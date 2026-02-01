@@ -26,13 +26,14 @@ export function useTabs(): UseTabsResult {
         .filter((tab): tab is typeof tab & { id: number; url: string } =>
           tab.id !== undefined && tab.url !== undefined
         )
-        .map((tab) => ({
+        .map((tab, index) => ({
           id: tab.id,
           title: tab.title || tab.url || 'Untitled',
           url: tab.url,
           favIconUrl: tab.favIconUrl,
           active: tab.active ?? false,
           windowId: tab.windowId ?? 0,
+          index,
         }));
 
       setTabs(mapped);

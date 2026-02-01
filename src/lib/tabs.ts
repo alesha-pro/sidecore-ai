@@ -8,6 +8,7 @@ export interface TabInfo {
   favIconUrl?: string;
   active: boolean;
   windowId: number;
+  index: number;
 }
 
 export async function getAllTabs(): Promise<TabInfo[]> {
@@ -16,13 +17,14 @@ export async function getAllTabs(): Promise<TabInfo[]> {
     .filter((tab): tab is typeof tab & { id: number; url: string } =>
       tab.id !== undefined && tab.url !== undefined
     )
-    .map((tab) => ({
+    .map((tab, index) => ({
       id: tab.id,
       title: tab.title || tab.url || 'Untitled',
       url: tab.url,
       favIconUrl: tab.favIconUrl,
       active: tab.active ?? false,
       windowId: tab.windowId ?? 0,
+      index,
     }));
 }
 
@@ -36,5 +38,6 @@ export async function getActiveTab(): Promise<TabInfo | null> {
     favIconUrl: tab.favIconUrl,
     active: true,
     windowId: tab.windowId ?? 0,
+    index: tab.index ?? 0,
   };
 }
