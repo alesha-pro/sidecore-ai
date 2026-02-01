@@ -228,6 +228,18 @@ export default function App() {
     setIsTabPickerOpen(true);
   };
 
+  // Handle tab selection from MentionInput picker
+  const handleSelectTab = useCallback((tabId: number) => {
+    setTabSelection((prev) => {
+      const newSet = new Set(prev.selectedTabIds);
+      newSet.add(tabId);
+      return {
+        ...prev,
+        selectedTabIds: newSet,
+      };
+    });
+  }, []);
+
   // Show loading state while fetching settings
   if (isLoading) {
     return (
@@ -283,9 +295,12 @@ export default function App() {
           <MentionInput
             onSend={handleSendMessage}
             disabled={!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel || isLLMLoading}
-            onTriggerTabPicker={handleTriggerTabPicker}
             selectedTabs={selectedTabsForInput}
             onRemoveTab={handleRemoveTab}
+            availableTabs={tabs}
+            onSelectTab={handleSelectTab}
+            isPickerOpen={isTabPickerOpen}
+            onPickerOpenChange={setIsTabPickerOpen}
           />
         </>
       )}

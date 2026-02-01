@@ -1,12 +1,15 @@
-import { useRef, useEffect, useCallback } from 'preact/hooks';
+import { useRef, useEffect, useCallback, useState } from 'preact/hooks';
 import type { TabInfo } from '../lib/tabs';
 
 interface MentionInputProps {
   onSend: (content: string, tabIds: number[]) => void;
   disabled?: boolean;
-  onTriggerTabPicker?: () => void;
   selectedTabs: TabInfo[];
   onRemoveTab: (tabId: number) => void;
+  availableTabs: TabInfo[];
+  onSelectTab: (tabId: number) => void;
+  isPickerOpen: boolean;
+  onPickerOpenChange: (open: boolean) => void;
 }
 
 interface ExtractedContent {
@@ -17,12 +20,49 @@ interface ExtractedContent {
 export function MentionInput({
   onSend,
   disabled = false,
-  onTriggerTabPicker,
   selectedTabs,
   onRemoveTab,
+  availableTabs,
+  onSelectTab,
+  isPickerOpen,
+  onPickerOpenChange,
 }: MentionInputProps) {
   const inputRef = useRef<HTMLDivElement>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
   const insertedTabsRef = useRef<Set<number>>(new Set());
+  const [activeIndex, setActiveIndex] = useState(-1);
+
+  // Filter out already selected tabs from picker
+  const pickerTabs = availableTabs.filter(
+    (t) => !selectedTabs.some((s) => s.id === t.id)
+  );
+
+  // Reset active index when picker opens
+  useEffect(() => {
+    if (isPickerOpen) {
+      setActiveIndex(pickerTabs.length > 0 ? 0 : -1);
+    }
+  }, [isPickerOpen, pickerTabs.length]);
+
+  // Close picker on click outside
+  useEffect(() => {
+    if (!isPickerOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        inputRef.current &&
+        !inputRef.current.contains(target) &&
+        pickerRef.current &&
+        !pickerRef.current.contains(target)
+      ) {
+        onPickerOpenChange(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isPickerOpen, onPickerOpenChange]);
 
   // Extract content from the contenteditable
   const extractContent = useCallback((): ExtractedContent => {
@@ -59,97 +99,113 @@ export function MentionInput({
   }, []);
 
   // Create a chip DOM element (not a Preact component - direct DOM manipulation)
-  const createChipElement = useCallback((tabId: number, title: string): HTMLSpanElement => {
-    const chip = document.createElement('span');
-    chip.contentEditable = 'false';
-    chip.setAttribute('data-tab-id', String(tabId));
-    chip.className = 'inline-flex items-center px-2 py-0.5 mx-1 text-xs bg-blue-100 text-blue-800 rounded select-none align-baseline';
+  const createChipElement = useCallback(
+    (tabId: number, title: string): HTMLSpanElement => {
+      const chip = document.createElement('span');
+      chip.contentEditable = 'false';
+      chip.setAttribute('data-tab-id', String(tabId));
+      chip.className =
+        'inline-flex items-center px-2 py-0.5 mx-1 text-xs bg-blue-100 text-blue-800 rounded select-none align-baseline';
 
-    const titleSpan = document.createElement('span');
-    titleSpan.className = 'truncate max-w-[120px]';
-    titleSpan.title = title;
-    titleSpan.setAttribute('data-chip-title', 'true');
-    titleSpan.textContent = title;
-    chip.appendChild(titleSpan);
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'truncate max-w-[120px]';
+      titleSpan.title = title;
+      titleSpan.setAttribute('data-chip-title', 'true');
+      titleSpan.textContent = title;
+      chip.appendChild(titleSpan);
 
-    const removeBtn = document.createElement('button');
-    removeBtn.type = 'button';
-    removeBtn.className = 'ml-1 hover:text-blue-600 focus:outline-none';
-    removeBtn.textContent = '×';
-    removeBtn.onclick = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      chip.remove();
-      insertedTabsRef.current.delete(tabId);
-      onRemoveTab(tabId);
-    };
-    chip.appendChild(removeBtn);
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.className = 'ml-1 hover:text-blue-600 focus:outline-none';
+      removeBtn.textContent = '×';
+      removeBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        chip.remove();
+        insertedTabsRef.current.delete(tabId);
+        onRemoveTab(tabId);
+      };
+      chip.appendChild(removeBtn);
 
-    return chip;
-  }, [onRemoveTab]);
+      return chip;
+    },
+    [onRemoveTab]
+  );
 
   // Insert chip at current cursor position
-  const insertChipAtCursor = useCallback((tabId: number, title: string) => {
-    const container = inputRef.current;
-    if (!container) return;
+  const insertChipAtCursor = useCallback(
+    (tabId: number, title: string) => {
+      const container = inputRef.current;
+      if (!container) return;
 
-    container.focus();
+      container.focus();
 
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) {
-      // No selection, append to end
+      const selection = window.getSelection();
+      if (!selection || selection.rangeCount === 0) {
+        // No selection, append to end
+        const chip = createChipElement(tabId, title);
+        container.appendChild(chip);
+        // Move cursor after chip
+        const range = document.createRange();
+        range.setStartAfter(chip);
+        range.collapse(true);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        return;
+      }
+
+      const range = selection.getRangeAt(0);
+
+      // Check if we need to remove @ before inserting chip
+      const startContainer = range.startContainer;
+      if (startContainer.nodeType === Node.TEXT_NODE) {
+        const textContent = startContainer.textContent || '';
+        const offset = range.startOffset;
+        if (offset > 0 && textContent[offset - 1] === '@') {
+          // Remove the @ character
+          const newText =
+            textContent.slice(0, offset - 1) + textContent.slice(offset);
+          startContainer.textContent = newText;
+          range.setStart(startContainer, offset - 1);
+          range.collapse(true);
+        }
+      }
+
+      // Insert chip
       const chip = createChipElement(tabId, title);
-      container.appendChild(chip);
+      range.deleteContents();
+      range.insertNode(chip);
+
       // Move cursor after chip
-      const range = document.createRange();
       range.setStartAfter(chip);
       range.collapse(true);
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-      return;
-    }
+      selection.removeAllRanges();
+      selection.addRange(range);
 
-    const range = selection.getRangeAt(0);
+      insertedTabsRef.current.add(tabId);
+    },
+    [createChipElement]
+  );
 
-    // Check if we need to remove @ before inserting chip
-    const startContainer = range.startContainer;
-    if (startContainer.nodeType === Node.TEXT_NODE) {
-      const textContent = startContainer.textContent || '';
-      const offset = range.startOffset;
-      if (offset > 0 && textContent[offset - 1] === '@') {
-        // Remove the @ character
-        const newText = textContent.slice(0, offset - 1) + textContent.slice(offset);
-        startContainer.textContent = newText;
-        range.setStart(startContainer, offset - 1);
-        range.collapse(true);
-      }
-    }
-
-    // Insert chip
-    const chip = createChipElement(tabId, title);
-    range.deleteContents();
-    range.insertNode(chip);
-
-    // Move cursor after chip
-    range.setStartAfter(chip);
-    range.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(range);
-
-    insertedTabsRef.current.add(tabId);
-  }, [createChipElement]);
+  // Handle tab selection from picker
+  const handlePickerSelect = (tab: TabInfo) => {
+    insertChipAtCursor(tab.id, tab.title);
+    onSelectTab(tab.id);
+    onPickerOpenChange(false);
+    inputRef.current?.focus();
+  };
 
   // Sync chips when selectedTabs prop changes
-  // - Add chips for new tabs (selected via picker)
-  // - Remove chips for tabs removed externally (via SelectedTabsBar)
   useEffect(() => {
     const container = inputRef.current;
     if (!container) return;
 
-    const selectedTabIds = new Set(selectedTabs.map(t => t.id));
+    const selectedTabIds = new Set(selectedTabs.map((t) => t.id));
 
-    // Add chips for newly selected tabs
-    const newTabs = selectedTabs.filter(tab => !insertedTabsRef.current.has(tab.id));
+    // Add chips for newly selected tabs (only if not already inserted)
+    const newTabs = selectedTabs.filter(
+      (tab) => !insertedTabsRef.current.has(tab.id)
+    );
     for (const tab of newTabs) {
       insertChipAtCursor(tab.id, tab.title);
     }
@@ -170,8 +226,33 @@ export function MentionInput({
 
   // Handle backspace to remove chips
   const handleKeyDown = (e: KeyboardEvent) => {
-    // Submit on Enter (without Shift)
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // Handle picker navigation when open
+    if (isPickerOpen) {
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          setActiveIndex((prev) => Math.min(prev + 1, pickerTabs.length - 1));
+          return;
+        case 'ArrowUp':
+          e.preventDefault();
+          setActiveIndex((prev) => Math.max(prev - 1, 0));
+          return;
+        case 'Enter':
+          if (activeIndex >= 0 && pickerTabs[activeIndex]) {
+            e.preventDefault();
+            handlePickerSelect(pickerTabs[activeIndex]);
+            return;
+          }
+          break;
+        case 'Escape':
+          e.preventDefault();
+          onPickerOpenChange(false);
+          return;
+      }
+    }
+
+    // Submit on Enter (without Shift) when picker is closed
+    if (e.key === 'Enter' && !e.shiftKey && !isPickerOpen) {
       e.preventDefault();
       handleSend();
       return;
@@ -190,11 +271,20 @@ export function MentionInput({
 
       // Check if cursor is at the start of a text node that follows a chip
       const startContainer = range.startContainer;
-      if (startContainer.nodeType === Node.TEXT_NODE && range.startOffset === 0) {
+      if (
+        startContainer.nodeType === Node.TEXT_NODE &&
+        range.startOffset === 0
+      ) {
         const prevSibling = startContainer.previousSibling;
-        if (prevSibling instanceof HTMLElement && prevSibling.hasAttribute('data-tab-id')) {
+        if (
+          prevSibling instanceof HTMLElement &&
+          prevSibling.hasAttribute('data-tab-id')
+        ) {
           e.preventDefault();
-          const tabId = parseInt(prevSibling.getAttribute('data-tab-id') || '0', 10);
+          const tabId = parseInt(
+            prevSibling.getAttribute('data-tab-id') || '0',
+            10
+          );
           prevSibling.remove();
           insertedTabsRef.current.delete(tabId);
           onRemoveTab(tabId);
@@ -206,9 +296,15 @@ export function MentionInput({
       if (startContainer === container && range.startOffset > 0) {
         const childNodes = Array.from(container.childNodes);
         const prevNode = childNodes[range.startOffset - 1];
-        if (prevNode instanceof HTMLElement && prevNode.hasAttribute('data-tab-id')) {
+        if (
+          prevNode instanceof HTMLElement &&
+          prevNode.hasAttribute('data-tab-id')
+        ) {
           e.preventDefault();
-          const tabId = parseInt(prevNode.getAttribute('data-tab-id') || '0', 10);
+          const tabId = parseInt(
+            prevNode.getAttribute('data-tab-id') || '0',
+            10
+          );
           prevNode.remove();
           insertedTabsRef.current.delete(tabId);
           onRemoveTab(tabId);
@@ -221,7 +317,7 @@ export function MentionInput({
   // Handle input to detect @ trigger
   const handleInput = () => {
     const container = inputRef.current;
-    if (!container || !onTriggerTabPicker) return;
+    if (!container) return;
 
     // Get current text content at cursor position
     const selection = window.getSelection();
@@ -235,7 +331,7 @@ export function MentionInput({
       const textContent = startContainer.textContent || '';
       const offset = range.startOffset;
       if (offset > 0 && textContent[offset - 1] === '@') {
-        onTriggerTabPicker();
+        onPickerOpenChange(true);
       }
     }
   };
@@ -254,35 +350,71 @@ export function MentionInput({
     }
   };
 
-  // Check if input has content (for button disabled state)
-  const hasContent = () => {
-    const container = inputRef.current;
-    if (!container) return false;
-    return container.textContent?.trim() || container.querySelector('[data-tab-id]');
-  };
-
   return (
     <div className="p-4 bg-white border-t border-gray-200">
-      <div className="flex gap-2">
-        <div
-          ref={inputRef}
-          contentEditable={!disabled}
-          onKeyDown={handleKeyDown}
-          onInput={handleInput}
-          className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg min-h-[38px] max-h-[150px] overflow-y-auto focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400"
-          data-placeholder="Type a message... (@ to add tabs)"
-          role="textbox"
-          aria-label="Message input"
-          aria-multiline="true"
-        />
-        <button
-          type="button"
-          onClick={handleSend}
-          disabled={disabled}
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed self-end"
-        >
-          Send
-        </button>
+      <div className="relative">
+        {/* Inline Tab Picker - appears above input */}
+        {isPickerOpen && pickerTabs.length > 0 && (
+          <div
+            ref={pickerRef}
+            className="absolute bottom-full left-0 right-0 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-auto z-10"
+          >
+            <ul role="listbox" aria-label="Select a tab">
+              {pickerTabs.map((tab, index) => (
+                <li
+                  key={tab.id}
+                  role="option"
+                  aria-selected={index === activeIndex}
+                  onClick={() => handlePickerSelect(tab)}
+                  className={`flex items-center gap-2 px-3 py-2 cursor-pointer ${
+                    index === activeIndex
+                      ? 'bg-blue-50 text-blue-900'
+                      : 'hover:bg-gray-50'
+                  }`}
+                >
+                  {tab.favIconUrl ? (
+                    <img
+                      src={tab.favIconUrl}
+                      alt=""
+                      className="w-4 h-4 flex-shrink-0"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <span className="w-4 h-4 flex-shrink-0 text-gray-400">
+                      📄
+                    </span>
+                  )}
+                  <span className="truncate text-sm">{tab.title}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Input area */}
+        <div className="flex gap-2">
+          <div
+            ref={inputRef}
+            contentEditable={!disabled}
+            onKeyDown={handleKeyDown}
+            onInput={handleInput}
+            className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg min-h-[38px] max-h-[150px] overflow-y-auto focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400"
+            data-placeholder="Type a message... (@ to add tabs)"
+            role="textbox"
+            aria-label="Message input"
+            aria-multiline="true"
+          />
+          <button
+            type="button"
+            onClick={handleSend}
+            disabled={disabled}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed self-end"
+          >
+            Send
+          </button>
+        </div>
       </div>
     </div>
   );
