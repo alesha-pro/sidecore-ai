@@ -5,12 +5,17 @@ import SettingsForm from '../../components/SettingsForm';
 import { getSettings, saveSettings } from '../../lib/storage';
 import type { Message, Settings } from '../../lib/types';
 import { DEFAULT_SETTINGS } from '../../lib/types';
+import { createChatCompletion } from '../../lib/llm/client';
+import { LLMError } from '../../lib/llm/errors';
+import type { ChatMessage } from '../../lib/llm/types';
 
 export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLLMLoading, setIsLLMLoading] = useState(false);
+  const [llmError, setLLMError] = useState<string | null>(null);
 
   // Load settings on mount
   useEffect(() => {
@@ -41,7 +46,13 @@ export default function App() {
     setShowSettings(false);
   };
 
-  const handleSendMessage = (content: string) => {
+  const handleSendMessage = async (content: string) => {
+    // Early return if settings incomplete
+    if (!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel) {
+      return;
+    }
+
+    // Add user message to state
     const newMessage: Message = {
       id: crypto.randomUUID(),
       role: 'user',
@@ -49,7 +60,53 @@ export default function App() {
       timestamp: Date.now(),
     };
     setMessages((prev) => [...prev, newMessage]);
-    // Note: LLM integration comes in Phase 2
+
+    // Reset error and set loading state
+    setLLMError(null);
+    setIsLLMLoading(true);
+
+    try {
+      // Build API messages from existing messages plus new user message
+      const apiMessages: ChatMessage[] = [
+        ...messages.map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        })),
+        {
+          role: 'user' as const,
+          content,
+        },
+      ];
+
+      // Call LLM API
+      const response = await createChatCompletion(
+        settings.baseUrl,
+        settings.apiKey,
+        {
+          model: settings.defaultModel,
+          messages: apiMessages,
+        }
+      );
+
+      // Create assistant message from response
+      const assistantMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: response.choices[0].message.content,
+        timestamp: Date.now(),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      if (error instanceof LLMError) {
+        setLLMError(error.userMessage);
+        console.error(error.toLogString());
+      } else {
+        setLLMError('An unexpected error occurred. Please try again.');
+        console.error('LLM request error:', error);
+      }
+    } finally {
+      setIsLLMLoading(false);
+    }
   };
 
   // Show loading state while fetching settings
@@ -87,10 +144,10 @@ export default function App() {
         />
       ) : (
         <>
-          <ChatHistory messages={messages} />
+          <ChatHistory messages={messages} isLoading={isLLMLoading} error={llmError} />
           <ChatInput
             onSend={handleSendMessage}
-            disabled={!settings?.baseUrl || !settings?.apiKey}
+            disabled={!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel || isLLMLoading}
           />
         </>
       )}
