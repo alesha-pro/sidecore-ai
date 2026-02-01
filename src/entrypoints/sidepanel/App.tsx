@@ -277,11 +277,9 @@ export default function App() {
         <>
           <ContextBar
             activeTab={activeTab}
-            tabs={tabs}
             selection={tabSelection}
             onSelectionChange={setTabSelection}
-            isPickerOpen={isTabPickerOpen}
-            onPickerOpenChange={setIsTabPickerOpen}
+            onOpenPicker={() => setIsTabPickerOpen(true)}
           />
           <ExtractionStatus results={extractionResults} />
           <SelectedTabsBar
