@@ -4,7 +4,7 @@ export default defineConfig({
   srcDir: 'src',
   manifest: {
     name: 'Sidepanel AI Agent',
-    permissions: ['sidePanel', 'storage'],
+    permissions: ['sidePanel', 'storage', 'tabs'],
     host_permissions: [
       'https://api.openai.com/*',
       'https://*.openai.com/*',
