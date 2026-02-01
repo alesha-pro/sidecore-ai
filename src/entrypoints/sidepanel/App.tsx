@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'preact/hooks';
+import { useState, useEffect, useCallback } from 'preact/hooks';
 import ChatHistory from '../../components/ChatHistory';
 import ChatInput from '../../components/ChatInput';
 import SettingsForm from '../../components/SettingsForm';
+import { ContextBar } from '../../components/ContextBar';
+import { useTabs } from '../../hooks/useTabs';
 import { getSettings, saveSettings } from '../../lib/storage';
-import type { Message, Settings } from '../../lib/types';
-import { DEFAULT_SETTINGS } from '../../lib/types';
+import type { Message, Settings, TabSelection } from '../../lib/types';
+import { DEFAULT_SETTINGS, DEFAULT_TAB_SELECTION } from '../../lib/types';
 import { createChatCompletion } from '../../lib/llm/client';
 import { LLMError } from '../../lib/llm/errors';
 import type { ChatMessage } from '../../lib/llm/types';
@@ -16,6 +18,13 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLLMLoading, setIsLLMLoading] = useState(false);
   const [llmError, setLLMError] = useState<string | null>(null);
+
+  // Tab selection state (ephemeral - resets after sending)
+  const [tabSelection, setTabSelection] = useState<TabSelection>(DEFAULT_TAB_SELECTION);
+  const [isTabPickerOpen, setIsTabPickerOpen] = useState(false);
+
+  // Use tabs hook
+  const { tabs, activeTab } = useTabs();
 
   // Load settings on mount
   useEffect(() => {
@@ -46,11 +55,34 @@ export default function App() {
     setShowSettings(false);
   };
 
+  // Get all selected tabs for context (will be used in Phase 4)
+  const getSelectedTabs = useCallback(() => {
+    const selected: typeof tabs = [];
+
+    if (tabSelection.includeActiveTab && activeTab) {
+      selected.push(activeTab);
+    }
+
+    for (const tabId of tabSelection.selectedTabIds) {
+      const tab = tabs.find((t) => t.id === tabId);
+      // Avoid duplicates (if activeTab is also in selectedTabIds)
+      if (tab && tab.id !== activeTab?.id) {
+        selected.push(tab);
+      }
+    }
+
+    return selected;
+  }, [tabSelection, tabs, activeTab]);
+
   const handleSendMessage = async (content: string) => {
     // Early return if settings incomplete
     if (!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel) {
       return;
     }
+
+    // Get selected tabs before sending (for Phase 4 extraction)
+    const selectedTabs = getSelectedTabs();
+    console.log('Selected tabs for context:', selectedTabs.map(t => ({ id: t.id, title: t.title })));
 
     // Add user message to state
     const newMessage: Message = {
@@ -60,6 +92,10 @@ export default function App() {
       timestamp: Date.now(),
     };
     setMessages((prev) => [...prev, newMessage]);
+
+    // Reset tab selection after capture (CTX-03: ephemeral selection)
+    setTabSelection(DEFAULT_TAB_SELECTION);
+    setIsTabPickerOpen(false);
 
     // Reset error and set loading state
     setLLMError(null);
@@ -109,6 +145,10 @@ export default function App() {
     }
   };
 
+  const handleTriggerTabPicker = () => {
+    setIsTabPickerOpen(true);
+  };
+
   // Show loading state while fetching settings
   if (isLoading) {
     return (
@@ -144,10 +184,19 @@ export default function App() {
         />
       ) : (
         <>
+          <ContextBar
+            activeTab={activeTab}
+            tabs={tabs}
+            selection={tabSelection}
+            onSelectionChange={setTabSelection}
+            isPickerOpen={isTabPickerOpen}
+            onPickerOpenChange={setIsTabPickerOpen}
+          />
           <ChatHistory messages={messages} isLoading={isLLMLoading} error={llmError} />
           <ChatInput
             onSend={handleSendMessage}
             disabled={!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel || isLLMLoading}
+            onTriggerTabPicker={handleTriggerTabPicker}
           />
         </>
       )}

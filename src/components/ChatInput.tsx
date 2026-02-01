@@ -3,9 +3,10 @@ import { useState, useRef } from 'preact/hooks';
 interface ChatInputProps {
   onSend: (content: string) => void;
   disabled?: boolean;
+  onTriggerTabPicker?: () => void;
 }
 
-export default function ChatInput({ onSend, disabled = false }: ChatInputProps) {
+export default function ChatInput({ onSend, disabled = false, onTriggerTabPicker }: ChatInputProps) {
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -32,7 +33,14 @@ export default function ChatInput({ onSend, disabled = false }: ChatInputProps) 
 
   const handleInput = (e: Event) => {
     const target = e.target as HTMLTextAreaElement;
-    setInput(target.value);
+    const value = target.value;
+    setInput(value);
+
+    // Detect @ trigger - open picker when @ is typed
+    if (value.endsWith('@') && onTriggerTabPicker) {
+      onTriggerTabPicker();
+    }
+
     // Auto-resize textarea
     target.style.height = 'auto';
     target.style.height = `${Math.min(target.scrollHeight, 150)}px`;
@@ -49,7 +57,7 @@ export default function ChatInput({ onSend, disabled = false }: ChatInputProps) 
           value={input}
           onInput={handleInput}
           onKeyDown={handleKeyDown}
-          placeholder="Type a message..."
+          placeholder="Type a message... (@ to add tabs)"
           disabled={disabled}
           rows={1}
           className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
