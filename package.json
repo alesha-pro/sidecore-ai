@@ -1,0 +1,28 @@
+{
+  "name": "ai-agents-chrome-extension",
+  "version": "1.0.0",
+  "description": "Chrome extension with AI agent in side panel",
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "zip": "wxt zip"
+  },
+  "keywords": [
+    "chrome-extension",
+    "side-panel",
+    "ai-agent"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.3",
+    "autoprefixer": "^10.4.24",
+    "postcss": "^8.5.6",
+    "preact": "^10.28.3",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "wxt": "^0.20.13"
+  }
+}
