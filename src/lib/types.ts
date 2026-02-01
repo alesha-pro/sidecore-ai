@@ -18,3 +18,13 @@ export const DEFAULT_SETTINGS: Settings = {
   defaultModel: '',
   contextBudget: 50000,
 };
+
+export interface TabSelection {
+  includeActiveTab: boolean;    // CTX-01: active tab on by default
+  selectedTabIds: Set<number>;  // CTX-03: additionally selected tabs
+}
+
+export const DEFAULT_TAB_SELECTION: TabSelection = {
+  includeActiveTab: true,
+  selectedTabIds: new Set(),
+};
