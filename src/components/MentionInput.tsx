@@ -139,11 +139,32 @@ export function MentionInput({
     insertedTabsRef.current.add(tabId);
   }, [createChipElement]);
 
-  // Sync chips when selectedTabs prop changes (new tab selected via picker)
+  // Sync chips when selectedTabs prop changes
+  // - Add chips for new tabs (selected via picker)
+  // - Remove chips for tabs removed externally (via SelectedTabsBar)
   useEffect(() => {
+    const container = inputRef.current;
+    if (!container) return;
+
+    const selectedTabIds = new Set(selectedTabs.map(t => t.id));
+
+    // Add chips for newly selected tabs
     const newTabs = selectedTabs.filter(tab => !insertedTabsRef.current.has(tab.id));
     for (const tab of newTabs) {
       insertChipAtCursor(tab.id, tab.title);
+    }
+
+    // Remove chips for tabs that were removed externally
+    const chipsToRemove: HTMLElement[] = [];
+    container.querySelectorAll('[data-tab-id]').forEach((chip) => {
+      const tabId = parseInt(chip.getAttribute('data-tab-id') || '0', 10);
+      if (!selectedTabIds.has(tabId)) {
+        chipsToRemove.push(chip as HTMLElement);
+        insertedTabsRef.current.delete(tabId);
+      }
+    });
+    for (const chip of chipsToRemove) {
+      chip.remove();
     }
   }, [selectedTabs, insertChipAtCursor]);
 

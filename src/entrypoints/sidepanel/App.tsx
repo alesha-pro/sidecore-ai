@@ -4,6 +4,7 @@ import { MentionInput } from '../../components/MentionInput';
 import SettingsForm from '../../components/SettingsForm';
 import { ContextBar } from '../../components/ContextBar';
 import { ExtractionStatus } from '../../components/ExtractionStatus';
+import { SelectedTabsBar } from '../../components/SelectedTabsBar';
 import { useTabs } from '../../hooks/useTabs';
 import { getSettings, saveSettings } from '../../lib/storage';
 import type { Message, Settings, TabSelection } from '../../lib/types';
@@ -96,11 +97,19 @@ export default function App() {
       .filter((t): t is TabInfo => t !== undefined);
   }, [tabSelection.selectedTabIds, tabs]);
 
-  // Handle chip removal from MentionInput
+  // Handle chip removal from MentionInput or SelectedTabsBar
   const handleRemoveTab = useCallback((tabId: number) => {
     setTabSelection((prev) => ({
       ...prev,
       selectedTabIds: prev.selectedTabIds.filter((id) => id !== tabId),
+    }));
+  }, []);
+
+  // Handle active tab toggle from SelectedTabsBar
+  const handleToggleActiveTab = useCallback((include: boolean) => {
+    setTabSelection((prev) => ({
+      ...prev,
+      includeActiveTab: include,
     }));
   }, []);
 
@@ -259,6 +268,13 @@ export default function App() {
             onPickerOpenChange={setIsTabPickerOpen}
           />
           <ExtractionStatus results={extractionResults} />
+          <SelectedTabsBar
+            tabs={selectedTabsForInput}
+            includeActiveTab={tabSelection.includeActiveTab}
+            activeTab={activeTab}
+            onRemoveTab={handleRemoveTab}
+            onToggleActiveTab={handleToggleActiveTab}
+          />
           <ChatHistory messages={messages} isLoading={isLLMLoading} error={llmError} />
           <MentionInput
             onSend={handleSendMessage}
