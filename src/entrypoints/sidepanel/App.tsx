@@ -10,6 +10,7 @@ import { DEFAULT_SETTINGS, DEFAULT_TAB_SELECTION } from '../../lib/types';
 import { createChatCompletion } from '../../lib/llm/client';
 import { LLMError } from '../../lib/llm/errors';
 import type { ChatMessage } from '../../lib/llm/types';
+import type { ExtractedTabContent } from '../../shared/extraction';
 
 export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -22,6 +23,9 @@ export default function App() {
   // Tab selection state (ephemeral - resets after sending)
   const [tabSelection, setTabSelection] = useState<TabSelection>(DEFAULT_TAB_SELECTION);
   const [isTabPickerOpen, setIsTabPickerOpen] = useState(false);
+
+  // Extraction results state (for per-tab status display)
+  const [extractionResults, setExtractionResults] = useState<ExtractedTabContent[]>([]);
 
   // Use tabs hook
   const { tabs, activeTab } = useTabs();
@@ -80,7 +84,7 @@ export default function App() {
       return;
     }
 
-    // Get selected tabs before sending (for Phase 4 extraction)
+    // Get selected tabs before sending
     const selectedTabs = getSelectedTabs();
     console.log('Selected tabs for context:', selectedTabs.map(t => ({ id: t.id, title: t.title })));
 
@@ -102,17 +106,53 @@ export default function App() {
     setIsLLMLoading(true);
 
     try {
+      // Extract content from selected tabs
+      let extractionResults: ExtractedTabContent[] = [];
+      if (selectedTabs.length > 0) {
+        const response = await chrome.runtime.sendMessage({
+          type: 'extract-tabs',
+          tabs: selectedTabs,
+          budget: settings.contextBudget,
+        });
+
+        if (response.success) {
+          extractionResults = response.results;
+          setExtractionResults(extractionResults);
+        } else {
+          console.error('Extraction failed:', response.error);
+        }
+      }
+
+      // Build system message from successful extractions
+      const successfulExtractions = extractionResults.filter((r) => !r.error && r.markdown);
+      let systemMessage = '';
+      if (successfulExtractions.length > 0) {
+        systemMessage = 'Context sources:\n\n' + successfulExtractions
+          .map((r) => `## ${r.title}\nSource: ${r.url}\n\n${r.markdown}`)
+          .join('\n\n');
+      }
+
       // Build API messages from existing messages plus new user message
       const apiMessages: ChatMessage[] = [
         ...messages.map((msg) => ({
           role: msg.role,
           content: msg.content,
         })),
-        {
-          role: 'user' as const,
-          content,
-        },
       ];
+
+      // Add system message with context if available
+      if (systemMessage) {
+        apiMessages.push({
+          role: 'system' as const,
+          content: systemMessage,
+        });
+      }
+
+      // Add user message
+      apiMessages.push({
+        role: 'user' as const,
+        content,
+      });
 
       // Call LLM API
       const response = await createChatCompletion(
