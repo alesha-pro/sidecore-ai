@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'preact/hooks';
+import { useState, useEffect, useCallback, useMemo } from 'preact/hooks';
 import ChatHistory from '../../components/ChatHistory';
-import ChatInput from '../../components/ChatInput';
+import { MentionInput } from '../../components/MentionInput';
 import SettingsForm from '../../components/SettingsForm';
 import { ContextBar } from '../../components/ContextBar';
 import { ExtractionStatus } from '../../components/ExtractionStatus';
@@ -12,6 +12,7 @@ import { createChatCompletion } from '../../lib/llm/client';
 import { LLMError } from '../../lib/llm/errors';
 import type { ChatMessage } from '../../lib/llm/types';
 import type { ExtractedTabContent } from '../../shared/extraction';
+import type { TabInfo } from '../../lib/tabs';
 
 export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -68,15 +69,16 @@ export default function App() {
     setShowSettings(false);
   };
 
-  // Get all selected tabs for context (will be used in Phase 4)
-  const getSelectedTabs = useCallback(() => {
-    const selected: typeof tabs = [];
+  // Get all selected tabs for context
+  const getSelectedTabs = useCallback((overrideTabIds?: number[]) => {
+    const selected: TabInfo[] = [];
+    const tabIdsToUse = overrideTabIds ?? Array.from(tabSelection.selectedTabIds);
 
     if (tabSelection.includeActiveTab && activeTab) {
       selected.push(activeTab);
     }
 
-    for (const tabId of tabSelection.selectedTabIds) {
+    for (const tabId of tabIdsToUse) {
       const tab = tabs.find((t) => t.id === tabId);
       // Avoid duplicates (if activeTab is also in selectedTabIds)
       if (tab && tab.id !== activeTab?.id) {
@@ -87,14 +89,29 @@ export default function App() {
     return selected;
   }, [tabSelection, tabs, activeTab]);
 
-  const handleSendMessage = async (content: string) => {
+  // Build selected tabs array for MentionInput (from selectedTabIds)
+  const selectedTabsForInput = useMemo(() => {
+    return tabSelection.selectedTabIds
+      .map(id => tabs.find(t => t.id === id))
+      .filter((t): t is TabInfo => t !== undefined);
+  }, [tabSelection.selectedTabIds, tabs]);
+
+  // Handle chip removal from MentionInput
+  const handleRemoveTab = useCallback((tabId: number) => {
+    setTabSelection((prev) => ({
+      ...prev,
+      selectedTabIds: prev.selectedTabIds.filter((id) => id !== tabId),
+    }));
+  }, []);
+
+  const handleSendMessage = async (content: string, tabIds: number[] = []) => {
     // Early return if settings incomplete
     if (!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel) {
       return;
     }
 
-    // Get selected tabs before sending
-    const selectedTabs = getSelectedTabs();
+    // Get selected tabs from inline mentions (tabIds) + activeTab toggle
+    const selectedTabs = getSelectedTabs(tabIds);
     console.log('Selected tabs for context:', selectedTabs.map(t => ({ id: t.id, title: t.title })));
 
     // Add user message to state
@@ -243,10 +260,12 @@ export default function App() {
           />
           <ExtractionStatus results={extractionResults} />
           <ChatHistory messages={messages} isLoading={isLLMLoading} error={llmError} />
-          <ChatInput
+          <MentionInput
             onSend={handleSendMessage}
             disabled={!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel || isLLMLoading}
             onTriggerTabPicker={handleTriggerTabPicker}
+            selectedTabs={selectedTabsForInput}
+            onRemoveTab={handleRemoveTab}
           />
         </>
       )}
