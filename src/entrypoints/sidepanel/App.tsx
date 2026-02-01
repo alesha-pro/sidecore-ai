@@ -28,8 +28,16 @@ export default function App() {
   // Extraction results state (for per-tab status display)
   const [extractionResults, setExtractionResults] = useState<ExtractedTabContent[]>([]);
 
-  // Use tabs hook
-  const { tabs, activeTab } = useTabs();
+  // Handle tab close: remove closed tabs from selection
+  const handleTabClosed = useCallback((tabId: number) => {
+    setTabSelection((prev) => ({
+      ...prev,
+      selectedTabIds: prev.selectedTabIds.filter((id) => id !== tabId),
+    }));
+  }, []);
+
+  // Use tabs hook with close callback for selection cleanup
+  const { tabs, activeTab } = useTabs(handleTabClosed);
 
   // Load settings on mount
   useEffect(() => {
