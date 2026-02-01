@@ -67,7 +67,7 @@ export async function extractTabs(
         // Inject article extractor script
         await chrome.scripting.executeScript({
           target: { tabId: tab.id },
-          files: ['/article-extractor.js'],
+          files: ['content-scripts/article-extractor.js'],
         });
 
         // Execute extraction and capture result
