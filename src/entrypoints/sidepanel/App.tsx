@@ -92,17 +92,21 @@ export default function App() {
 
   // Build selected tabs array for MentionInput (from selectedTabIds)
   const selectedTabsForInput = useMemo(() => {
-    return tabSelection.selectedTabIds
+    return Array.from(tabSelection.selectedTabIds)
       .map(id => tabs.find(t => t.id === id))
       .filter((t): t is TabInfo => t !== undefined);
   }, [tabSelection.selectedTabIds, tabs]);
 
   // Handle chip removal from MentionInput or SelectedTabsBar
   const handleRemoveTab = useCallback((tabId: number) => {
-    setTabSelection((prev) => ({
-      ...prev,
-      selectedTabIds: prev.selectedTabIds.filter((id) => id !== tabId),
-    }));
+    setTabSelection((prev) => {
+      const newSet = new Set(prev.selectedTabIds);
+      newSet.delete(tabId);
+      return {
+        ...prev,
+        selectedTabIds: newSet,
+      };
+    });
   }, []);
 
   // Handle active tab toggle from SelectedTabsBar
