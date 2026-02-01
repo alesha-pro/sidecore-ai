@@ -3,6 +3,7 @@ import ChatHistory from '../../components/ChatHistory';
 import ChatInput from '../../components/ChatInput';
 import SettingsForm from '../../components/SettingsForm';
 import { ContextBar } from '../../components/ContextBar';
+import { ExtractionStatus } from '../../components/ExtractionStatus';
 import { useTabs } from '../../hooks/useTabs';
 import { getSettings, saveSettings } from '../../lib/storage';
 import type { Message, Settings, TabSelection } from '../../lib/types';
@@ -232,6 +233,7 @@ export default function App() {
             isPickerOpen={isTabPickerOpen}
             onPickerOpenChange={setIsTabPickerOpen}
           />
+          <ExtractionStatus results={extractionResults} />
           <ChatHistory messages={messages} isLoading={isLLMLoading} error={llmError} />
           <ChatInput
             onSend={handleSendMessage}
