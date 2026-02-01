@@ -5,7 +5,8 @@
  * a global function window.__extractArticle that returns structured article content
  * or structured errors.
  *
- * WXT Content Script Configuration: matches array is empty to prevent auto-injection.
+ * WXT Content Script Configuration: matches array uses a never-matching domain to prevent
+ * auto-injection while satisfying WXT's dev mode requirement for at least one match pattern.
  * This will be manually injected via chrome.scripting.executeScript when needed.
  */
 
@@ -14,7 +15,7 @@ import TurndownService from 'turndown';
 import type { ArticleExtractionPayload } from '../shared/extraction';
 
 export default defineContentScript({
-  matches: [],  // Empty matches = never auto-inject, only manual injection
+  matches: ['https://never-match-this-domain-wxt-dev-mode.invalid/*'],  // Never-matching pattern for WXT dev mode compatibility
   main() {
     window.__extractArticle = extractArticle;
   },
