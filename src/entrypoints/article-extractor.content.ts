@@ -30,30 +30,37 @@ export default defineContentScript({
  */
 function extractArticle(): ArticleExtractionPayload {
   try {
-    // Check if page is probably readerable before processing
-    if (!isProbablyReaderable(document)) {
-      return {
-        readerable: false,
-        error: {
-          type: 'not_readerable',
-          message: 'Page does not appear to contain article content',
-        },
-      };
-    }
+    const url = document.location.href;
+    const isReaderable = isProbablyReaderable(document);
+
+    console.log('[article-extractor] Starting extraction:', {
+      url,
+      isReaderable,
+      title: document.title,
+      bodyTextLength: document.body?.innerText?.length || 0
+    });
 
     // Clone document to avoid modifying the live page
     const documentClone = document.cloneNode(true) as Document;
 
     // Parse article content with Readability
+    // We try extraction even if isProbablyReaderable is false (fallback)
     const reader = new Readability(documentClone);
     const article = reader.parse();
 
+    console.log('[article-extractor] Readability result:', {
+      success: !!article,
+      title: article?.title,
+      contentLength: article?.content?.length || 0
+    });
+
     if (!article) {
+      console.log('[article-extractor] Failed: no article extracted');
       return {
         readerable: false,
         error: {
           type: 'parse_failed',
-          message: 'Readability failed to extract article content',
+          message: `Readability could not extract content from this page (isReaderable: ${isReaderable})`,
         },
       };
     }
@@ -65,6 +72,11 @@ function extractArticle(): ArticleExtractionPayload {
     });
 
     const markdown = turndownService.turndown(article.content);
+
+    console.log('[article-extractor] Success:', {
+      title: article.title,
+      markdownLength: markdown.length
+    });
 
     return {
       title: article.title,
