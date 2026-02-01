@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'preact/hooks';
 import type { Settings } from '../lib/types';
-import { DEFAULT_SETTINGS } from '../lib/types';
 import { normalizeBaseUrl, validateBaseUrl } from '../lib/urlNormalization';
+import { listModels } from '../lib/llm/client';
+import { LLMError } from '../lib/llm/errors';
+import type { Model } from '../lib/llm/types';
 
 interface SettingsFormProps {
   settings: Settings;
@@ -21,6 +23,9 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [availableModels, setAvailableModels] = useState<Model[]>([]);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   // Reset form when settings prop changes
   useEffect(() => {
@@ -87,12 +92,38 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
   };
 
   const handleChange = (field: keyof Settings) => (e: Event) => {
-    const target = e.target as HTMLInputElement;
+    const target = e.target as HTMLInputElement | HTMLSelectElement;
     const value = field === 'contextBudget' ? parseInt(target.value, 10) || 0 : target.value;
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear field error on change
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  const handleTestConnection = async () => {
+    setConnectionStatus('testing');
+    setConnectionError(null);
+
+    try {
+      const normalizedBaseUrl = normalizeBaseUrl(formData.baseUrl);
+      const models = await listModels(normalizedBaseUrl, formData.apiKey);
+      setAvailableModels(models);
+      setConnectionStatus('success');
+
+      // Auto-select first model if defaultModel is empty and models exist
+      if (!formData.defaultModel.trim() && models.length > 0) {
+        setFormData((prev) => ({ ...prev, defaultModel: models[0].id }));
+      }
+    } catch (error) {
+      setConnectionStatus('error');
+      if (error instanceof LLMError) {
+        setConnectionError(error.userMessage);
+        console.error(error.toLogString());
+      } else {
+        setConnectionError('Failed to connect. Please check your settings.');
+        console.error('Connection test error:', error);
+      }
     }
   };
 
@@ -157,29 +188,65 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
           )}
         </div>
 
+        {/* Test Connection */}
+        <div>
+          <button
+            type="button"
+            onClick={handleTestConnection}
+            disabled={connectionStatus === 'testing' || !formData.baseUrl.trim() || !formData.apiKey.trim()}
+            className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {connectionStatus === 'testing' && 'Testing...'}
+            {connectionStatus === 'success' && '✓ Connected'}
+            {(connectionStatus === 'idle' || connectionStatus === 'error') && 'Test Connection'}
+          </button>
+          {connectionError && (
+            <p className="mt-2 text-sm text-red-600">{connectionError}</p>
+          )}
+        </div>
+
         {/* Default Model */}
         <div>
           <label htmlFor="defaultModel" className="block text-sm font-medium text-gray-700 mb-1">
             Default Model
           </label>
-          <input
-            id="defaultModel"
-            type="text"
-            value={formData.defaultModel}
-            onInput={handleChange('defaultModel')}
-            placeholder="gpt-4o"
-            className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.defaultModel ? 'border-red-500' : 'border-gray-300'
-            }`}
-            aria-describedby={errors.defaultModel ? 'defaultModel-error' : 'defaultModel-hint'}
-          />
+          {connectionStatus === 'success' && availableModels.length > 0 ? (
+            <select
+              id="defaultModel"
+              value={formData.defaultModel}
+              onChange={handleChange('defaultModel')}
+              className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.defaultModel ? 'border-red-500' : 'border-gray-300'
+              }`}
+              aria-describedby={errors.defaultModel ? 'defaultModel-error' : 'defaultModel-hint'}
+            >
+              <option value="">Select a model...</option>
+              {availableModels.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.id}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              id="defaultModel"
+              type="text"
+              value={formData.defaultModel}
+              onInput={handleChange('defaultModel')}
+              placeholder="gpt-4o"
+              className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.defaultModel ? 'border-red-500' : 'border-gray-300'
+              }`}
+              aria-describedby={errors.defaultModel ? 'defaultModel-error' : 'defaultModel-hint'}
+            />
+          )}
           {errors.defaultModel ? (
             <p id="defaultModel-error" className="mt-1 text-sm text-red-600">
               {errors.defaultModel}
             </p>
           ) : (
             <p id="defaultModel-hint" className="mt-1 text-xs text-gray-500">
-              Model discovery will be available in Settings after connection test
+              Click 'Test Connection' to load available models
             </p>
           )}
         </div>
