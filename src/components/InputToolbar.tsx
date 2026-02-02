@@ -5,6 +5,13 @@ interface InputToolbarProps {
   onSlashClick: () => void;
   onSettingsClick: () => void;
   disabled?: boolean;
+  // New props for moved controls
+  agentMode?: boolean;
+  onAgentModeChange?: (enabled: boolean) => void;
+  includeActiveTab?: boolean;
+  onActiveTabChange?: (included: boolean) => void;
+  onChatListToggle?: () => void;
+  showChatList?: boolean;
 }
 
 // Extract short model name for display
@@ -59,7 +66,7 @@ function ModelIcon() {
 function GearIcon() {
   return (
     <svg
-      className="w-5 h-5"
+      className="w-4 h-4"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -79,6 +86,42 @@ function GearIcon() {
   );
 }
 
+// Robot icon for Agent Mode
+function RobotIcon() {
+  return (
+    <svg
+      className="w-4 h-4"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+      />
+      <circle cx="9" cy="9" r="1" fill="currentColor" />
+      <circle cx="15" cy="9" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
+// Menu icon for chat list toggle
+function MenuIcon() {
+  return (
+    <svg
+      className="w-4 h-4"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+    </svg>
+  );
+}
+
 export function InputToolbar({
   currentModel,
   onModelClick,
@@ -86,23 +129,77 @@ export function InputToolbar({
   onSlashClick,
   onSettingsClick,
   disabled = false,
+  agentMode = false,
+  onAgentModeChange,
+  includeActiveTab = false,
+  onActiveTabChange,
+  onChatListToggle,
+  showChatList = false,
 }: InputToolbarProps) {
   const shortName = getShortModelName(currentModel);
 
   return (
-    <div className="flex items-center justify-between px-3 py-1.5 bg-white border-t border-gray-100 text-sm">
-      {/* Left side: Model selector + @ + / */}
+    <div className="flex items-center justify-between px-3 py-1.5 bg-white border-t border-gray-100 text-xs">
+      {/* Left side: Chat list, Agent Mode, Current Tab, Model, @, / */}
       <div className="flex items-center gap-1">
+        {/* Chat list toggle (menu icon) */}
+        {onChatListToggle && (
+          <button
+            type="button"
+            onClick={onChatListToggle}
+            disabled={disabled}
+            className={`p-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              showChatList
+                ? 'text-blue-600 hover:bg-blue-50'
+                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+            } rounded`}
+            title={showChatList ? 'Hide chat list' : 'Show chat list'}
+          >
+            <MenuIcon />
+          </button>
+        )}
+
+        {/* Agent Mode checkbox with robot icon */}
+        {onAgentModeChange && (
+          <label className="flex items-center gap-1 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={agentMode}
+              disabled={disabled}
+              onChange={(e) => onAgentModeChange((e.target as HTMLInputElement).checked)}
+              className="h-3.5 w-3.5 text-blue-600 border-gray-300 rounded focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+            />
+            <span className="flex items-center gap-0.5 text-gray-500">
+              <RobotIcon />
+            </span>
+            <span className="sr-only">Agent Mode</span>
+          </label>
+        )}
+
+        {/* Current Tab checkbox */}
+        {onActiveTabChange && (
+          <label className="flex items-center gap-1 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={includeActiveTab}
+              disabled={disabled}
+              onChange={(e) => onActiveTabChange((e.target as HTMLInputElement).checked)}
+              className="h-3.5 w-3.5 text-blue-600 border-gray-300 rounded focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+            />
+            <span className="text-gray-500">Current Tab</span>
+          </label>
+        )}
+
         {/* Model button */}
         <button
           type="button"
           onClick={onModelClick}
           disabled={disabled}
-          className="flex items-center gap-1.5 px-2 py-1 text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 px-2 py-1 text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title={`Current model: ${currentModel}`}
         >
           <ModelIcon />
-          <span className="text-xs font-medium">{shortName}</span>
+          <span className="font-medium">{shortName}</span>
         </button>
 
         {/* @ button */}
@@ -113,7 +210,7 @@ export function InputToolbar({
           className="px-2 py-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Add tab context (@)"
         >
-          <span className="text-sm font-medium">@</span>
+          <span className="font-medium">@</span>
         </button>
 
         {/* / button */}
@@ -124,11 +221,11 @@ export function InputToolbar({
           className="px-2 py-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Commands (/)"
         >
-          <span className="text-sm font-medium">/</span>
+          <span className="font-medium">/</span>
         </button>
       </div>
 
-      {/* Right side: Settings gear only */}
+      {/* Right side: Settings gear */}
       <button
         type="button"
         onClick={onSettingsClick}

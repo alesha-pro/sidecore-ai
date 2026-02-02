@@ -3,7 +3,6 @@ import ChatHistory from '../../components/ChatHistory';
 import ChatList from '../../components/ChatList';
 import { MentionInput } from '../../components/MentionInput';
 import SettingsForm from '../../components/SettingsForm';
-import { ContextBar } from '../../components/ContextBar';
 import { ExtractionStatus } from '../../components/ExtractionStatus';
 import { SelectedTabsBar } from '../../components/SelectedTabsBar';
 import { PromptDebugView } from '../../components/PromptDebugView';
@@ -962,48 +961,7 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
-      <header className="flex items-center justify-between p-4 bg-white border-b border-gray-200">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setShowChatList(!showChatList)}
-            className="p-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
-            title="Toggle chat list"
-            aria-label="Toggle chat list"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={2}
-              stroke="currentColor"
-              className="w-5 h-5"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-            </svg>
-          </button>
-          <h1 className="text-lg font-semibold text-gray-900">AI Agent</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-1.5 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={settings?.agentMode ?? false}
-              disabled={!settings || isLLMLoading || isStreaming}
-              onChange={async (e) => {
-                if (!settings) return;
-                const checked = (e.target as HTMLInputElement).checked;
-                const updatedSettings = { ...settings, agentMode: checked };
-                await saveSettings(updatedSettings);
-                setSettings(updatedSettings);
-              }}
-              className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-            />
-            <span className="text-sm text-gray-600">Agent Mode</span>
-            <span className="sr-only">Enable automatic tool calling</span>
-          </label>
-        </div>
-      </header>
+      {/* Header removed - all controls moved to bottom toolbar */}
 
       {showSettings ? (
         <SettingsForm
@@ -1023,11 +981,6 @@ export default function App() {
             />
           )}
           <div className="flex flex-col flex-1 min-w-0">
-            <ContextBar
-              activeTab={activeTab}
-              selection={tabSelection}
-              onSelectionChange={setTabSelection}
-            />
             {settings?.showExtractionStatus && (
               <ExtractionStatus results={extractionResults} />
             )}
@@ -1068,6 +1021,17 @@ export default function App() {
               currentModel={settings?.defaultModel || ''}
               onModelClick={() => setShowModelSelector(true)}
               onSettingsClick={() => setShowSettings(!showSettings)}
+              agentMode={settings?.agentMode ?? false}
+              onAgentModeChange={async (enabled) => {
+                if (!settings) return;
+                const updatedSettings = { ...settings, agentMode: enabled };
+                await saveSettings(updatedSettings);
+                setSettings(updatedSettings);
+              }}
+              includeActiveTab={tabSelection.includeActiveTab}
+              onActiveTabChange={handleToggleActiveTab}
+              onChatListToggle={() => setShowChatList(!showChatList)}
+              showChatList={showChatList}
             />
           </div>
         </div>
