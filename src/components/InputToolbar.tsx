@@ -4,7 +4,6 @@ interface InputToolbarProps {
   onAtClick: () => void;
   onSlashClick: () => void;
   onSettingsClick: () => void;
-  onSend: () => void;
   disabled?: boolean;
 }
 
@@ -80,32 +79,12 @@ function GearIcon() {
   );
 }
 
-// Elegant send icon (paper plane)
-function SendIcon() {
-  return (
-    <svg
-      className="w-4 h-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"
-      />
-    </svg>
-  );
-}
-
 export function InputToolbar({
   currentModel,
   onModelClick,
   onAtClick,
   onSlashClick,
   onSettingsClick,
-  onSend,
   disabled = false,
 }: InputToolbarProps) {
   const shortName = getShortModelName(currentModel);
@@ -149,30 +128,16 @@ export function InputToolbar({
         </button>
       </div>
 
-      {/* Right side: Settings gear + Send button */}
-      <div className="flex items-center gap-1">
-        {/* Settings gear */}
-        <button
-          type="button"
-          onClick={onSettingsClick}
-          disabled={disabled}
-          className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Settings"
-        >
-          <GearIcon />
-        </button>
-
-        {/* Send button */}
-        <button
-          type="button"
-          onClick={onSend}
-          disabled={disabled}
-          className="flex items-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
-          title="Send message (Enter)"
-        >
-          <SendIcon />
-        </button>
-      </div>
+      {/* Right side: Settings gear only */}
+      <button
+        type="button"
+        onClick={onSettingsClick}
+        disabled={disabled}
+        className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Settings"
+      >
+        <GearIcon />
+      </button>
     </div>
   );
 }

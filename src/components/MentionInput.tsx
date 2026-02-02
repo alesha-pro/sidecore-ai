@@ -488,18 +488,33 @@ export function MentionInput({
             filter={commandFilter}
           />
 
-          {/* Input area */}
-          <div
-            ref={inputRef}
-            contentEditable={!disabled}
-            onKeyDown={handleKeyDown}
-            onInput={handleInput}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg min-h-[38px] max-h-[150px] overflow-y-auto focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400"
-            data-placeholder="Type a message, @ for tabs, / for commands"
-            role="textbox"
-            aria-label="Message input"
-            aria-multiline="true"
-          />
+          {/* Input area with inline Send button */}
+          <div className="relative">
+            <div
+              ref={inputRef}
+              contentEditable={!disabled}
+              onKeyDown={handleKeyDown}
+              onInput={handleInput}
+              className="w-full px-3 py-2 pr-10 text-sm border border-gray-300 rounded-lg min-h-[38px] max-h-[150px] overflow-y-auto focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400"
+              data-placeholder="Type a message, @ for tabs, / for commands"
+              role="textbox"
+              aria-label="Message input"
+              aria-multiline="true"
+            />
+
+            {/* Send button - positioned inside input, on the right */}
+            <button
+              type="button"
+              onClick={handleSend}
+              disabled={disabled}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              title="Send message (Enter)"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -510,7 +525,6 @@ export function MentionInput({
         onAtClick={handleAtClick}
         onSlashClick={handleSlashClick}
         onSettingsClick={onSettingsClick || (() => {})}
-        onSend={handleSend}
         disabled={disabled}
       />
     </div>
