@@ -27,6 +27,8 @@ import {
   deleteChat,
   createChat,
 } from '../../lib/chat-storage';
+import { runAgentLoop } from '../../lib/agent/agent-loop';
+import { toolRegistry } from '../../lib/tools';
 
 // Helper function to get language instruction
 function getLanguageInstruction(languageCode: string): string {
@@ -413,7 +415,49 @@ export default function App() {
         content,
       });
 
-      if (settings.stream) {
+      // Agent Mode: use agentic loop with automatic tool execution
+      if (settings.agentMode) {
+        // Get tools from registry
+        const tools = toolRegistry.getDefinitions();
+
+        // Create executeTool callback
+        const executeTool = async (name: string, args: unknown) => {
+          const tool = toolRegistry.get(name);
+          if (!tool) {
+            return { error: 'Tool not found', name };
+          }
+          return await tool.execute(args);
+        };
+
+        // Run the agent loop (clone apiMessages to avoid mutation)
+        const result = await runAgentLoop({
+          baseUrl: settings.baseUrl,
+          apiKey: settings.apiKey,
+          model: settings.defaultModel,
+          messages: [...apiMessages],
+          tools,
+          executeTool,
+          maxIterations: settings.agentMaxIterations,
+          timeoutMs: settings.agentTimeoutMs,
+          signal: abortControllerRef.current.signal,
+        });
+
+        // Extract thinking from final message
+        const { thinking, mainContent } = extractThinking(
+          result.finalMessage.content ?? '',
+          result.finalMessage.reasoning_content
+        );
+
+        // Add final assistant message to UI
+        const assistantMessage: Message = {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: mainContent,
+          thinking: thinking || undefined,
+          timestamp: Date.now(),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+      } else if (settings.stream) {
         const streamingMessageId = crypto.randomUUID();
         setMessages((prev) => [...prev, {
           id: streamingMessageId,
@@ -522,6 +566,20 @@ export default function App() {
       if (error instanceof LLMError) {
         setLLMError(error.userMessage);
         console.error(error.toLogString());
+      } else if (error instanceof DOMException && error.name === 'AbortError') {
+        // Agent loop or request was aborted
+        console.log('Request aborted successfully.');
+        setLLMError('Generation stopped.');
+        setMessages((prev) => {
+          const lastMessage = prev[prev.length - 1];
+          if (lastMessage && lastMessage.isStreaming) {
+            return [
+              ...prev.slice(0, -1),
+              { ...lastMessage, isStreaming: false },
+            ];
+          }
+          return prev;
+        });
       } else if (abortControllerRef.current?.signal.aborted) {
         console.log('LLM request aborted successfully.');
         setLLMError('Generation stopped.');
@@ -535,8 +593,14 @@ export default function App() {
           }
           return prev;
         });
-      }
-      else {
+      } else if (error instanceof Error && (
+        error.message === 'Agent loop timed out' ||
+        error.message === 'Agent loop exceeded max iterations'
+      )) {
+        // Agent loop specific errors - show user-friendly message
+        setLLMError(error.message);
+        console.error('Agent loop error:', error.message);
+      } else {
         setLLMError('An unexpected error occurred. Please try again.');
         console.error('LLM request error:', error);
       }
