@@ -295,11 +295,30 @@ export default function App() {
       });
     }
 
-    // 3. Conversation history
-    preview.push(...messages.map((msg) => ({
-      role: msg.role,
-      content: msg.content,
-    })));
+    // 3. Conversation history (include tool_calls and tool metadata)
+    preview.push(...messages.map((msg) => {
+      const apiMsg: LLMChatMessage = {
+        role: msg.role,
+        content: msg.content,
+      };
+
+      // Include tool_calls for assistant messages
+      if (msg.role === 'assistant' && msg.tool_calls) {
+        apiMsg.tool_calls = msg.tool_calls;
+      }
+
+      // Include tool_call_id and name for tool messages
+      if (msg.role === 'tool') {
+        if (msg.tool_call_id) {
+          apiMsg.tool_call_id = msg.tool_call_id;
+        }
+        if (msg.name) {
+          apiMsg.name = msg.name;
+        }
+      }
+
+      return apiMsg;
+    }));
 
     // 4. Current user message
     if (content.trim()) {
@@ -403,11 +422,30 @@ export default function App() {
         });
       }
 
-      // 3. Add conversation history
-      apiMessages.push(...messages.map((msg) => ({
-        role: msg.role,
-        content: msg.content,
-      })));
+      // 3. Add conversation history (include tool_calls for assistant, tool_call_id/name for tool messages)
+      apiMessages.push(...messages.map((msg) => {
+        const apiMsg: LLMChatMessage = {
+          role: msg.role,
+          content: msg.content,
+        };
+
+        // Include tool_calls for assistant messages
+        if (msg.role === 'assistant' && msg.tool_calls) {
+          apiMsg.tool_calls = msg.tool_calls;
+        }
+
+        // Include tool_call_id and name for tool messages
+        if (msg.role === 'tool') {
+          if (msg.tool_call_id) {
+            apiMsg.tool_call_id = msg.tool_call_id;
+          }
+          if (msg.name) {
+            apiMsg.name = msg.name;
+          }
+        }
+
+        return apiMsg;
+      }));
 
       // 4. Add current user message
       apiMessages.push({
@@ -484,13 +522,65 @@ export default function App() {
           }
 
           if (chunk.type === 'data' && typeof chunk.payload === 'object' && 'choices' in chunk.payload) {
-            const delta = chunk.payload.choices[0].delta.content || '';
+            const delta = chunk.payload.choices[0].delta;
+            const contentDelta = delta.content || '';
+            const toolCallDeltas = delta.tool_calls;
+
             setMessages((prev) => {
               const lastMessage = prev[prev.length - 1];
               if (lastMessage && lastMessage.id === streamingMessageId) {
+                let updatedMessage = { ...lastMessage };
+
+                // Accumulate content
+                if (contentDelta) {
+                  updatedMessage.content = lastMessage.content + contentDelta;
+                }
+
+                // Accumulate tool calls (index-based)
+                if (toolCallDeltas && toolCallDeltas.length > 0) {
+                  // Initialize tool_calls array if not present
+                  const existingToolCalls = lastMessage.tool_calls || [];
+                  const toolCallsMap = new Map(
+                    existingToolCalls.map((tc, idx) => [idx, tc])
+                  );
+
+                  // Process each delta
+                  for (const delta of toolCallDeltas) {
+                    const index = delta.index;
+                    const existing = toolCallsMap.get(index);
+
+                    if (existing) {
+                      // Append to existing tool call
+                      if (delta.function?.arguments) {
+                        toolCallsMap.set(index, {
+                          ...existing,
+                          function: {
+                            ...existing.function,
+                            arguments: existing.function.arguments + delta.function.arguments,
+                          },
+                        });
+                      }
+                    } else {
+                      // Create new tool call
+                      toolCallsMap.set(index, {
+                        id: delta.id || '',
+                        type: 'function',
+                        function: {
+                          name: delta.function?.name || '',
+                          arguments: delta.function?.arguments || '',
+                        },
+                      });
+                    }
+                  }
+
+                  // Convert map back to array
+                  updatedMessage.tool_calls = Array.from(toolCallsMap.values());
+                  console.log('[streaming] Tool calls accumulated:', updatedMessage.tool_calls);
+                }
+
                 return [
                   ...prev.slice(0, -1),
-                  { ...lastMessage, content: lastMessage.content + delta },
+                  updatedMessage,
                 ];
               }
               return prev;
