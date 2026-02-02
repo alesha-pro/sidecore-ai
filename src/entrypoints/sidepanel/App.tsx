@@ -623,10 +623,11 @@ export default function App() {
           result.finalMessage.reasoning_content
         );
 
-        // Finalize the streaming message with extracted thinking
+        // Finalize the last streaming message with extracted thinking
         setMessages((prev) => {
           const lastMessage = prev[prev.length - 1];
-          if (lastMessage && lastMessage.id === currentStreamingId) {
+          // Find and finalize the streaming message (ID may have changed during iterations)
+          if (lastMessage?.role === 'assistant' && lastMessage?.isStreaming) {
             return [...prev.slice(0, -1), {
               ...lastMessage,
               content: mainContent,
