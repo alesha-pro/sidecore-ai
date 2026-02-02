@@ -1,11 +1,30 @@
+/**
+ * Tool call structure (matches OpenAI spec)
+ */
+export interface ToolCall {
+  id: string;
+  type: 'function';
+  function: {
+    name: string;
+    /** JSON-encoded arguments */
+    arguments: string;
+  };
+}
+
 export interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'tool';
   content: string;
   thinking?: string; // Optional thinking/reasoning content
   timestamp: number;
   isStreaming?: boolean;
   isError?: boolean;
+  /** Tool calls made by assistant (only for role: 'assistant') */
+  tool_calls?: ToolCall[];
+  /** ID of the tool call this message is responding to (only for role: 'tool') */
+  tool_call_id?: string;
+  /** Name of the tool (for role: 'tool') */
+  name?: string;
 }
 
 export interface Settings {
