@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'preact/hooks';
 import ChatHistory from '../../components/ChatHistory';
+import ChatList from '../../components/ChatList';
 import { MentionInput } from '../../components/MentionInput';
 import SettingsForm from '../../components/SettingsForm';
 import { ContextBar } from '../../components/ContextBar';
@@ -9,7 +10,7 @@ import { PromptDebugView } from '../../components/PromptDebugView';
 import ModelSelector from '../../components/ModelSelector';
 import { useTabs } from '../../hooks/useTabs';
 import { getSettings, saveSettings } from '../../lib/storage';
-import type { Message, Settings, TabSelection } from '../../lib/types';
+import type { Message, Settings, TabSelection, Chat, ChatSummary } from '../../lib/types';
 import { DEFAULT_SETTINGS, DEFAULT_TAB_SELECTION } from '../../lib/types';
 import { createChatCompletion } from '../../lib/llm/client';
 import { LLMError } from '../../lib/llm/errors';
@@ -18,6 +19,13 @@ import type { ExtractedTabContent } from '../../shared/extraction';
 import type { TabInfo } from '../../lib/tabs';
 import { createStreamingClient } from '../../lib/streaming/streaming-client';
 import { extractThinking } from '../../lib/thinking';
+import {
+  listChats,
+  loadChat,
+  saveChat,
+  deleteChat,
+  createChat,
+} from '../../lib/chat-storage';
 
 export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -39,6 +47,11 @@ export default function App() {
   const [previewExtraction, setPreviewExtraction] = useState<ExtractedTabContent[]>([]);
   const [isPreviewExtracting, setIsPreviewExtracting] = useState(false);
 
+  // Chat management state
+  const [chats, setChats] = useState<ChatSummary[]>([]);
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [showChatList, setShowChatList] = useState(false);
+
   const isStreaming = useMemo(
     () => messages.some((message) => message.isStreaming),
     [messages]
@@ -54,7 +67,7 @@ export default function App() {
   const { tabs, activeTab } = useTabs(handleTabClosed);
 
   useEffect(() => {
-    const loadSettings = async () => {
+    const loadSettingsAndChats = async () => {
       try {
         const loadedSettings = await getSettings();
         setSettings(loadedSettings);
@@ -62,8 +75,34 @@ export default function App() {
         if (!loadedSettings.baseUrl || !loadedSettings.apiKey) {
           setShowSettings(true);
         }
+
+        // Load chats
+        const chatList = await listChats();
+        setChats(chatList);
+
+        // Load most recent chat or create new one
+        if (chatList.length > 0) {
+          const mostRecent = chatList[0];
+          const chat = await loadChat(mostRecent.id);
+          if (chat) {
+            setCurrentChatId(chat.id);
+            setMessages(chat.messages);
+          }
+        } else {
+          // Create initial chat
+          const newChat = await createChat();
+          await saveChat(newChat);
+          setCurrentChatId(newChat.id);
+          setMessages([]);
+          setChats([{
+            id: newChat.id,
+            title: newChat.title,
+            messageCount: 0,
+            updatedAt: newChat.updatedAt,
+          }]);
+        }
       } catch (error) {
-        console.error('Failed to load settings:', error);
+        console.error('Failed to load settings or chats:', error);
         setSettings({ ...DEFAULT_SETTINGS });
         setShowSettings(true);
       } finally {
@@ -71,7 +110,7 @@ export default function App() {
       }
     };
 
-    loadSettings();
+    loadSettingsAndChats();
   }, []);
 
   useEffect(() => {
@@ -79,6 +118,47 @@ export default function App() {
       abortControllerRef.current?.abort();
     };
   }, []);
+
+  // Auto-save current chat when messages change
+  useEffect(() => {
+    const saveChatAsync = async () => {
+      if (!currentChatId || messages.length === 0) return;
+
+      try {
+        // Auto-generate title from first user message if still "New Chat"
+        const currentChat = await loadChat(currentChatId);
+        if (!currentChat) return;
+
+        let title = currentChat.title;
+        if (title === 'New Chat' && messages.length > 0) {
+          const firstUserMessage = messages.find((m) => m.role === 'user');
+          if (firstUserMessage) {
+            title = firstUserMessage.content.slice(0, 50);
+            if (firstUserMessage.content.length > 50) {
+              title += '...';
+            }
+          }
+        }
+
+        const updatedChat: Chat = {
+          ...currentChat,
+          title,
+          messages,
+          updatedAt: Date.now(),
+        };
+
+        await saveChat(updatedChat);
+
+        // Update chats list
+        const updatedChats = await listChats();
+        setChats(updatedChats);
+      } catch (error) {
+        console.error('Failed to auto-save chat:', error);
+      }
+    };
+
+    saveChatAsync();
+  }, [messages, currentChatId]);
 
   const handleSaveSettings = async (newSettings: Settings) => {
     await saveSettings(newSettings);
@@ -471,6 +551,85 @@ export default function App() {
     }
   }, [settings]);
 
+  // Chat management handlers
+  const handleNewChat = useCallback(async () => {
+    try {
+      const newChat = await createChat();
+      await saveChat(newChat);
+      setCurrentChatId(newChat.id);
+      setMessages([]);
+      const updatedChats = await listChats();
+      setChats(updatedChats);
+    } catch (error) {
+      console.error('Failed to create new chat:', error);
+    }
+  }, []);
+
+  const handleSelectChat = useCallback(async (id: string) => {
+    try {
+      const chat = await loadChat(id);
+      if (chat) {
+        setCurrentChatId(chat.id);
+        setMessages(chat.messages);
+      }
+    } catch (error) {
+      console.error('Failed to load chat:', error);
+    }
+  }, []);
+
+  const handleDeleteChat = useCallback(async (id: string) => {
+    try {
+      await deleteChat(id);
+      const updatedChats = await listChats();
+      setChats(updatedChats);
+
+      // If deleted current chat, switch to another or create new
+      if (id === currentChatId) {
+        if (updatedChats.length > 0) {
+          await handleSelectChat(updatedChats[0].id);
+        } else {
+          await handleNewChat();
+        }
+      }
+    } catch (error) {
+      console.error('Failed to delete chat:', error);
+    }
+  }, [currentChatId, handleSelectChat, handleNewChat]);
+
+  const handleEditMessage = useCallback(async (id: string, newContent: string) => {
+    // Find the message being edited
+    const messageIndex = messages.findIndex((m) => m.id === id);
+    if (messageIndex === -1) return;
+
+    const message = messages[messageIndex];
+
+    // Update the message content
+    const updatedMessages = [...messages];
+    updatedMessages[messageIndex] = { ...message, content: newContent };
+
+    // If it's a user message, remove all messages after it and re-send
+    if (message.role === 'user') {
+      // Abort any in-flight request
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      // Remove assistant messages after the edited message
+      const messagesToKeep = updatedMessages.slice(0, messageIndex + 1);
+      setMessages(messagesToKeep);
+
+      // Re-send the message
+      await handleSendMessage(newContent);
+    } else {
+      // Just update the message (assistant messages)
+      setMessages(updatedMessages);
+    }
+  }, [messages, handleSendMessage]);
+
+  const handleDeleteMessage = useCallback((id: string) => {
+    setMessages((prev) => prev.filter((m) => m.id !== id));
+  }, []);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -482,7 +641,27 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       <header className="flex items-center justify-between p-4 bg-white border-b border-gray-200">
-        <h1 className="text-lg font-semibold text-gray-900">AI Agent</h1>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowChatList(!showChatList)}
+            className="p-1 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+            title="Toggle chat list"
+            aria-label="Toggle chat list"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              className="w-5 h-5"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+          </button>
+          <h1 className="text-lg font-semibold text-gray-900">AI Agent</h1>
+        </div>
         <button
           type="button"
           onClick={() => setShowSettings(!showSettings)}
@@ -504,55 +683,68 @@ export default function App() {
           onCancel={() => setShowSettings(false)}
         />
       ) : (
-        <>
-          <ContextBar
-            activeTab={activeTab}
-            selection={tabSelection}
-            onSelectionChange={setTabSelection}
-          />
-          <ExtractionStatus results={extractionResults} />
-          <ChatHistory
-            messages={messages}
-            isLoading={isLLMLoading && !isStreaming}
-            error={llmError}
-            isStreaming={isStreaming}
-            onStop={handleStopStreaming}
-          />
-          <SelectedTabsBar
-            tabs={selectedTabsForInput}
-            includeActiveTab={tabSelection.includeActiveTab}
-            activeTab={activeTab}
-            onRemoveTab={handleRemoveTab}
-            onToggleActiveTab={handleToggleActiveTab}
-          />
-          {settings?.showDebugPrompt && (
-            <PromptDebugView
-              messages={previewMessages}
-              isOpen={isDebugViewOpen}
-              onToggle={handleDebugViewToggle}
-              isLoading={isPreviewExtracting}
+        <div className="flex flex-1 overflow-hidden">
+          {showChatList && (
+            <ChatList
+              chats={chats}
+              currentChatId={currentChatId}
+              onSelectChat={handleSelectChat}
+              onNewChat={handleNewChat}
+              onDeleteChat={handleDeleteChat}
             />
           )}
-          {settings && (
-            <ModelSelector
-              currentModel={settings.defaultModel}
-              savedModels={settings.savedModels}
-              onModelChange={handleModelChange}
-              disabled={isLLMLoading || isStreaming}
+          <div className="flex flex-col flex-1">
+            <ContextBar
+              activeTab={activeTab}
+              selection={tabSelection}
+              onSelectionChange={setTabSelection}
             />
-          )}
-          <MentionInput
-            onSend={handleSendMessage}
-            disabled={!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel || isLLMLoading || isStreaming}
-            selectedTabs={selectedTabsForInput}
-            onRemoveTab={handleRemoveTab}
-            availableTabs={tabs}
-            onSelectTab={handleSelectTab}
-            isPickerOpen={isTabPickerOpen}
-            onPickerOpenChange={setIsTabPickerOpen}
-            onInputChange={handleInputChange}
-          />
-        </>
+            <ExtractionStatus results={extractionResults} />
+            <ChatHistory
+              messages={messages}
+              isLoading={isLLMLoading && !isStreaming}
+              error={llmError}
+              isStreaming={isStreaming}
+              onStop={handleStopStreaming}
+              onEditMessage={handleEditMessage}
+              onDeleteMessage={handleDeleteMessage}
+            />
+            <SelectedTabsBar
+              tabs={selectedTabsForInput}
+              includeActiveTab={tabSelection.includeActiveTab}
+              activeTab={activeTab}
+              onRemoveTab={handleRemoveTab}
+              onToggleActiveTab={handleToggleActiveTab}
+            />
+            {settings?.showDebugPrompt && (
+              <PromptDebugView
+                messages={previewMessages}
+                isOpen={isDebugViewOpen}
+                onToggle={handleDebugViewToggle}
+                isLoading={isPreviewExtracting}
+              />
+            )}
+            {settings && (
+              <ModelSelector
+                currentModel={settings.defaultModel}
+                savedModels={settings.savedModels}
+                onModelChange={handleModelChange}
+                disabled={isLLMLoading || isStreaming}
+              />
+            )}
+            <MentionInput
+              onSend={handleSendMessage}
+              disabled={!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel || isLLMLoading || isStreaming}
+              selectedTabs={selectedTabsForInput}
+              onRemoveTab={handleRemoveTab}
+              availableTabs={tabs}
+              onSelectTab={handleSelectTab}
+              isPickerOpen={isTabPickerOpen}
+              onPickerOpenChange={setIsTabPickerOpen}
+              onInputChange={handleInputChange}
+            />
+          </div>
+        </div>
       )}
     </div>
   );
