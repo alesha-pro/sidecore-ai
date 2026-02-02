@@ -29,6 +29,7 @@ import {
 } from '../../lib/chat-storage';
 import { runAgentLoop } from '../../lib/agent/agent-loop';
 import { toolRegistry } from '../../lib/tools';
+import { registerBuiltInTools } from '../../lib/tools/builtins';
 
 // Helper function to get language instruction
 function getLanguageInstruction(languageCode: string): string {
@@ -455,7 +456,8 @@ export default function App() {
 
       // Agent Mode: use agentic loop with automatic tool execution
       if (settings.agentMode) {
-        // Get tools from registry
+        // Register built-in tools and get definitions
+        registerBuiltInTools(toolRegistry);
         const tools = toolRegistry.getDefinitions();
 
         // Create executeTool callback
