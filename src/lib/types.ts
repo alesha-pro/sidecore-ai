@@ -42,6 +42,7 @@ export interface Settings {
   agentMaxIterations: number;
   agentTimeoutMs: number;
   exaApiKey: string;
+  mcpServers: McpServerConfig[];
 }
 
 export const SUPPORTED_LANGUAGES = [
@@ -85,6 +86,7 @@ export const DEFAULT_SETTINGS: Settings = {
   agentMaxIterations: 15,
   agentTimeoutMs: 5 * 60 * 1000,
   exaApiKey: '',
+  mcpServers: [],
 };
 
 export interface TabSelection {
@@ -110,4 +112,26 @@ export interface ChatSummary {
   title: string;
   messageCount: number;
   updatedAt: number;
+}
+
+// ============================================================================
+// MCP Server Configuration
+// ============================================================================
+
+/**
+ * Header key-value pair for MCP server authentication
+ */
+export interface McpHeader {
+  key: string;
+  value: string;
+}
+
+/**
+ * MCP server configuration
+ */
+export interface McpServerConfig {
+  id: string;
+  name: string;
+  url: string;
+  headers: McpHeader[];
 }

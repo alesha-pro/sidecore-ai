@@ -1,9 +1,15 @@
 import { useState, useEffect } from 'preact/hooks';
-import type { Settings } from '../lib/types';
+import type { Settings, McpHeader } from '../lib/types';
 import { DEFAULT_SYSTEM_PROMPT, SUPPORTED_LANGUAGES } from '../lib/types';
 import { normalizeBaseUrl, validateBaseUrl } from '../lib/urlNormalization';
 import { listModels } from '../lib/llm/client';
 import { LLMError } from '../lib/llm/errors';
+
+interface McpServerDraft {
+  name: string;
+  url: string;
+  headers: McpHeader[];
+}
 
 interface SettingsFormProps {
   settings: Settings;
@@ -21,6 +27,21 @@ interface FormErrors {
   agentTimeoutMs?: string;
 }
 
+const emptyMcpServerDraft = (): McpServerDraft => ({
+  name: '',
+  url: '',
+  headers: [],
+});
+
+function isValidHttpUrl(str: string): boolean {
+  try {
+    const url = new URL(str);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 export default function SettingsForm({ settings, onSave, onCancel }: SettingsFormProps) {
   const [formData, setFormData] = useState<Settings>(settings);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -29,11 +50,17 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
+  // MCP Server draft state
+  const [mcpDraft, setMcpDraft] = useState<McpServerDraft>(emptyMcpServerDraft());
+  const [mcpUrlError, setMcpUrlError] = useState<string | null>(null);
+
   // Reset form when settings prop changes
   useEffect(() => {
     setFormData(settings);
     setErrors({});
     setSaveError(null);
+    setMcpDraft(emptyMcpServerDraft());
+    setMcpUrlError(null);
   }, [settings]);
 
   const validate = (): boolean => {
@@ -517,6 +544,223 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                   Maximum agent run time (60,000-900,000 ms). Default: 300,000 (5 min)
                 </p>
               )}
+            </div>
+          </div>
+        </details>
+
+        {/* Section 5: MCP Servers */}
+        <details className="border border-gray-200 rounded-lg bg-white">
+          <summary className="px-4 py-3 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 rounded-lg select-none">
+            MCP Servers
+          </summary>
+          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 mt-2 pt-4">
+            <p className="text-xs text-gray-500">
+              Add MCP (Model Context Protocol) servers to provide additional tools in Agent Mode.
+            </p>
+
+            {/* Existing servers list */}
+            {formData.mcpServers.length > 0 && (
+              <div className="space-y-2">
+                {formData.mcpServers.map((server) => (
+                  <div
+                    key={server.id}
+                    className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-gray-900 truncate">
+                        {server.name || 'Unnamed Server'}
+                      </div>
+                      <div className="text-xs text-gray-500 truncate">
+                        {server.url}
+                      </div>
+                      {server.headers.length > 0 && (
+                        <div className="text-xs text-gray-400 mt-1">
+                          {server.headers.length} header{server.headers.length === 1 ? '' : 's'}
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          mcpServers: prev.mcpServers.filter((s) => s.id !== server.id),
+                        }));
+                      }}
+                      className="ml-2 p-1 text-gray-400 hover:text-red-600 transition-colors"
+                      title="Remove server"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2}
+                        stroke="currentColor"
+                        className="w-4 h-4"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add new server form */}
+            <div className="space-y-3 pt-2 border-t border-gray-200">
+              <div className="text-sm font-medium text-gray-700">Add Server</div>
+
+              {/* Server Name */}
+              <div>
+                <label htmlFor="mcpServerName" className="block text-xs text-gray-600 mb-1">
+                  Name (optional)
+                </label>
+                <input
+                  id="mcpServerName"
+                  type="text"
+                  value={mcpDraft.name}
+                  onInput={(e) => setMcpDraft((prev) => ({ ...prev, name: (e.target as HTMLInputElement).value }))}
+                  placeholder="My MCP Server"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* Server URL */}
+              <div>
+                <label htmlFor="mcpServerUrl" className="block text-xs text-gray-600 mb-1">
+                  URL (required)
+                </label>
+                <input
+                  id="mcpServerUrl"
+                  type="text"
+                  value={mcpDraft.url}
+                  onInput={(e) => {
+                    setMcpDraft((prev) => ({ ...prev, url: (e.target as HTMLInputElement).value }));
+                    setMcpUrlError(null);
+                  }}
+                  placeholder="https://mcp-server.example.com/mcp"
+                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    mcpUrlError ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                />
+                {mcpUrlError && (
+                  <p className="mt-1 text-xs text-red-600">{mcpUrlError}</p>
+                )}
+              </div>
+
+              {/* Headers */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs text-gray-600">Headers (optional)</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMcpDraft((prev) => ({
+                        ...prev,
+                        headers: [...prev.headers, { key: '', value: '' }],
+                      }));
+                    }}
+                    className="text-xs text-blue-600 hover:text-blue-700"
+                  >
+                    + Add header
+                  </button>
+                </div>
+                {mcpDraft.headers.length > 0 && (
+                  <div className="space-y-2">
+                    {mcpDraft.headers.map((header, idx) => (
+                      <div key={idx} className="flex gap-2">
+                        <input
+                          type="text"
+                          value={header.key}
+                          onInput={(e) => {
+                            const newHeaders = [...mcpDraft.headers];
+                            newHeaders[idx] = { ...newHeaders[idx], key: (e.target as HTMLInputElement).value };
+                            setMcpDraft((prev) => ({ ...prev, headers: newHeaders }));
+                          }}
+                          placeholder="Header name"
+                          className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <input
+                          type="text"
+                          value={header.value}
+                          onInput={(e) => {
+                            const newHeaders = [...mcpDraft.headers];
+                            newHeaders[idx] = { ...newHeaders[idx], value: (e.target as HTMLInputElement).value };
+                            setMcpDraft((prev) => ({ ...prev, headers: newHeaders }));
+                          }}
+                          placeholder="Value"
+                          className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newHeaders = mcpDraft.headers.filter((_, i) => i !== idx);
+                            setMcpDraft((prev) => ({ ...prev, headers: newHeaders }));
+                          }}
+                          className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                          title="Remove header"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={2}
+                            stroke="currentColor"
+                            className="w-4 h-4"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Add Server Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  // Validate URL
+                  const trimmedUrl = mcpDraft.url.trim();
+                  if (!trimmedUrl) {
+                    setMcpUrlError('URL is required');
+                    return;
+                  }
+                  if (!isValidHttpUrl(trimmedUrl)) {
+                    setMcpUrlError('URL must be a valid http:// or https:// URL');
+                    return;
+                  }
+
+                  // Create new server config
+                  const newServer = {
+                    id: crypto.randomUUID(),
+                    name: mcpDraft.name.trim(),
+                    url: trimmedUrl,
+                    headers: mcpDraft.headers
+                      .filter((h) => h.key.trim() && h.value.trim())
+                      .map((h) => ({ key: h.key.trim(), value: h.value.trim() })),
+                  };
+
+                  // Add to formData
+                  setFormData((prev) => ({
+                    ...prev,
+                    mcpServers: [...prev.mcpServers, newServer],
+                  }));
+
+                  // Reset draft
+                  setMcpDraft(emptyMcpServerDraft());
+                  setMcpUrlError(null);
+                }}
+                disabled={!mcpDraft.url.trim()}
+                className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add Server
+              </button>
             </div>
           </div>
         </details>
