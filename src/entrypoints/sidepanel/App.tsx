@@ -5,6 +5,7 @@ import SettingsForm from '../../components/SettingsForm';
 import { ContextBar } from '../../components/ContextBar';
 import { ExtractionStatus } from '../../components/ExtractionStatus';
 import { SelectedTabsBar } from '../../components/SelectedTabsBar';
+import { PromptDebugView } from '../../components/PromptDebugView';
 import { useTabs } from '../../hooks/useTabs';
 import { getSettings, saveSettings } from '../../lib/storage';
 import type { Message, Settings, TabSelection } from '../../lib/types';
@@ -30,6 +31,10 @@ export default function App() {
   const [isTabPickerOpen, setIsTabPickerOpen] = useState(false);
 
   const [extractionResults, setExtractionResults] = useState<ExtractedTabContent[]>([]);
+
+  // Debug view state
+  const [isDebugViewOpen, setIsDebugViewOpen] = useState(false);
+  const [currentInputContent, setCurrentInputContent] = useState('');
 
   const isStreaming = useMemo(
     () => messages.some((message) => message.isStreaming),
@@ -129,6 +134,57 @@ export default function App() {
       ...prev,
       includeActiveTab: include,
     }));
+  }, []);
+
+  // Build preview messages for debug view (mirrors handleSendMessage logic but without sending)
+  const buildPreviewMessages = useCallback((content: string): LLMChatMessage[] => {
+    if (!settings) return [];
+
+    const preview: LLMChatMessage[] = [];
+
+    // 1. System prompt
+    if (settings.systemPrompt?.trim()) {
+      preview.push({
+        role: 'system',
+        content: settings.systemPrompt,
+      });
+    }
+
+    // 2. Context placeholder (show what would be extracted)
+    const selectedTabs = getSelectedTabs();
+    if (selectedTabs.length > 0) {
+      const tabList = selectedTabs.map(t => `- ${t.title}`).join('\n');
+      preview.push({
+        role: 'system',
+        content: `[Context will be extracted from ${selectedTabs.length} tab(s):\n${tabList}]`,
+      });
+    }
+
+    // 3. Conversation history
+    preview.push(...messages.map((msg) => ({
+      role: msg.role,
+      content: msg.content,
+    })));
+
+    // 4. Current user message
+    if (content.trim()) {
+      preview.push({
+        role: 'user',
+        content,
+      });
+    }
+
+    return preview;
+  }, [settings, getSelectedTabs, messages]);
+
+  // Preview messages for debug view
+  const previewMessages = useMemo(() => {
+    return buildPreviewMessages(currentInputContent);
+  }, [buildPreviewMessages, currentInputContent]);
+
+  // Handle input changes from MentionInput
+  const handleInputChange = useCallback((content: string) => {
+    setCurrentInputContent(content);
   }, []);
 
   const handleSendMessage = async (content: string, tabIds: number[] = []) => {
@@ -403,6 +459,11 @@ export default function App() {
             isStreaming={isStreaming}
             onStop={handleStopStreaming}
           />
+          <PromptDebugView
+            messages={previewMessages}
+            isOpen={isDebugViewOpen}
+            onToggle={() => setIsDebugViewOpen(!isDebugViewOpen)}
+          />
           <MentionInput
             onSend={handleSendMessage}
             disabled={!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel || isLLMLoading || isStreaming}
@@ -412,6 +473,7 @@ export default function App() {
             onSelectTab={handleSelectTab}
             isPickerOpen={isTabPickerOpen}
             onPickerOpenChange={setIsTabPickerOpen}
+            onInputChange={handleInputChange}
           />
         </>
       )}
