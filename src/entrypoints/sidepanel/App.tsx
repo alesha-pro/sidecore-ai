@@ -178,11 +178,18 @@ export default function App() {
           .join('\n\n');
       }
 
-      const apiMessages: LLMChatMessage[] = messages.map((msg) => ({
-        role: msg.role,
-        content: msg.content,
-      }));
+      // Build API messages
+      const apiMessages: LLMChatMessage[] = [];
 
+      // 1. Add system prompt first (if exists)
+      if (settings.systemPrompt?.trim()) {
+        apiMessages.push({
+          role: 'system' as const,
+          content: settings.systemPrompt,
+        });
+      }
+
+      // 2. Add system message with context if available
       if (systemMessage) {
         apiMessages.push({
           role: 'system' as const,
@@ -190,6 +197,13 @@ export default function App() {
         });
       }
 
+      // 3. Add conversation history
+      apiMessages.push(...messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      })));
+
+      // 4. Add current user message
       apiMessages.push({
         role: 'user' as const,
         content,
