@@ -48,33 +48,33 @@ export function SelectedTabsBar({
     return `${truncateTitle(displayTabs[0].title)}, +${displayTabs.length - 1} more`;
   };
 
-  const truncateTitle = (title: string, maxLen = 25) => {
+  const truncateTitle = (title: string, maxLen = 30) => {
     if (title.length <= maxLen) return title;
     return title.slice(0, maxLen) + '...';
   };
 
   return (
-    <div className="px-4 py-2 bg-gray-100 border-b border-gray-200">
-      {/* Collapsed view */}
+    <div className="px-3 py-1 bg-gray-50 border-t border-gray-200">
+      {/* Collapsed view - thin strip */}
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-2 w-full text-left text-sm text-gray-700 hover:text-gray-900"
+        className="flex items-center gap-1.5 w-full text-left text-xs text-gray-600 hover:text-gray-800"
         aria-expanded={isExpanded}
       >
         <svg
-          className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+          className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
-        <span className="font-medium">
+        <span className="text-gray-500">
           {displayTabs.length} {displayTabs.length === 1 ? 'tab' : 'tabs'} selected
         </span>
         {!isExpanded && (
-          <span className="text-gray-500 truncate">
+          <span className="text-gray-400 truncate flex-1">
             — {getSummaryText()}
           </span>
         )}
@@ -82,25 +82,25 @@ export function SelectedTabsBar({
 
       {/* Expanded view */}
       {isExpanded && (
-        <div className="mt-2 space-y-1 pl-6">
+        <div className="mt-1.5 space-y-0.5 pl-4">
           {displayTabs.map((tab) => (
             <div
               key={tab.id}
-              className="flex items-center gap-2 py-1 group"
+              className="flex items-center gap-1.5 py-0.5 group"
             >
               {/* Favicon or generic icon */}
               {tab.favIconUrl ? (
                 <img
                   src={tab.favIconUrl}
                   alt=""
-                  className="w-4 h-4 flex-shrink-0"
+                  className="w-3 h-3 flex-shrink-0"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
                 />
               ) : (
                 <svg
-                  className="w-4 h-4 text-gray-400 flex-shrink-0"
+                  className="w-3 h-3 text-gray-400 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -116,12 +116,12 @@ export function SelectedTabsBar({
 
               {/* Title */}
               <span
-                className="flex-1 text-sm text-gray-800 truncate"
+                className="flex-1 text-xs text-gray-700 truncate"
                 title={tab.title}
               >
                 {tab.title}
                 {'isActive' in tab && tab.isActive && (
-                  <span className="ml-2 text-xs text-blue-600">(active)</span>
+                  <span className="ml-1 text-blue-500">(active)</span>
                 )}
               </span>
 
@@ -137,7 +137,7 @@ export function SelectedTabsBar({
                   aria-label="Exclude active tab"
                   title="Exclude active tab"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
@@ -151,7 +151,7 @@ export function SelectedTabsBar({
                   className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                   aria-label={`Remove ${tab.title}`}
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>

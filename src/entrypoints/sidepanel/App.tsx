@@ -487,22 +487,21 @@ export default function App() {
             activeTab={activeTab}
             selection={tabSelection}
             onSelectionChange={setTabSelection}
-            onOpenPicker={() => setIsTabPickerOpen(true)}
           />
           <ExtractionStatus results={extractionResults} />
-          <SelectedTabsBar
-            tabs={selectedTabsForInput}
-            includeActiveTab={tabSelection.includeActiveTab}
-            activeTab={activeTab}
-            onRemoveTab={handleRemoveTab}
-            onToggleActiveTab={handleToggleActiveTab}
-          />
           <ChatHistory
             messages={messages}
             isLoading={isLLMLoading && !isStreaming}
             error={llmError}
             isStreaming={isStreaming}
             onStop={handleStopStreaming}
+          />
+          <SelectedTabsBar
+            tabs={selectedTabsForInput}
+            includeActiveTab={tabSelection.includeActiveTab}
+            activeTab={activeTab}
+            onRemoveTab={handleRemoveTab}
+            onToggleActiveTab={handleToggleActiveTab}
           />
           <PromptDebugView
             messages={previewMessages}
