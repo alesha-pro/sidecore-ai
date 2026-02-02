@@ -12,7 +12,7 @@ import QuickCommands from '../../components/QuickCommands';
 import { useTabs } from '../../hooks/useTabs';
 import { getSettings, saveSettings } from '../../lib/storage';
 import type { Message, Settings, TabSelection, Chat, ChatSummary } from '../../lib/types';
-import { DEFAULT_SETTINGS, DEFAULT_TAB_SELECTION } from '../../lib/types';
+import { DEFAULT_SETTINGS, DEFAULT_TAB_SELECTION, SUPPORTED_LANGUAGES } from '../../lib/types';
 import { createChatCompletion } from '../../lib/llm/client';
 import { LLMError } from '../../lib/llm/errors';
 import type { ChatMessage as LLMChatMessage } from '../../lib/llm/types';
@@ -27,6 +27,14 @@ import {
   deleteChat,
   createChat,
 } from '../../lib/chat-storage';
+
+// Helper function to get language instruction
+function getLanguageInstruction(languageCode: string): string {
+  if (languageCode === 'auto') return '';
+  const language = SUPPORTED_LANGUAGES.find((lang) => lang.code === languageCode);
+  if (!language) return '';
+  return `IMPORTANT: Always respond in ${language.label}.\n\n`;
+}
 
 export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -261,12 +269,16 @@ export default function App() {
 
     const preview: LLMChatMessage[] = [];
 
-    // 1. System prompt
-    if (settings.systemPrompt?.trim()) {
-      preview.push({
-        role: 'system',
-        content: settings.systemPrompt,
-      });
+    // 1. System prompt with optional language instruction
+    if (settings.systemPrompt?.trim() || settings.responseLanguage !== 'auto') {
+      const languageInstruction = getLanguageInstruction(settings.responseLanguage);
+      const systemPromptContent = languageInstruction + (settings.systemPrompt || '');
+      if (systemPromptContent.trim()) {
+        preview.push({
+          role: 'system',
+          content: systemPromptContent,
+        });
+      }
     }
 
     // 2. Context from extracted content (real extraction, not placeholder)
@@ -369,12 +381,16 @@ export default function App() {
       // Build API messages
       const apiMessages: LLMChatMessage[] = [];
 
-      // 1. Add system prompt first (if exists)
-      if (settings.systemPrompt?.trim()) {
-        apiMessages.push({
-          role: 'system' as const,
-          content: settings.systemPrompt,
-        });
+      // 1. Add system prompt first with optional language instruction
+      if (settings.systemPrompt?.trim() || settings.responseLanguage !== 'auto') {
+        const languageInstruction = getLanguageInstruction(settings.responseLanguage);
+        const systemPromptContent = languageInstruction + (settings.systemPrompt || '');
+        if (systemPromptContent.trim()) {
+          apiMessages.push({
+            role: 'system' as const,
+            content: systemPromptContent,
+          });
+        }
       }
 
       // 2. Add system message with context if available
