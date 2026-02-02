@@ -154,8 +154,10 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
           </div>
         )}
 
-        {/* Main content bubble - hide if streaming with no content (thinking shown instead) */}
-        {!(message.role === 'assistant' && message.isStreaming && !message.content && !message.tool_calls?.length) && (
+        {/* Main content bubble - hide if:
+            1. Streaming with no content yet (thinking bubble shown instead)
+            2. Assistant with empty content (tool-only message) */}
+        {!(message.role === 'assistant' && !message.content) && (
           <div
             className={`px-4 py-2 rounded-lg ${
               isUser
