@@ -140,7 +140,7 @@ export function InputToolbar({
 
   return (
     <div className="flex items-center justify-between px-3 py-1.5 bg-white border-t border-gray-100 text-xs">
-      {/* Left side: Model, @, / */}
+      {/* Left side: Model, @, /, Chat List, Agent Mode, Current Tab */}
       <div className="flex items-center gap-1">
         {/* Model button */}
         <button
@@ -175,10 +175,7 @@ export function InputToolbar({
         >
           <span className="font-medium">/</span>
         </button>
-      </div>
 
-      {/* Right side: Chat list, Agent Mode, Current Tab, Settings */}
-      <div className="flex items-center gap-1">
         {/* Chat list toggle (menu icon) */}
         {onChatListToggle && (
           <button
@@ -226,18 +223,18 @@ export function InputToolbar({
             <span className="text-gray-500">Current Tab</span>
           </label>
         )}
-
-        {/* Settings gear */}
-        <button
-          type="button"
-          onClick={onSettingsClick}
-          disabled={disabled}
-          className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Settings"
-        >
-          <GearIcon />
-        </button>
       </div>
+
+      {/* Right side: Settings gear only */}
+      <button
+        type="button"
+        onClick={onSettingsClick}
+        disabled={disabled}
+        className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        title="Settings"
+      >
+        <GearIcon />
+      </button>
     </div>
   );
 }
