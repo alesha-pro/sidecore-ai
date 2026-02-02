@@ -566,16 +566,24 @@ export default function App() {
           },
           onIterationStart: (iteration: number) => {
             console.log(`[agent] Starting iteration ${iteration}`);
-            // On iteration > 0, finalize previous message and create new streaming placeholder
+            // On iteration > 0, finalize previous streaming message and create new placeholder
             if (iteration > 0) {
               const newStreamingId = crypto.randomUUID();
               currentStreamingId = newStreamingId;
               setMessages((prev) => {
-                // Finalize last assistant message (remove isStreaming)
-                const lastMessage = prev[prev.length - 1];
-                const updatedPrev = lastMessage?.role === 'assistant' && lastMessage?.isStreaming
-                  ? [...prev.slice(0, -1), { ...lastMessage, isStreaming: false }]
-                  : prev;
+                // Find and finalize any streaming assistant message (may not be last due to tool messages)
+                const streamingIdx = prev.findIndex(
+                  (m) => m.role === 'assistant' && m.isStreaming
+                );
+                let updatedPrev = prev;
+                if (streamingIdx !== -1) {
+                  const streamingMessage = prev[streamingIdx];
+                  updatedPrev = [
+                    ...prev.slice(0, streamingIdx),
+                    { ...streamingMessage, isStreaming: false },
+                    ...prev.slice(streamingIdx + 1),
+                  ];
+                }
                 // Add new streaming placeholder for this iteration
                 return [...updatedPrev, {
                   id: newStreamingId,
