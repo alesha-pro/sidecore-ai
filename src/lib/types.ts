@@ -41,6 +41,7 @@ export interface Settings {
   agentMode: boolean;
   agentMaxIterations: number;
   agentTimeoutMs: number;
+  exaApiKey: string;
 }
 
 export const SUPPORTED_LANGUAGES = [
@@ -83,6 +84,7 @@ export const DEFAULT_SETTINGS: Settings = {
   agentMode: false,
   agentMaxIterations: 15,
   agentTimeoutMs: 5 * 60 * 1000,
+  exaApiKey: '',
 };
 
 export interface TabSelection {
