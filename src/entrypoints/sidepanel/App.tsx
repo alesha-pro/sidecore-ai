@@ -609,19 +609,23 @@ export default function App() {
 
     // If it's a user message, remove all messages after it and re-send
     if (message.role === 'user') {
-      // Abort any in-flight request
+      // Abort any in-flight request (if streaming)
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+        setIsLLMLoading(false);
       }
 
-      // Remove assistant messages after the edited message
+      // Remove all messages after the edited message (including partial responses)
       const messagesToKeep = updatedMessages.slice(0, messageIndex + 1);
       setMessages(messagesToKeep);
 
-      // Re-send the message
+      // Clear any errors
+      setLLMError(null);
+
+      // Re-send the message with updated content
       await handleSendMessage(newContent);
     } else {
-      // Just update the message (assistant messages)
+      // Just update the message content (for assistant messages)
       setMessages(updatedMessages);
     }
   }, [messages, handleSendMessage]);
