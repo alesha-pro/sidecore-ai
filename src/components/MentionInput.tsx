@@ -11,6 +11,7 @@ interface MentionInputProps {
   isPickerOpen: boolean;
   onPickerOpenChange: (open: boolean) => void;
   onInputChange?: (content: string) => void;
+  initialValue?: string;
 }
 
 interface ExtractedContent {
@@ -28,6 +29,7 @@ export function MentionInput({
   isPickerOpen,
   onPickerOpenChange,
   onInputChange,
+  initialValue,
 }: MentionInputProps) {
   const inputRef = useRef<HTMLDivElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -45,6 +47,23 @@ export function MentionInput({
       setActiveIndex(pickerTabs.length > 0 ? 0 : -1);
     }
   }, [isPickerOpen, pickerTabs.length]);
+
+  // Apply initialValue when it changes and is non-empty
+  useEffect(() => {
+    if (initialValue && inputRef.current) {
+      inputRef.current.textContent = initialValue;
+      // Move cursor to end
+      const range = document.createRange();
+      const selection = window.getSelection();
+      range.selectNodeContents(inputRef.current);
+      range.collapse(false);
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      inputRef.current.focus();
+      // Notify parent of content change
+      onInputChange?.(initialValue);
+    }
+  }, [initialValue, onInputChange]);
 
   // Close picker on click outside
   useEffect(() => {

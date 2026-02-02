@@ -8,6 +8,7 @@ import { ExtractionStatus } from '../../components/ExtractionStatus';
 import { SelectedTabsBar } from '../../components/SelectedTabsBar';
 import { PromptDebugView } from '../../components/PromptDebugView';
 import ModelSelector from '../../components/ModelSelector';
+import QuickCommands from '../../components/QuickCommands';
 import { useTabs } from '../../hooks/useTabs';
 import { getSettings, saveSettings } from '../../lib/storage';
 import type { Message, Settings, TabSelection, Chat, ChatSummary } from '../../lib/types';
@@ -46,6 +47,9 @@ export default function App() {
   const [currentInputContent, setCurrentInputContent] = useState('');
   const [previewExtraction, setPreviewExtraction] = useState<ExtractedTabContent[]>([]);
   const [isPreviewExtracting, setIsPreviewExtracting] = useState(false);
+
+  // Quick commands state
+  const [quickCommandText, setQuickCommandText] = useState('');
 
   // Chat management state
   const [chats, setChats] = useState<ChatSummary[]>([]);
@@ -331,6 +335,7 @@ export default function App() {
 
     setTabSelection(DEFAULT_TAB_SELECTION);
     setIsTabPickerOpen(false);
+    setQuickCommandText(''); // Clear quick command after send
 
     setLLMError(null);
     setIsLLMLoading(true);
@@ -737,6 +742,10 @@ export default function App() {
                 disabled={isLLMLoading || isStreaming}
               />
             )}
+            <QuickCommands
+              onCommandSelect={setQuickCommandText}
+              disabled={!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel || isLLMLoading || isStreaming}
+            />
             <MentionInput
               onSend={handleSendMessage}
               disabled={!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel || isLLMLoading || isStreaming}
@@ -747,6 +756,7 @@ export default function App() {
               isPickerOpen={isTabPickerOpen}
               onPickerOpenChange={setIsTabPickerOpen}
               onInputChange={handleInputChange}
+              initialValue={quickCommandText}
             />
           </div>
         </div>
