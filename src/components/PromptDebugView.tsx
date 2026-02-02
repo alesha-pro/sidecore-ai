@@ -5,9 +5,10 @@ interface PromptDebugViewProps {
   messages: ChatMessage[];
   isOpen: boolean;
   onToggle: () => void;
+  isLoading?: boolean;
 }
 
-export function PromptDebugView({ messages, isOpen, onToggle }: PromptDebugViewProps) {
+export function PromptDebugView({ messages, isOpen, onToggle, isLoading = false }: PromptDebugViewProps) {
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
 
   // Calculate totals
@@ -63,30 +64,42 @@ export function PromptDebugView({ messages, isOpen, onToggle }: PromptDebugViewP
 
       {isOpen && (
         <div className="px-4 pb-4 space-y-3">
-          <div className="flex justify-end">
-            <button
-              onClick={handleCopy}
-              className="px-3 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50"
-            >
-              {copyStatus === 'copied' ? '\u2713 Copied' : 'Copy to Clipboard'}
-            </button>
-          </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8 text-gray-500">
+              <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Extracting content...
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-end">
+                <button
+                  onClick={handleCopy}
+                  className="px-3 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  {copyStatus === 'copied' ? '\u2713 Copied' : 'Copy to Clipboard'}
+                </button>
+              </div>
 
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {messages.map((msg, idx) => {
-              const style = getRoleStyle(msg.role);
-              return (
-                <div key={idx} className="bg-white border border-gray-200 rounded p-3">
-                  <div className={`inline-block px-2 py-0.5 text-xs font-semibold rounded mb-2 ${style.color}`}>
-                    {style.label}
-                  </div>
-                  <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono overflow-x-auto">
-                    {msg.content}
-                  </pre>
-                </div>
-              );
-            })}
-          </div>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {messages.map((msg, idx) => {
+                  const style = getRoleStyle(msg.role);
+                  return (
+                    <div key={idx} className="bg-white border border-gray-200 rounded p-3">
+                      <div className={`inline-block px-2 py-0.5 text-xs font-semibold rounded mb-2 ${style.color}`}>
+                        {style.label}
+                      </div>
+                      <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono overflow-x-auto">
+                        {msg.content}
+                      </pre>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

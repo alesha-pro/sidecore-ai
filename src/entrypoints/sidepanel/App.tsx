@@ -35,6 +35,8 @@ export default function App() {
   // Debug view state
   const [isDebugViewOpen, setIsDebugViewOpen] = useState(false);
   const [currentInputContent, setCurrentInputContent] = useState('');
+  const [previewExtraction, setPreviewExtraction] = useState<ExtractedTabContent[]>([]);
+  const [isPreviewExtracting, setIsPreviewExtracting] = useState(false);
 
   const isStreaming = useMemo(
     () => messages.some((message) => message.isStreaming),
@@ -136,7 +138,39 @@ export default function App() {
     }));
   }, []);
 
-  // Build preview messages for debug view (mirrors handleSendMessage logic but without sending)
+  // Extract content for preview (called when debug view opens)
+  const extractForPreview = useCallback(async () => {
+    if (!settings) return;
+
+    const selectedTabs = getSelectedTabs();
+    if (selectedTabs.length === 0) {
+      setPreviewExtraction([]);
+      return;
+    }
+
+    setIsPreviewExtracting(true);
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: 'extract-tabs',
+        tabs: selectedTabs,
+        budget: settings.contextBudget,
+      });
+
+      if (response.success) {
+        setPreviewExtraction(response.results);
+      } else {
+        console.error('Preview extraction failed:', response.error);
+        setPreviewExtraction([]);
+      }
+    } catch (error) {
+      console.error('Preview extraction error:', error);
+      setPreviewExtraction([]);
+    } finally {
+      setIsPreviewExtracting(false);
+    }
+  }, [settings, getSelectedTabs]);
+
+  // Build preview messages for debug view (uses real extracted content)
   const buildPreviewMessages = useCallback((content: string): LLMChatMessage[] => {
     if (!settings) return [];
 
@@ -150,13 +184,15 @@ export default function App() {
       });
     }
 
-    // 2. Context placeholder (show what would be extracted)
-    const selectedTabs = getSelectedTabs();
-    if (selectedTabs.length > 0) {
-      const tabList = selectedTabs.map(t => `- ${t.title}`).join('\n');
+    // 2. Context from extracted content (real extraction, not placeholder)
+    const successfulExtractions = previewExtraction.filter((r) => !r.error && r.markdown);
+    if (successfulExtractions.length > 0) {
+      const systemMessage = 'Context sources:\n\n' + successfulExtractions
+        .map((r) => `## ${r.title}\nSource: ${r.url}\n\n${r.markdown}`)
+        .join('\n\n');
       preview.push({
         role: 'system',
-        content: `[Context will be extracted from ${selectedTabs.length} tab(s):\n${tabList}]`,
+        content: systemMessage,
       });
     }
 
@@ -175,7 +211,7 @@ export default function App() {
     }
 
     return preview;
-  }, [settings, getSelectedTabs, messages]);
+  }, [settings, previewExtraction, messages]);
 
   // Preview messages for debug view
   const previewMessages = useMemo(() => {
@@ -186,6 +222,15 @@ export default function App() {
   const handleInputChange = useCallback((content: string) => {
     setCurrentInputContent(content);
   }, []);
+
+  // Handle debug view toggle - extract content when opening
+  const handleDebugViewToggle = useCallback(() => {
+    const willOpen = !isDebugViewOpen;
+    setIsDebugViewOpen(willOpen);
+    if (willOpen) {
+      extractForPreview();
+    }
+  }, [isDebugViewOpen, extractForPreview]);
 
   const handleSendMessage = async (content: string, tabIds: number[] = []) => {
     if (!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel) {
@@ -462,7 +507,8 @@ export default function App() {
           <PromptDebugView
             messages={previewMessages}
             isOpen={isDebugViewOpen}
-            onToggle={() => setIsDebugViewOpen(!isDebugViewOpen)}
+            onToggle={handleDebugViewToggle}
+            isLoading={isPreviewExtracting}
           />
           <MentionInput
             onSend={handleSendMessage}
