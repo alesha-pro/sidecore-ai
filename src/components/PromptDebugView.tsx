@@ -87,11 +87,11 @@ export function PromptDebugView({ messages, isOpen, onToggle, isLoading = false 
                 {messages.map((msg, idx) => {
                   const style = getRoleStyle(msg.role);
                   return (
-                    <div key={idx} className="bg-white border border-gray-200 rounded p-3">
+                    <div key={idx} className="bg-white border border-gray-200 rounded p-3 overflow-hidden">
                       <div className={`inline-block px-2 py-0.5 text-xs font-semibold rounded mb-2 ${style.color}`}>
                         {style.label}
                       </div>
-                      <pre className="text-xs text-gray-700 whitespace-pre-wrap font-mono overflow-x-auto">
+                      <pre className="text-xs text-gray-700 whitespace-pre-wrap break-words font-mono">
                         {msg.content}
                       </pre>
                     </div>

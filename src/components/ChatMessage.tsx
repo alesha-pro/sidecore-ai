@@ -130,7 +130,7 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
           ) : (
             <>
               {message.role === 'assistant' ? (
-                <div className="prose prose-sm max-w-none text-gray-900">
+                <div className="prose prose-sm max-w-none text-gray-900 break-words overflow-hidden">
                   <div dangerouslySetInnerHTML={{ __html: renderedContent || '' }} />
                   {message.isStreaming && (
                     <span className="inline-block w-2 h-4 ml-1 bg-gray-400 animate-pulse align-middle"></span>

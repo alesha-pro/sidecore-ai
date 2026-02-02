@@ -717,7 +717,7 @@ export default function App() {
               onDeleteChat={handleDeleteChat}
             />
           )}
-          <div className="flex flex-col flex-1">
+          <div className="flex flex-col flex-1 min-w-0">
             <ContextBar
               activeTab={activeTab}
               selection={tabSelection}

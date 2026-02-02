@@ -29,7 +29,7 @@ export default function ChatHistory({
       role="log"
       aria-live="polite"
       aria-label="Chat history"
-      className="flex-1 overflow-y-auto p-4 space-y-4"
+      className="flex-1 overflow-y-auto p-4 space-y-4 min-w-0"
     >
       {messages.length === 0 ? (
         <div className="flex items-center justify-center h-full text-gray-400 text-sm">

@@ -12,7 +12,7 @@ const QUICK_COMMANDS = [
 
 export default function QuickCommands({ onCommandSelect, disabled = false }: QuickCommandsProps) {
   return (
-    <div className="px-4 pb-2 bg-white border-t border-gray-200">
+    <div className="px-4 pb-2 bg-white">
       <div className="flex flex-wrap gap-2">
         {QUICK_COMMANDS.map((cmd) => (
           <button
