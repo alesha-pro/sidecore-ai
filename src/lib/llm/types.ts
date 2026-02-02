@@ -17,7 +17,9 @@ export interface ChatCompletionRequest {
 
 export interface ChatCompletionChoice {
   index: number;
-  message: ChatMessage;
+  message: ChatMessage & {
+    reasoning_content?: string; // DeepSeek reasoning model field
+  };
   finish_reason: string | null;
 }
 

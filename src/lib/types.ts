@@ -2,6 +2,7 @@ export interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  thinking?: string; // Optional thinking/reasoning content
   timestamp: number;
   isStreaming?: boolean;
   isError?: boolean;
