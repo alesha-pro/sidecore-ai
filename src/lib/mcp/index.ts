@@ -17,3 +17,6 @@ export type {
 
 // Client
 export { McpClient } from './client';
+
+// Adapter
+export { sanitizeToolName, buildMcpTools } from './tool-adapter';
