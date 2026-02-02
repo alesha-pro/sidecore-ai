@@ -59,6 +59,21 @@ export class ToolRegistry {
   }
 
   /**
+   * Remove all tools whose names start with the given prefix
+   * @returns Number of tools removed
+   */
+  unregisterByPrefix(prefix: string): number {
+    let count = 0;
+    for (const name of this.tools.keys()) {
+      if (name.startsWith(prefix)) {
+        this.tools.delete(name);
+        count++;
+      }
+    }
+    return count;
+  }
+
+  /**
    * Get the number of registered tools
    */
   get size(): number {

@@ -20,3 +20,6 @@ export { McpClient } from './client';
 
 // Adapter
 export { sanitizeToolName, buildMcpTools } from './tool-adapter';
+
+// Manager
+export { McpToolManager } from './manager';

@@ -30,6 +30,7 @@ import {
 import { runAgentLoop } from '../../lib/agent/agent-loop';
 import { toolRegistry } from '../../lib/tools';
 import { registerBuiltInTools } from '../../lib/tools/builtins';
+import { McpToolManager } from '../../lib/mcp';
 
 // Helper function to get language instruction
 function getLanguageInstruction(languageCode: string): string {
@@ -47,6 +48,7 @@ export default function App() {
   const [isLLMLoading, setIsLLMLoading] = useState(false);
   const [llmError, setLLMError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const mcpManagerRef = useRef(new McpToolManager(toolRegistry));
 
   const [tabSelection, setTabSelection] = useState<TabSelection>(DEFAULT_TAB_SELECTION);
   const [isTabPickerOpen, setIsTabPickerOpen] = useState(false);
@@ -133,6 +135,15 @@ export default function App() {
       abortControllerRef.current?.abort();
     };
   }, []);
+
+  // Sync MCP tools when mcpServers setting changes
+  useEffect(() => {
+    if (settings?.mcpServers) {
+      mcpManagerRef.current.sync(settings.mcpServers).catch((error) => {
+        console.error('[App] MCP tool sync failed:', error);
+      });
+    }
+  }, [settings?.mcpServers]);
 
   // Auto-save current chat when messages change
   useEffect(() => {
