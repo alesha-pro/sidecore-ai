@@ -6,7 +6,7 @@
 import type { ToolRegistry } from '../tools/registry';
 import type { McpServerConfig } from '../types';
 import { McpClient } from './client';
-import { buildMcpTools } from './tool-adapter';
+import { buildMcpTools, getServerPrefix } from './tool-adapter';
 
 /**
  * Manages MCP server tool registration and cleanup
@@ -27,7 +27,7 @@ export class McpToolManager {
     // Remove tools from servers that are no longer configured
     for (const serverId of this.activeServerIds) {
       if (!currentServerIds.has(serverId)) {
-        const prefix = `mcp_${serverId}__`;
+        const prefix = getServerPrefix(serverId);
         const removed = this.registry.unregisterByPrefix(prefix);
         console.log(`[McpToolManager] Removed ${removed} tools from server ${serverId}`);
       }

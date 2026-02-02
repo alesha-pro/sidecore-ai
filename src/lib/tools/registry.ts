@@ -166,7 +166,7 @@ export const MOCK_MCP_SERVERS: MCPServer[] = [
     status: 'connected',
     tools: [
       {
-        name: 'mcp_filesystem__read_file',
+        name: 'mcp_6qbz7fkv_read_file',
         description: 'Read the contents of a file',
         source: 'mcp',
         serverId: 'filesystem',
@@ -180,7 +180,7 @@ export const MOCK_MCP_SERVERS: MCPServer[] = [
         execute: async () => 'Mock: read_file not available',
       },
       {
-        name: 'mcp_filesystem__write_file',
+        name: 'mcp_6qbz7fkv_write_file',
         description: 'Write content to a file',
         source: 'mcp',
         serverId: 'filesystem',
