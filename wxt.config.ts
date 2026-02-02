@@ -2,6 +2,15 @@ import { defineConfig } from 'wxt';
 
 export default defineConfig({
   srcDir: 'src',
+  vite: () => ({
+    resolve: {
+      alias: {
+        'react': 'preact/compat',
+        'react-dom': 'preact/compat',
+        'react/jsx-runtime': 'preact/jsx-runtime',
+      },
+    },
+  }),
   manifest: {
     name: 'Sidepanel AI Agent',
     permissions: ['sidePanel', 'storage', 'tabs', 'scripting'],

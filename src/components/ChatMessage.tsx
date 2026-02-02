@@ -1,17 +1,25 @@
+import { useMemo } from 'preact/hooks';
 import type { Message } from '../lib/types';
 import ThinkingBlock from './ThinkingBlock';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeHighlight from 'rehype-highlight';
+import { marked } from 'marked';
+
+// Configure marked for safe rendering
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+});
 
 interface ChatMessageProps {
   message: Message;
-  isStreaming?: boolean;
-  streamingContent?: string;
 }
 
-export default function ChatMessage({ message, isStreaming, streamingContent }: ChatMessageProps) {
-  const displayContent = isStreaming ? streamingContent : message.content;
+export default function ChatMessage({ message }: ChatMessageProps) {
+  const renderedContent = useMemo(() => {
+    if (message.role === 'assistant' && message.content) {
+      return marked.parse(message.content) as string;
+    }
+    return null;
+  }, [message.role, message.content]);
 
   return (
     <div
@@ -33,19 +41,14 @@ export default function ChatMessage({ message, isStreaming, streamingContent }: 
         >
           {message.role === 'assistant' ? (
             <div className="prose prose-sm max-w-none text-gray-900">
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeHighlight]}
-              >
-                {displayContent || ''}
-              </ReactMarkdown>
+              <div dangerouslySetInnerHTML={{ __html: renderedContent || '' }} />
               {message.isStreaming && (
                 <span className="inline-block w-2 h-4 ml-1 bg-gray-400 animate-pulse align-middle"></span>
               )}
             </div>
           ) : (
             <p className="text-sm whitespace-pre-wrap break-words">
-              {displayContent}
+              {message.content}
             </p>
           )}
         </div>
