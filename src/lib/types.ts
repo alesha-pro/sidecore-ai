@@ -43,6 +43,10 @@ export interface Settings {
   agentTimeoutMs: number;
   exaApiKey: string;
   mcpServers: McpServerConfig[];
+  /** Tool names to disable (won't be sent to LLM) */
+  disabledTools: string[];
+  /** MCP server IDs to disable (tools won't be registered) */
+  disabledServers: string[];
 }
 
 export const SUPPORTED_LANGUAGES = [
@@ -87,6 +91,8 @@ export const DEFAULT_SETTINGS: Settings = {
   agentTimeoutMs: 5 * 60 * 1000,
   exaApiKey: '',
   mcpServers: [],
+  disabledTools: [],
+  disabledServers: [],
 };
 
 export interface TabSelection {
