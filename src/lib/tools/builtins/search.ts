@@ -31,6 +31,7 @@ interface SearchResultOutput {
 export const searchTool: Tool<SearchToolParams> = {
   name: 'search',
   description: 'Search the web using Exa and return top results with snippets. Use this to find current information, research topics, or locate web resources.',
+  source: 'built-in',
   parameters: {
     type: 'object',
     properties: {

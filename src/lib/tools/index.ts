@@ -2,7 +2,16 @@
  * Tools module - exports types and registry for the Agentic Tool system
  */
 
-export type { Tool, ToolDefinition, JSONSchema } from './types';
+export type {
+  Tool,
+  ToolDefinition,
+  JSONSchema,
+  ToolSource,
+  ToolInputSchema,
+  MCPServer,
+  MCPServerStatus,
+  ToolRegistryService,
+} from './types';
 export { toToolDefinition } from './types';
 export { ToolRegistry } from './registry';
 

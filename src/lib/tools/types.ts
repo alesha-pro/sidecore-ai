@@ -16,6 +16,11 @@ export interface JSONSchema {
 }
 
 /**
+ * Source of a tool - where it comes from
+ */
+export type ToolSource = 'built-in' | 'mcp';
+
+/**
  * Core Tool interface for registered tools
  * @template TParams - The type of parameters the tool accepts
  */
@@ -24,10 +29,50 @@ export interface Tool<TParams = unknown> {
   name: string;
   /** Human-readable description of what the tool does */
   description: string;
-  /** JSON Schema defining the tool's parameters */
+  /** JSON Schema defining the tool's parameters (alias: inputSchema) */
   parameters: JSONSchema;
   /** Execute the tool with the given arguments */
   execute: (args: TParams) => Promise<unknown>;
+  /** Source of the tool */
+  source: ToolSource;
+  /** Server ID if tool comes from MCP server */
+  serverId?: string;
+}
+
+/**
+ * Tool input schema - alias for parameters for clarity in UI contexts
+ */
+export type ToolInputSchema = JSONSchema;
+
+/**
+ * MCP Server runtime status
+ */
+export type MCPServerStatus = 'connected' | 'disconnected' | 'connecting' | 'error';
+
+/**
+ * MCP Server runtime state (different from McpServerConfig which is for storage)
+ */
+export interface MCPServer {
+  /** Server identifier (matches McpServerConfig.id) */
+  id: string;
+  /** Human-readable name */
+  name: string;
+  /** Current connection status */
+  status: MCPServerStatus;
+  /** Tools provided by this server */
+  tools: Tool[];
+  /** Error message if status is 'error' */
+  error?: string;
+}
+
+/**
+ * Service interface for accessing tools and servers
+ */
+export interface ToolRegistryService {
+  /** Get all registered tools */
+  getTools(): Promise<Tool[]>;
+  /** Get all MCP servers with their status */
+  getServers(): Promise<MCPServer[]>;
 }
 
 /**

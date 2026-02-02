@@ -26,6 +26,7 @@ const MAX_RAW_TEXT_LENGTH = 50_000;
 export const fetchTool: Tool<FetchToolParams> = {
   name: 'fetch',
   description: 'Fetch a URL and return its main content in Markdown. Use this to read web pages, articles, documentation, or any HTTP resource.',
+  source: 'built-in',
   parameters: {
     type: 'object',
     properties: {

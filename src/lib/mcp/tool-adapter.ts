@@ -66,6 +66,8 @@ export function buildMcpTools(
     return {
       name: uniqueName,
       description: mcpTool.description || `MCP tool (${mcpTool.name})`,
+      source: 'mcp' as const,
+      serverId: serverId,
       parameters: mcpTool.inputSchema as JSONSchema,
       execute: async (args: unknown): Promise<string> => {
         const result = await client.callTool(mcpTool.name, args);
