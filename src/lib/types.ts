@@ -54,3 +54,18 @@ export const DEFAULT_TAB_SELECTION: TabSelection = {
   includeActiveTab: true,
   selectedTabIds: new Set(),
 };
+
+export interface Chat {
+  id: string;
+  title: string;           // Auto-generated from first user message (truncated to 50 chars)
+  messages: Message[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ChatSummary {
+  id: string;
+  title: string;
+  messageCount: number;
+  updatedAt: number;
+}

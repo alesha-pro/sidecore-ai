@@ -1,0 +1,183 @@
+import type { Chat, ChatSummary } from './types';
+
+const CHATS_KEY = 'chats';
+
+/**
+ * List all chats with summary information.
+ * Returns summaries sorted by updatedAt (most recent first).
+ */
+export async function listChats(): Promise<ChatSummary[]> {
+  try {
+    const result = await chrome.storage.local.get([CHATS_KEY]);
+    const chats: Record<string, Chat> = result[CHATS_KEY] || {};
+
+    const summaries: ChatSummary[] = Object.values(chats).map((chat) => ({
+      id: chat.id,
+      title: chat.title,
+      messageCount: chat.messages.length,
+      updatedAt: chat.updatedAt,
+    }));
+
+    // Sort by updatedAt descending (most recent first)
+    summaries.sort((a, b) => b.updatedAt - a.updatedAt);
+
+    return summaries;
+  } catch (error) {
+    console.error('Failed to list chats:', error);
+    return [];
+  }
+}
+
+/**
+ * Load a single chat by ID.
+ * Returns null if chat doesn't exist.
+ */
+export async function loadChat(id: string): Promise<Chat | null> {
+  try {
+    const result = await chrome.storage.local.get([CHATS_KEY]);
+    const chats: Record<string, Chat> = result[CHATS_KEY] || {};
+    return chats[id] || null;
+  } catch (error) {
+    console.error('Failed to load chat:', error);
+    return null;
+  }
+}
+
+/**
+ * Save (upsert) a chat.
+ * Creates new if doesn't exist, updates if exists.
+ */
+export async function saveChat(chat: Chat): Promise<void> {
+  try {
+    const result = await chrome.storage.local.get([CHATS_KEY]);
+    const chats: Record<string, Chat> = result[CHATS_KEY] || {};
+
+    chats[chat.id] = chat;
+
+    await chrome.storage.local.set({ [CHATS_KEY]: chats });
+  } catch (error) {
+    console.error('Failed to save chat:', error);
+    throw new Error('Failed to save chat');
+  }
+}
+
+/**
+ * Delete a chat by ID.
+ */
+export async function deleteChat(id: string): Promise<void> {
+  try {
+    const result = await chrome.storage.local.get([CHATS_KEY]);
+    const chats: Record<string, Chat> = result[CHATS_KEY] || {};
+
+    delete chats[id];
+
+    await chrome.storage.local.set({ [CHATS_KEY]: chats });
+  } catch (error) {
+    console.error('Failed to delete chat:', error);
+    throw new Error('Failed to delete chat');
+  }
+}
+
+/**
+ * Create a new empty chat with UUID id.
+ */
+export async function createChat(): Promise<Chat> {
+  const now = Date.now();
+  const chat: Chat = {
+    id: crypto.randomUUID(),
+    title: 'New Chat',
+    messages: [],
+    createdAt: now,
+    updatedAt: now,
+  };
+  return chat;
+}
+
+/**
+ * Storage statistics for monitoring usage.
+ */
+export interface StorageStats {
+  totalChats: number;
+  totalMessages: number;
+  estimatedBytes: number;
+  quotaBytes: number;          // chrome.storage.local.QUOTA_BYTES (5MB default)
+  usagePercent: number;
+}
+
+/**
+ * Get storage statistics.
+ * Provides insight into chrome.storage.local usage.
+ *
+ * Default quota: 5MB (chrome.storage.local.QUOTA_BYTES = 5242880)
+ * Estimated capacity: ~500-1000 chats with average 20 messages each
+ * Average message size: ~500 bytes (including thinking blocks)
+ *
+ * Recommendation: Consider unlimitedStorage permission if heavy usage expected.
+ */
+export async function getStorageStats(): Promise<StorageStats> {
+  try {
+    const result = await chrome.storage.local.get([CHATS_KEY]);
+    const chats: Record<string, Chat> = result[CHATS_KEY] || {};
+    const json = JSON.stringify(chats);
+    const estimatedBytes = new Blob([json]).size;
+
+    const totalMessages = Object.values(chats).reduce(
+      (sum, chat) => sum + chat.messages.length,
+      0
+    );
+
+    return {
+      totalChats: Object.keys(chats).length,
+      totalMessages,
+      estimatedBytes,
+      quotaBytes: chrome.storage.local.QUOTA_BYTES, // 5242880 (5MB)
+      usagePercent: (estimatedBytes / chrome.storage.local.QUOTA_BYTES) * 100,
+    };
+  } catch (error) {
+    console.error('Failed to get storage stats:', error);
+    return {
+      totalChats: 0,
+      totalMessages: 0,
+      estimatedBytes: 0,
+      quotaBytes: chrome.storage.local.QUOTA_BYTES,
+      usagePercent: 0,
+    };
+  }
+}
+
+/**
+ * Prune old chats when storage exceeds threshold.
+ * Keeps the most recent N chats, deletes the rest.
+ *
+ * @param keepCount Number of recent chats to keep (default: 50)
+ * @returns Number of chats deleted
+ */
+export async function pruneOldChats(keepCount: number = 50): Promise<number> {
+  try {
+    const result = await chrome.storage.local.get([CHATS_KEY]);
+    const chats: Record<string, Chat> = result[CHATS_KEY] || {};
+
+    const chatArray = Object.values(chats);
+
+    if (chatArray.length <= keepCount) {
+      return 0; // Nothing to prune
+    }
+
+    // Sort by updatedAt descending
+    chatArray.sort((a, b) => b.updatedAt - a.updatedAt);
+
+    // Keep only the most recent N
+    const toKeep = chatArray.slice(0, keepCount);
+    const newChats: Record<string, Chat> = {};
+    toKeep.forEach((chat) => {
+      newChats[chat.id] = chat;
+    });
+
+    await chrome.storage.local.set({ [CHATS_KEY]: newChats });
+
+    return chatArray.length - keepCount;
+  } catch (error) {
+    console.error('Failed to prune old chats:', error);
+    return 0;
+  }
+}
