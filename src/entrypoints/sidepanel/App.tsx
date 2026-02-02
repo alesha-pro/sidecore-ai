@@ -139,11 +139,15 @@ export default function App() {
   // Sync MCP tools when mcpServers setting changes
   useEffect(() => {
     if (settings?.mcpServers) {
-      mcpManagerRef.current.sync(settings.mcpServers).catch((error) => {
+      const disabledServers = new Set(settings.disabledServers ?? []);
+      const enabledServers = settings.mcpServers.filter(
+        (server) => !disabledServers.has(server.id)
+      );
+      mcpManagerRef.current.sync(enabledServers).catch((error) => {
         console.error('[App] MCP tool sync failed:', error);
       });
     }
-  }, [settings?.mcpServers]);
+  }, [settings?.mcpServers, settings?.disabledServers]);
 
   // Auto-save current chat when messages change
   useEffect(() => {
