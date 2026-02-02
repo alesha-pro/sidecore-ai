@@ -19,6 +19,9 @@ export interface Settings {
   showDebugPrompt: boolean;
   showExtractionStatus: boolean;
   responseLanguage: string;
+  agentMode: boolean;
+  agentMaxIterations: number;
+  agentTimeoutMs: number;
 }
 
 export const SUPPORTED_LANGUAGES = [
@@ -58,6 +61,9 @@ export const DEFAULT_SETTINGS: Settings = {
   showDebugPrompt: false,
   showExtractionStatus: false,
   responseLanguage: 'auto',
+  agentMode: false,
+  agentMaxIterations: 15,
+  agentTimeoutMs: 5 * 60 * 1000,
 };
 
 export interface TabSelection {
