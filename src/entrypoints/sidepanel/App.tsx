@@ -621,19 +621,26 @@ export default function App() {
         );
 
         // Finalize the last streaming message with extracted thinking
+        // Find any streaming assistant message (may not be last due to tool messages)
         setMessages((prev) => {
-          const lastMessage = prev[prev.length - 1];
-          // Find and finalize the streaming message (ID may have changed during iterations)
-          if (lastMessage?.role === 'assistant' && lastMessage?.isStreaming) {
-            return [...prev.slice(0, -1), {
-              ...lastMessage,
+          const streamingIdx = prev.findIndex(
+            (m) => m.role === 'assistant' && m.isStreaming
+          );
+          if (streamingIdx === -1) {
+            return prev;
+          }
+          const streamingMessage = prev[streamingIdx];
+          return [
+            ...prev.slice(0, streamingIdx),
+            {
+              ...streamingMessage,
               content: mainContent,
               thinking: thinking || undefined,
               isStreaming: false,
               timestamp: Date.now(),
-            }];
-          }
-          return prev;
+            },
+            ...prev.slice(streamingIdx + 1),
+          ];
         });
       } else if (settings.stream) {
         const streamingMessageId = crypto.randomUUID();

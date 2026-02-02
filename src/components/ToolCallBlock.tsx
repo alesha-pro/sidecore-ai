@@ -35,7 +35,6 @@ export default function ToolCallBlock({ toolCall, output, isStreaming }: ToolCal
   return (
     <details
       className="mt-2 border border-gray-200 rounded-lg bg-gray-50"
-      open={isAccumulating || isRunning || !!output}
     >
       <summary className="px-3 py-2 cursor-pointer hover:bg-gray-100 rounded-t-lg flex items-center gap-2 font-medium text-sm">
         {/* Status indicator */}

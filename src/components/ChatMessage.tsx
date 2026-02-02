@@ -135,17 +135,25 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
           <ThinkingBlock thinking={message.thinking} />
         )}
 
-        {/* Main content bubble */}
-        <div
-          className={`px-4 py-2 rounded-lg ${
-            isUser
-              ? 'bg-blue-600 text-white'
-              : 'bg-white border border-gray-200 text-gray-900'
-          }`}
-        >
+        {/* Thinking bubble - shown while streaming with no content yet */}
+        {message.role === 'assistant' && message.isStreaming && !message.content && !message.tool_calls?.length && (
+          <div className="px-4 py-2 rounded-lg bg-white border border-gray-200 text-gray-500 text-sm flex items-center gap-2">
+            <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-pulse"></span>
+            Thinking...
+          </div>
+        )}
 
-          {/* Content */}
-          {isEditing ? (
+        {/* Main content bubble - hide if streaming with no content (thinking shown instead) */}
+        {!(message.role === 'assistant' && message.isStreaming && !message.content && !message.tool_calls?.length) && (
+          <div
+            className={`px-4 py-2 rounded-lg ${
+              isUser
+                ? 'bg-blue-600 text-white'
+                : 'bg-white border border-gray-200 text-gray-900'
+            }`}
+          >
+            {/* Content */}
+            {isEditing ? (
             <div className="space-y-2">
               <textarea
                 value={editContent}
@@ -186,7 +194,8 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
               )}
             </>
           )}
-        </div>
+          </div>
+        )}
 
         {/* Tool calls section (render below main content) */}
         {message.role === 'assistant' && message.tool_calls && message.tool_calls.length > 0 && (
