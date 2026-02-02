@@ -1,5 +1,8 @@
 import type { Message } from '../lib/types';
 import ThinkingBlock from './ThinkingBlock';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
 
 interface ChatMessageProps {
   message: Message;
@@ -28,12 +31,23 @@ export default function ChatMessage({ message, isStreaming, streamingContent }: 
               : 'bg-white border border-gray-200 text-gray-900'
           }`}
         >
-          <p className="text-sm whitespace-pre-wrap break-words">
-            {displayContent}
-            {message.isStreaming && (
-              <span className="inline-block w-2 h-4 ml-1 bg-gray-400 animate-pulse align-middle"></span>
-            )}
-          </p>
+          {message.role === 'assistant' ? (
+            <div className="prose prose-sm max-w-none text-gray-900">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                rehypePlugins={[rehypeHighlight]}
+              >
+                {displayContent || ''}
+              </ReactMarkdown>
+              {message.isStreaming && (
+                <span className="inline-block w-2 h-4 ml-1 bg-gray-400 animate-pulse align-middle"></span>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm whitespace-pre-wrap break-words">
+              {displayContent}
+            </p>
+          )}
         </div>
       </div>
     </div>
