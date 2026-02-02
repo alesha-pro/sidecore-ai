@@ -510,6 +510,7 @@ export function MentionInput({
         onAtClick={handleAtClick}
         onSlashClick={handleSlashClick}
         onSettingsClick={onSettingsClick || (() => {})}
+        onSend={handleSend}
         disabled={disabled}
       />
     </div>
