@@ -227,6 +227,34 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
     }
   };
 
+  const handleToolToggle = (toolName: string) => {
+    setFormData((prev) => {
+      const isDisabled = prev.disabledTools.includes(toolName);
+      const disabledTools = isDisabled
+        ? prev.disabledTools.filter((name) => name !== toolName)
+        : [...prev.disabledTools, toolName];
+
+      return {
+        ...prev,
+        disabledTools,
+      };
+    });
+  };
+
+  const handleServerToggle = (serverId: string) => {
+    setFormData((prev) => {
+      const isDisabled = prev.disabledServers.includes(serverId);
+      const disabledServers = isDisabled
+        ? prev.disabledServers.filter((id) => id !== serverId)
+        : [...prev.disabledServers, serverId];
+
+      return {
+        ...prev,
+        disabledServers,
+      };
+    });
+  };
+
 
   return (
     <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
@@ -612,12 +640,28 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                 ) : (
                   availableTools
                     .filter((tool) => tool.source === 'built-in')
-                    .map((tool) => (
-                      <div key={tool.name} className="p-2 rounded-lg border border-gray-200">
-                        <div className="text-sm font-medium text-gray-900">{tool.name}</div>
-                        <div className="text-xs text-gray-500">{tool.description}</div>
-                      </div>
-                    ))
+                    .map((tool) => {
+                      const isDisabled = formData.disabledTools.includes(tool.name);
+                      return (
+                        <label
+                          key={tool.name}
+                          className={`flex items-start gap-2 p-2 rounded-lg border ${
+                            isDisabled ? 'bg-gray-50 border-gray-200 text-gray-400' : 'bg-white border-gray-200'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={!isDisabled}
+                            onChange={() => handleToolToggle(tool.name)}
+                            className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                          />
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-gray-900">{tool.name}</div>
+                            <div className="text-xs text-gray-500">{tool.description}</div>
+                          </div>
+                        </label>
+                      );
+                    })
                 )}
               </div>
             </div>
@@ -628,29 +672,59 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                 {availableServers.length === 0 ? (
                   <p className="text-xs text-gray-500">No MCP servers connected.</p>
                 ) : (
-                  availableServers.map((server) => (
-                    <div key={server.id} className="border border-gray-200 rounded-lg p-3">
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-gray-900">
-                          {server.name || server.id}
-                        </div>
-                        <div className="text-xs text-gray-500">Status: {server.status}</div>
-                      </div>
-
-                      <div className="mt-3 space-y-2 pl-6">
-                        {server.tools.length === 0 ? (
-                          <p className="text-xs text-gray-500">No tools registered for this server.</p>
-                        ) : (
-                          server.tools.map((tool) => (
-                            <div key={tool.name} className="p-2 rounded-lg border border-gray-200">
-                              <div className="text-sm font-medium text-gray-900">{tool.name}</div>
-                              <div className="text-xs text-gray-500">{tool.description}</div>
+                  availableServers.map((server) => {
+                    const serverDisabled = formData.disabledServers.includes(server.id);
+                    return (
+                      <div key={server.id} className="border border-gray-200 rounded-lg p-3">
+                        <label className="flex items-start gap-2">
+                          <input
+                            type="checkbox"
+                            checked={!serverDisabled}
+                            onChange={() => handleServerToggle(server.id)}
+                            className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                          />
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-gray-900">
+                              {server.name || server.id}
                             </div>
-                          ))
-                        )}
+                            <div className="text-xs text-gray-500">Status: {server.status}</div>
+                          </div>
+                        </label>
+
+                        <div className={`mt-3 space-y-2 pl-6 ${serverDisabled ? 'opacity-50' : ''}`}>
+                          {server.tools.length === 0 ? (
+                            <p className="text-xs text-gray-500">No tools registered for this server.</p>
+                          ) : (
+                            server.tools.map((tool) => {
+                              const toolDisabled = formData.disabledTools.includes(tool.name);
+                              return (
+                                <label
+                                  key={tool.name}
+                                  className={`flex items-start gap-2 p-2 rounded-lg border ${
+                                    serverDisabled || toolDisabled
+                                      ? 'bg-gray-50 border-gray-200 text-gray-400'
+                                      : 'bg-white border-gray-200'
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={!toolDisabled}
+                                    onChange={() => handleToolToggle(tool.name)}
+                                    disabled={serverDisabled}
+                                    className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                                  />
+                                  <div className="min-w-0">
+                                    <div className="text-sm font-medium text-gray-900">{tool.name}</div>
+                                    <div className="text-xs text-gray-500">{tool.description}</div>
+                                  </div>
+                                </label>
+                              );
+                            })
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
