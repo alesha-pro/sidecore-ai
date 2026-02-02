@@ -1,4 +1,5 @@
 import { extractTabs } from '../background/extraction/extractTabs';
+import { fetchUrl } from '../background/tools/fetch';
 import type { TabInfo } from '../lib/tabs';
 import type { ExtractedTabContent } from '../shared/extraction';
 
@@ -6,8 +7,9 @@ export default defineBackground(() => {
   // Open side panel when extension icon is clicked
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
-  // Handle extraction requests from sidepanel
+  // Handle messages from sidepanel
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    // Handle extraction requests
     if (message.type === 'extract-tabs') {
       const { tabs, budget } = message as {
         type: 'extract-tabs';
@@ -22,6 +24,30 @@ export default defineBackground(() => {
         })
         .catch((error) => {
           console.error('Extraction failed:', error);
+          sendResponse({
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+        });
+
+      // Return true to indicate async response
+      return true;
+    }
+
+    // Handle tool fetch requests (CORS bypass)
+    if (message.type === 'tool-fetch') {
+      const { url } = message as { type: 'tool-fetch'; url: string };
+
+      fetchUrl({ url })
+        .then((result) => {
+          if ('error' in result) {
+            sendResponse({ success: false, error: result.error });
+          } else {
+            sendResponse({ success: true, result });
+          }
+        })
+        .catch((error) => {
+          console.error('Tool fetch failed:', error);
           sendResponse({
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error',
