@@ -961,7 +961,31 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
-      {/* Header removed - all controls moved to bottom toolbar */}
+      {/* Mini header with chat list toggle only */}
+      <header className="flex items-center px-3 py-2 bg-white border-b border-gray-200">
+        <button
+          type="button"
+          onClick={() => setShowChatList(!showChatList)}
+          className={`p-1 transition-colors ${
+            showChatList
+              ? 'text-blue-600 hover:bg-blue-50'
+              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+          } rounded`}
+          title={showChatList ? 'Hide chat list' : 'Show chat list'}
+          aria-label="Toggle chat list"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="currentColor"
+            className="w-5 h-5"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+          </svg>
+        </button>
+      </header>
 
       {showSettings ? (
         <SettingsForm
@@ -1030,8 +1054,6 @@ export default function App() {
               }}
               includeActiveTab={tabSelection.includeActiveTab}
               onActiveTabChange={handleToggleActiveTab}
-              onChatListToggle={() => setShowChatList(!showChatList)}
-              showChatList={showChatList}
             />
           </div>
         </div>

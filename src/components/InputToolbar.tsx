@@ -10,8 +10,6 @@ interface InputToolbarProps {
   onAgentModeChange?: (enabled: boolean) => void;
   includeActiveTab?: boolean;
   onActiveTabChange?: (included: boolean) => void;
-  onChatListToggle?: () => void;
-  showChatList?: boolean;
 }
 
 // Extract short model name for display
@@ -107,21 +105,6 @@ function RobotIcon() {
   );
 }
 
-// Menu icon for chat list toggle
-function MenuIcon() {
-  return (
-    <svg
-      className="w-4 h-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-    </svg>
-  );
-}
-
 export function InputToolbar({
   currentModel,
   onModelClick,
@@ -133,14 +116,12 @@ export function InputToolbar({
   onAgentModeChange,
   includeActiveTab = false,
   onActiveTabChange,
-  onChatListToggle,
-  showChatList = false,
 }: InputToolbarProps) {
   const shortName = getShortModelName(currentModel);
 
   return (
     <div className="flex items-center justify-between px-3 py-1.5 bg-white border-t border-gray-100 text-xs">
-      {/* Left side: Model, @, /, Chat List, Agent Mode, Current Tab */}
+      {/* Left side: Model, @, /, Agent Mode, Current Tab */}
       <div className="flex items-center gap-1">
         {/* Model button */}
         <button
@@ -175,23 +156,6 @@ export function InputToolbar({
         >
           <span className="font-medium">/</span>
         </button>
-
-        {/* Chat list toggle (menu icon) */}
-        {onChatListToggle && (
-          <button
-            type="button"
-            onClick={onChatListToggle}
-            disabled={disabled}
-            className={`p-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-              showChatList
-                ? 'text-blue-600 hover:bg-blue-50'
-                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
-            } rounded`}
-            title={showChatList ? 'Hide chat list' : 'Show chat list'}
-          >
-            <MenuIcon />
-          </button>
-        )}
 
         {/* Agent Mode checkbox with robot icon */}
         {onAgentModeChange && (

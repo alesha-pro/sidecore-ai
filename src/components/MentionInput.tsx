@@ -21,8 +21,6 @@ interface MentionInputProps {
   onAgentModeChange?: (enabled: boolean) => void;
   includeActiveTab?: boolean;
   onActiveTabChange?: (included: boolean) => void;
-  onChatListToggle?: () => void;
-  showChatList?: boolean;
 }
 
 interface ExtractedContent {
@@ -47,8 +45,6 @@ export function MentionInput({
   onAgentModeChange,
   includeActiveTab = false,
   onActiveTabChange,
-  onChatListToggle,
-  showChatList = false,
 }: MentionInputProps) {
   const inputRef = useRef<HTMLDivElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -543,8 +539,6 @@ export function MentionInput({
         onAgentModeChange={onAgentModeChange}
         includeActiveTab={includeActiveTab}
         onActiveTabChange={onActiveTabChange}
-        onChatListToggle={onChatListToggle}
-        showChatList={showChatList}
       />
     </div>
   );
