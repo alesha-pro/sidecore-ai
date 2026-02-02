@@ -33,19 +33,22 @@ hljs.registerLanguage('markdown', markdown);
 hljs.registerLanguage('md', markdown);
 
 // Configure marked with syntax highlighting
-const renderer = new marked.Renderer();
-renderer.code = function(code: string, language: string | undefined) {
-  const validLang = language && hljs.getLanguage(language);
-  const highlighted = validLang
-    ? hljs.highlight(code, { language }).value
-    : hljs.highlightAuto(code).value;
-  return `<pre><code class="hljs${validLang ? ` language-${language}` : ''}">${highlighted}</code></pre>`;
-};
-
 marked.setOptions({
   breaks: true,
   gfm: true,
-  renderer,
+});
+
+// Use marked extension API for code highlighting (marked v17+)
+marked.use({
+  renderer: {
+    code({ text, lang }: { text: string; lang?: string }) {
+      const validLang = lang && hljs.getLanguage(lang);
+      const highlighted = validLang
+        ? hljs.highlight(text, { language: lang }).value
+        : hljs.highlightAuto(text).value;
+      return `<pre><code class="hljs${validLang ? ` language-${lang}` : ''}">${highlighted}</code></pre>`;
+    },
+  },
 });
 
 interface ChatMessageProps {
