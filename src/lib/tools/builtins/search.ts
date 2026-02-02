@@ -1,32 +1,22 @@
 /**
  * Built-in Search Tool
- * Searches the web using Exa API via background service worker
+ * Searches the web using Exa MCP server (keyless)
  */
 
 import type { Tool } from '../types';
-import type { SearchExaSuccess } from '../../../background/tools/search';
-import { getSettings } from '../../storage';
+import { McpClient } from '../../mcp/client';
 
 interface SearchToolParams {
   query: string;
   numResults?: number;
 }
 
-interface SearchResponse {
-  success: boolean;
-  result?: SearchExaSuccess;
-  error?: string;
-}
-
-interface SearchResultOutput {
-  title: string;
-  url: string;
-  snippet: string;
-}
+// Exa MCP server - free, no API key needed
+const EXA_MCP_URL = 'https://mcp.exa.ai/mcp';
 
 /**
  * Search tool implementation
- * Searches the web using Exa and returns top results with snippets
+ * Searches the web using Exa MCP and returns top results with snippets
  */
 export const searchTool: Tool<SearchToolParams> = {
   name: 'search',
@@ -55,59 +45,39 @@ export const searchTool: Tool<SearchToolParams> = {
       return 'Error: Search query cannot be empty';
     }
 
-    // Load settings to get API key
-    let apiKey: string;
-    try {
-      const settings = await getSettings();
-      apiKey = settings.exaApiKey;
-    } catch (err) {
-      return 'Error: Failed to load settings';
-    }
-
-    // Check for API key
-    if (!apiKey || !apiKey.trim()) {
-      return 'Error: Exa API key not configured. Please add your API key in Settings > Advanced > Web Search (Exa) API Key.';
-    }
-
     // Clamp numResults to reasonable bounds
     const clampedNumResults = Math.min(Math.max(numResults, 1), 10);
 
-    // Search via background service worker
-    let response: SearchResponse;
     try {
-      response = await chrome.runtime.sendMessage({
-        type: 'tool-search',
+      const client = new McpClient(EXA_MCP_URL);
+
+      // Call the Exa MCP search tool
+      // Exa MCP tool name is "web_search_exa" with parameters: query, numResults
+      const result = await client.callTool('web_search_exa', {
         query,
-        apiKey,
         numResults: clampedNumResults,
       });
+
+      // Extract text content from MCP response
+      const content = result.content;
+      if (!content || content.length === 0) {
+        return `No results found for "${query}"`;
+      }
+
+      // MCP returns content array with text items
+      const textContent = content
+        .filter((item): item is { type: 'text'; text: string } => item.type === 'text')
+        .map((item) => item.text)
+        .join('\n');
+
+      if (!textContent) {
+        return `No results found for "${query}"`;
+      }
+
+      return textContent;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       return `Error: Failed to search "${query}": ${message}`;
     }
-
-    // Handle search failure
-    if (!response.success || !response.result) {
-      return `Error: Search failed for "${query}": ${response.error || 'Unknown error'}`;
-    }
-
-    // Format results
-    const results: SearchResultOutput[] = response.result.results.map((r) => ({
-      title: r.title,
-      url: r.url,
-      snippet: r.text.slice(0, 500) + (r.text.length > 500 ? '...' : ''),
-    }));
-
-    // Build output
-    if (results.length === 0) {
-      return `No results found for "${query}"`;
-    }
-
-    const output = {
-      query,
-      results,
-    };
-
-    return JSON.stringify(output, null, 2);
   },
 };
