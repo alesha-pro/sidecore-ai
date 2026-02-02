@@ -7,9 +7,23 @@ interface ChatHistoryProps {
   error?: string | null;
   isStreaming?: boolean;
   onStop?: () => void;
+  onEditMessage?: (id: string, newContent: string) => void;
+  onDeleteMessage?: (id: string) => void;
 }
 
-export default function ChatHistory({ messages, isLoading, error, isStreaming, onStop }: ChatHistoryProps) {
+export default function ChatHistory({
+  messages,
+  isLoading,
+  error,
+  isStreaming,
+  onStop,
+  onEditMessage,
+  onDeleteMessage,
+}: ChatHistoryProps) {
+  // Find the last user message
+  const lastUserMessageIndex = messages.map((m, i) => ({ ...m, index: i }))
+    .reverse()
+    .find((m) => m.role === 'user')?.index;
   return (
     <div
       role="log"
@@ -23,10 +37,13 @@ export default function ChatHistory({ messages, isLoading, error, isStreaming, o
         </div>
       ) : (
         <>
-          {messages.map((message) => (
+          {messages.map((message, index) => (
             <ChatMessage
               key={message.id}
               message={message}
+              isLastUserMessage={index === lastUserMessageIndex}
+              onEdit={onEditMessage}
+              onDelete={onDeleteMessage}
             />
           ))}
           {isLoading && (
