@@ -507,7 +507,7 @@ export default function App() {
         const reasoningContent = response.choices[0].message.reasoning_content;
 
         // Extract thinking from tags or use reasoning_content field
-        const { thinking, mainContent } = extractThinking(responseContent, reasoningContent);
+        const { thinking, mainContent } = extractThinking(responseContent ?? '', reasoningContent);
 
         const assistantMessage: Message = {
           id: crypto.randomUUID(),

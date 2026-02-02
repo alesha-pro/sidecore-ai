@@ -11,13 +11,13 @@ interface PromptDebugViewProps {
 export function PromptDebugView({ messages, isOpen, onToggle, isLoading = false }: PromptDebugViewProps) {
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
 
-  // Calculate totals
-  const totalChars = messages.reduce((sum, msg) => sum + msg.content.length, 0);
+  // Calculate totals (handle null content for tool_calls messages)
+  const totalChars = messages.reduce((sum, msg) => sum + (msg.content?.length ?? 0), 0);
   const estimatedTokens = Math.ceil(totalChars / 4);
 
   const handleCopy = async () => {
     const formatted = messages
-      .map(msg => `[${msg.role.toUpperCase()}]\n${msg.content}`)
+      .map(msg => `[${msg.role.toUpperCase()}]\n${msg.content ?? ''}`)
       .join('\n\n---\n\n');
 
     try {
@@ -92,7 +92,7 @@ export function PromptDebugView({ messages, isOpen, onToggle, isLoading = false 
                         {style.label}
                       </div>
                       <pre className="text-xs text-gray-700 whitespace-pre-wrap break-words font-mono">
-                        {msg.content}
+                        {msg.content ?? ''}
                       </pre>
                     </div>
                   );
