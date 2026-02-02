@@ -24,3 +24,6 @@ export {
 // Global registry instance for the application
 import { ToolRegistry } from './registry';
 export const toolRegistry = new ToolRegistry();
+
+export const getTools = () => toolRegistry.getTools();
+export const getServers = () => toolRegistry.getServers();

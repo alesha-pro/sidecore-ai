@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'preact/hooks';
+import type { MCPServer, Tool } from '../lib/tools';
+import { getMockServers, getMockTools, getServers, getTools } from '../lib/tools';
 import type { Settings, McpHeader } from '../lib/types';
 import { DEFAULT_SYSTEM_PROMPT, SUPPORTED_LANGUAGES } from '../lib/types';
 import { normalizeBaseUrl, validateBaseUrl } from '../lib/urlNormalization';
@@ -50,6 +52,9 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
+  const [availableTools, setAvailableTools] = useState<Tool[]>([]);
+  const [availableServers, setAvailableServers] = useState<MCPServer[]>([]);
+
   // MCP Server draft state
   const [mcpDraft, setMcpDraft] = useState<McpServerDraft>(emptyMcpServerDraft());
   const [mcpUrlError, setMcpUrlError] = useState<string | null>(null);
@@ -62,6 +67,46 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
     setMcpDraft(emptyMcpServerDraft());
     setMcpUrlError(null);
   }, [settings]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadTools = async () => {
+      try {
+        const [tools, servers] = await Promise.all([getTools(), getServers()]);
+
+        if (!isMounted) {
+          return;
+        }
+
+        if (tools.length === 0 && servers.length === 0) {
+          const [mockTools, mockServers] = await Promise.all([getMockTools(), getMockServers()]);
+          if (!isMounted) {
+            return;
+          }
+          setAvailableTools(mockTools);
+          setAvailableServers(mockServers);
+          return;
+        }
+
+        setAvailableTools(tools);
+        setAvailableServers(servers);
+      } catch (error) {
+        console.error('Failed to load tools:', error);
+        if (!isMounted) {
+          return;
+        }
+        setAvailableTools([]);
+        setAvailableServers([]);
+      }
+    };
+
+    loadTools();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
@@ -181,6 +226,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
       }
     }
   };
+
 
   return (
     <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
@@ -548,7 +594,70 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
           </div>
         </details>
 
-        {/* Section 5: MCP Servers */}
+        {/* Section 5: Tools & Capabilities */}
+        <details className="border border-gray-200 rounded-lg bg-white">
+          <summary className="px-4 py-3 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 rounded-lg select-none">
+            Tools &amp; Capabilities
+          </summary>
+          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 mt-2 pt-4">
+            <p className="text-xs text-gray-500">
+              Enable or disable specific tools and MCP servers available to Agent Mode.
+            </p>
+
+            <div>
+              <div className="text-sm font-medium text-gray-900">Built-in Tools</div>
+              <div className="mt-2 space-y-2">
+                {availableTools.filter((tool) => tool.source === 'built-in').length === 0 ? (
+                  <p className="text-xs text-gray-500">No built-in tools registered yet.</p>
+                ) : (
+                  availableTools
+                    .filter((tool) => tool.source === 'built-in')
+                    .map((tool) => (
+                      <div key={tool.name} className="p-2 rounded-lg border border-gray-200">
+                        <div className="text-sm font-medium text-gray-900">{tool.name}</div>
+                        <div className="text-xs text-gray-500">{tool.description}</div>
+                      </div>
+                    ))
+                )}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm font-medium text-gray-900">MCP Servers</div>
+              <div className="mt-2 space-y-3">
+                {availableServers.length === 0 ? (
+                  <p className="text-xs text-gray-500">No MCP servers connected.</p>
+                ) : (
+                  availableServers.map((server) => (
+                    <div key={server.id} className="border border-gray-200 rounded-lg p-3">
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-gray-900">
+                          {server.name || server.id}
+                        </div>
+                        <div className="text-xs text-gray-500">Status: {server.status}</div>
+                      </div>
+
+                      <div className="mt-3 space-y-2 pl-6">
+                        {server.tools.length === 0 ? (
+                          <p className="text-xs text-gray-500">No tools registered for this server.</p>
+                        ) : (
+                          server.tools.map((tool) => (
+                            <div key={tool.name} className="p-2 rounded-lg border border-gray-200">
+                              <div className="text-sm font-medium text-gray-900">{tool.name}</div>
+                              <div className="text-xs text-gray-500">{tool.description}</div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </details>
+
+        {/* Section 6: MCP Servers */}
         <details className="border border-gray-200 rounded-lg bg-white">
           <summary className="px-4 py-3 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 rounded-lg select-none">
             MCP Servers
@@ -598,6 +707,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                         stroke="currentColor"
                         className="w-4 h-4"
                       >
+                        <title>Remove server</title>
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -655,7 +765,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
               {/* Headers */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs text-gray-600">Headers (optional)</label>
+                  <div className="block text-xs text-gray-600">Headers (optional)</div>
                   <button
                     type="button"
                     onClick={() => {
@@ -712,6 +822,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                             stroke="currentColor"
                             className="w-4 h-4"
                           >
+                            <title>Remove header</title>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                           </svg>
                         </button>
