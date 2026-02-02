@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'preact/hooks';
 import type { Message } from '../lib/types';
 import ThinkingBlock from './ThinkingBlock';
+import ToolCallBlock from './ToolCallBlock';
 import { marked } from 'marked';
 
 // Configure marked for safe rendering
@@ -14,9 +15,10 @@ interface ChatMessageProps {
   isLastUserMessage?: boolean;
   onEdit?: (id: string, newContent: string) => void;
   onDelete?: (id: string) => void;
+  toolOutputs?: Message[];
 }
 
-export default function ChatMessage({ message, isLastUserMessage, onEdit, onDelete }: ChatMessageProps) {
+export default function ChatMessage({ message, isLastUserMessage, onEdit, onDelete, toolOutputs }: ChatMessageProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [isHovered, setIsHovered] = useState(false);
@@ -144,6 +146,23 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
             </>
           )}
         </div>
+
+        {/* Tool calls section (render below main content) */}
+        {message.role === 'assistant' && message.tool_calls && message.tool_calls.length > 0 && (
+          <div className="mt-2 space-y-2">
+            {message.tool_calls.map((toolCall) => {
+              // Find matching output from toolOutputs
+              const output = toolOutputs?.find((out) => out.tool_call_id === toolCall.id);
+              return (
+                <ToolCallBlock
+                  key={toolCall.id}
+                  toolCall={toolCall}
+                  output={output}
+                />
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Action buttons for assistant messages (right of bubble) */}
