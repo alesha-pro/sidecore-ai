@@ -196,9 +196,10 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
               const output = toolOutputs?.find((out) => out.tool_call_id === toolCall.id);
               return (
                 <ToolCallBlock
-                  key={toolCall.id}
+                  key={toolCall.id || `pending-${toolCall.function.name}`}
                   toolCall={toolCall}
                   output={output}
+                  isStreaming={message.isStreaming}
                 />
               );
             })}
