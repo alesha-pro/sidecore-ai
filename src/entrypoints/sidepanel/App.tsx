@@ -15,6 +15,7 @@ import type { ChatMessage as LLMChatMessage } from '../../lib/llm/types';
 import type { ExtractedTabContent } from '../../shared/extraction';
 import type { TabInfo } from '../../lib/tabs';
 import { createStreamingClient } from '../../lib/streaming/streaming-client';
+import { extractThinking } from '../../lib/thinking';
 
 export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -269,12 +270,20 @@ export default function App() {
           }
         }
 
+        // Extract thinking from accumulated content when streaming completes
         setMessages((prev) => {
           const lastMessage = prev[prev.length - 1];
           if (lastMessage && lastMessage.id === streamingMessageId) {
+            const { thinking, mainContent } = extractThinking(lastMessage.content);
             return [
               ...prev.slice(0, -1),
-              { ...lastMessage, isStreaming: false, timestamp: Date.now() },
+              {
+                ...lastMessage,
+                content: mainContent,
+                thinking: thinking || undefined,
+                isStreaming: false,
+                timestamp: Date.now(),
+              },
             ];
           }
           return prev;
@@ -290,10 +299,18 @@ export default function App() {
           }
         );
 
+        // Get response content and optional reasoning_content field
+        const responseContent = response.choices[0].message.content;
+        const reasoningContent = response.choices[0].message.reasoning_content;
+
+        // Extract thinking from tags or use reasoning_content field
+        const { thinking, mainContent } = extractThinking(responseContent, reasoningContent);
+
         const assistantMessage: Message = {
           id: crypto.randomUUID(),
           role: 'assistant',
-          content: response.choices[0].message.content,
+          content: mainContent,
+          thinking: thinking || undefined,
           timestamp: Date.now(),
         };
         setMessages((prev) => [...prev, assistantMessage]);
