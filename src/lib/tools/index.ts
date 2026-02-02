@@ -13,7 +13,13 @@ export type {
   ToolRegistryService,
 } from './types';
 export { toToolDefinition } from './types';
-export { ToolRegistry } from './registry';
+export {
+  ToolRegistry,
+  MOCK_BUILT_IN_TOOLS,
+  MOCK_MCP_SERVERS,
+  getMockTools,
+  getMockServers,
+} from './registry';
 
 // Global registry instance for the application
 import { ToolRegistry } from './registry';
