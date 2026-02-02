@@ -44,6 +44,15 @@
 .prose ul, .prose ol {
   margin: 0.5em 0;
   padding-left: 1.5em;
+  list-style-position: outside;
+}
+
+.prose ul {
+  list-style-type: disc;
+}
+
+.prose ol {
+  list-style-type: decimal;
 }
 
 .prose li {
