@@ -63,6 +63,17 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [isHovered, setIsHovered] = useState(false);
+
+  // Hide empty assistant messages (no content, no tool_calls, no thinking, not streaming)
+  const isEmptyAssistant = message.role === 'assistant'
+    && !message.content
+    && !message.tool_calls?.length
+    && !message.thinking
+    && !message.isStreaming;
+
+  if (isEmptyAssistant) {
+    return null;
+  }
   const renderedContent = useMemo(() => {
     if (message.role === 'assistant' && message.content) {
       return marked.parse(message.content) as string;
