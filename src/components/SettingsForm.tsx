@@ -93,7 +93,16 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
 
   const handleChange = (field: keyof Settings) => (e: Event) => {
     const target = e.target as HTMLInputElement | HTMLSelectElement;
-    const value = field === 'contextBudget' ? parseInt(target.value, 10) || 0 : target.value;
+    let value: string | number | boolean;
+
+    if (field === 'contextBudget') {
+      value = parseInt(target.value, 10) || 0;
+    } else if (field === 'showDebugPrompt') {
+      value = (target as HTMLInputElement).checked;
+    } else {
+      value = target.value;
+    }
+
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear field error on change
     if (errors[field]) {
@@ -133,7 +142,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
   return (
     <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
       <form onSubmit={handleSubmit} className="max-w-md mx-auto space-y-6">
-        <h2 className="text-xl font-semibold text-gray-900">Provider Settings</h2>
+        <h2 className="text-xl font-semibold text-gray-900">Settings</h2>
 
         {saveError && (
           <div className="p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg">
@@ -141,174 +150,216 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
           </div>
         )}
 
-        {/* Base URL */}
-        <div>
-          <label htmlFor="baseUrl" className="block text-sm font-medium text-gray-700 mb-1">
-            Base URL
-          </label>
-          <input
-            id="baseUrl"
-            type="text"
-            value={formData.baseUrl}
-            onInput={handleChange('baseUrl')}
-            placeholder="api.openai.com"
-            className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.baseUrl ? 'border-red-500' : 'border-gray-300'
-            }`}
-            aria-describedby={errors.baseUrl ? 'baseUrl-error' : 'baseUrl-hint'}
-          />
-          {errors.baseUrl ? (
-            <p id="baseUrl-error" className="mt-1 text-sm text-red-600">
-              {errors.baseUrl}
-            </p>
-          ) : (
-            <p id="baseUrl-hint" className="mt-1 text-xs text-gray-500">
-              Will be normalized to https://...../v1
-            </p>
-          )}
-        </div>
+        {/* Section 1: LLM Provider */}
+        <details open className="border border-gray-200 rounded-lg bg-white">
+          <summary className="px-4 py-3 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 rounded-lg select-none">
+            LLM Provider
+          </summary>
+          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 mt-2 pt-4">
+            {/* Base URL */}
+            <div>
+              <label htmlFor="baseUrl" className="block text-sm font-medium text-gray-700 mb-1">
+                Base URL
+              </label>
+              <input
+                id="baseUrl"
+                type="text"
+                value={formData.baseUrl}
+                onInput={handleChange('baseUrl')}
+                placeholder="api.openai.com"
+                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.baseUrl ? 'border-red-500' : 'border-gray-300'
+                }`}
+                aria-describedby={errors.baseUrl ? 'baseUrl-error' : 'baseUrl-hint'}
+              />
+              {errors.baseUrl ? (
+                <p id="baseUrl-error" className="mt-1 text-sm text-red-600">
+                  {errors.baseUrl}
+                </p>
+              ) : (
+                <p id="baseUrl-hint" className="mt-1 text-xs text-gray-500">
+                  Will be normalized to https://...../v1
+                </p>
+              )}
+            </div>
 
-        {/* API Key */}
-        <div>
-          <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700 mb-1">
-            API Key
-          </label>
-          <input
-            id="apiKey"
-            type="password"
-            value={formData.apiKey}
-            onInput={handleChange('apiKey')}
-            placeholder="sk-..."
-            className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.apiKey ? 'border-red-500' : 'border-gray-300'
-            }`}
-            aria-describedby={errors.apiKey ? 'apiKey-error' : undefined}
-          />
-          {errors.apiKey && (
-            <p id="apiKey-error" className="mt-1 text-sm text-red-600">
-              {errors.apiKey}
-            </p>
-          )}
-        </div>
+            {/* API Key */}
+            <div>
+              <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700 mb-1">
+                API Key
+              </label>
+              <input
+                id="apiKey"
+                type="password"
+                value={formData.apiKey}
+                onInput={handleChange('apiKey')}
+                placeholder="sk-..."
+                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.apiKey ? 'border-red-500' : 'border-gray-300'
+                }`}
+                aria-describedby={errors.apiKey ? 'apiKey-error' : undefined}
+              />
+              {errors.apiKey && (
+                <p id="apiKey-error" className="mt-1 text-sm text-red-600">
+                  {errors.apiKey}
+                </p>
+              )}
+            </div>
 
-        {/* Test Connection */}
-        <div>
-          <button
-            type="button"
-            onClick={handleTestConnection}
-            disabled={connectionStatus === 'testing' || !formData.baseUrl.trim() || !formData.apiKey.trim()}
-            className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {connectionStatus === 'testing' && 'Testing...'}
-            {connectionStatus === 'success' && '✓ Connected'}
-            {(connectionStatus === 'idle' || connectionStatus === 'error') && 'Test Connection'}
-          </button>
-          {connectionError && (
-            <p className="mt-2 text-sm text-red-600">{connectionError}</p>
-          )}
-        </div>
+            {/* Test Connection */}
+            <div>
+              <button
+                type="button"
+                onClick={handleTestConnection}
+                disabled={connectionStatus === 'testing' || !formData.baseUrl.trim() || !formData.apiKey.trim()}
+                className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {connectionStatus === 'testing' && 'Testing...'}
+                {connectionStatus === 'success' && '✓ Connected'}
+                {(connectionStatus === 'idle' || connectionStatus === 'error') && 'Test Connection'}
+              </button>
+              {connectionError && (
+                <p className="mt-2 text-sm text-red-600">{connectionError}</p>
+              )}
+            </div>
 
-        {/* Default Model */}
-        <div>
-          <label htmlFor="defaultModel" className="block text-sm font-medium text-gray-700 mb-1">
-            Default Model
-          </label>
-          {formData.savedModels.length > 0 ? (
-            <select
-              id="defaultModel"
-              value={formData.defaultModel}
-              onChange={handleChange('defaultModel')}
-              className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.defaultModel ? 'border-red-500' : 'border-gray-300'
-              }`}
-              aria-describedby={errors.defaultModel ? 'defaultModel-error' : 'defaultModel-hint'}
-            >
-              <option value="">Select a model...</option>
-              {formData.savedModels.map((modelId) => (
-                <option key={modelId} value={modelId}>
-                  {modelId}
-                </option>
-              ))}
-            </select>
-          ) : (
-            <input
-              id="defaultModel"
-              type="text"
-              value={formData.defaultModel}
-              onInput={handleChange('defaultModel')}
-              placeholder="gpt-4o"
-              className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.defaultModel ? 'border-red-500' : 'border-gray-300'
-              }`}
-              aria-describedby={errors.defaultModel ? 'defaultModel-error' : 'defaultModel-hint'}
-            />
-          )}
-          {errors.defaultModel ? (
-            <p id="defaultModel-error" className="mt-1 text-sm text-red-600">
-              {errors.defaultModel}
-            </p>
-          ) : (
-            <p id="defaultModel-hint" className="mt-1 text-xs text-gray-500">
-              Click 'Test Connection' to load available models
-            </p>
-          )}
-        </div>
-
-        {/* Context Budget */}
-        <div>
-          <label htmlFor="contextBudget" className="block text-sm font-medium text-gray-700 mb-1">
-            Context Budget (characters)
-          </label>
-          <input
-            id="contextBudget"
-            type="number"
-            value={formData.contextBudget}
-            onInput={handleChange('contextBudget')}
-            min="1000"
-            max="1000000"
-            step="1000"
-            className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              errors.contextBudget ? 'border-red-500' : 'border-gray-300'
-            }`}
-            aria-describedby={errors.contextBudget ? 'contextBudget-error' : 'contextBudget-hint'}
-          />
-          {errors.contextBudget ? (
-            <p id="contextBudget-error" className="mt-1 text-sm text-red-600">
-              {errors.contextBudget}
-            </p>
-          ) : (
-            <p id="contextBudget-hint" className="mt-1 text-xs text-gray-500">
-              Maximum extracted content per request. Default: 50,000
-            </p>
-          )}
-        </div>
-
-        {/* System Prompt */}
-        <div>
-          <label htmlFor="systemPrompt" className="block text-sm font-medium text-gray-700 mb-1">
-            System Prompt
-          </label>
-          <textarea
-            id="systemPrompt"
-            value={formData.systemPrompt}
-            onInput={handleChange('systemPrompt')}
-            rows={8}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
-            placeholder="Define the AI assistant's role and behavior..."
-          />
-          <div className="flex justify-between mt-1">
-            <p className="text-xs text-gray-500">
-              {formData.systemPrompt.length.toLocaleString()} characters
-            </p>
-            <button
-              type="button"
-              onClick={() => setFormData(prev => ({ ...prev, systemPrompt: DEFAULT_SYSTEM_PROMPT }))}
-              className="text-xs text-blue-600 hover:text-blue-700"
-            >
-              Reset to default
-            </button>
+            {/* Default Model */}
+            <div>
+              <label htmlFor="defaultModel" className="block text-sm font-medium text-gray-700 mb-1">
+                Default Model
+              </label>
+              {formData.savedModels.length > 0 ? (
+                <select
+                  id="defaultModel"
+                  value={formData.defaultModel}
+                  onChange={handleChange('defaultModel')}
+                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.defaultModel ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  aria-describedby={errors.defaultModel ? 'defaultModel-error' : 'defaultModel-hint'}
+                >
+                  <option value="">Select a model...</option>
+                  {formData.savedModels.map((modelId) => (
+                    <option key={modelId} value={modelId}>
+                      {modelId}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  id="defaultModel"
+                  type="text"
+                  value={formData.defaultModel}
+                  onInput={handleChange('defaultModel')}
+                  placeholder="gpt-4o"
+                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.defaultModel ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  aria-describedby={errors.defaultModel ? 'defaultModel-error' : 'defaultModel-hint'}
+                />
+              )}
+              {errors.defaultModel ? (
+                <p id="defaultModel-error" className="mt-1 text-sm text-red-600">
+                  {errors.defaultModel}
+                </p>
+              ) : (
+                <p id="defaultModel-hint" className="mt-1 text-xs text-gray-500">
+                  Click 'Test Connection' to load available models
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        </details>
+
+        {/* Section 2: System Prompt */}
+        <details open className="border border-gray-200 rounded-lg bg-white">
+          <summary className="px-4 py-3 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 rounded-lg select-none">
+            System Prompt
+          </summary>
+          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 mt-2 pt-4">
+            <div>
+              <label htmlFor="systemPrompt" className="block text-sm font-medium text-gray-700 mb-1">
+                System Prompt
+              </label>
+              <textarea
+                id="systemPrompt"
+                value={formData.systemPrompt}
+                onInput={handleChange('systemPrompt')}
+                rows={8}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                placeholder="Define the AI assistant's role and behavior..."
+              />
+              <div className="flex justify-between mt-1">
+                <p className="text-xs text-gray-500">
+                  {formData.systemPrompt.length.toLocaleString()} characters
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, systemPrompt: DEFAULT_SYSTEM_PROMPT }))}
+                  className="text-xs text-blue-600 hover:text-blue-700"
+                >
+                  Reset to default
+                </button>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        {/* Section 3: Advanced */}
+        <details className="border border-gray-200 rounded-lg bg-white">
+          <summary className="px-4 py-3 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 rounded-lg select-none">
+            Advanced
+          </summary>
+          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 mt-2 pt-4">
+            {/* Context Budget */}
+            <div>
+              <label htmlFor="contextBudget" className="block text-sm font-medium text-gray-700 mb-1">
+                Context Budget (characters)
+              </label>
+              <input
+                id="contextBudget"
+                type="number"
+                value={formData.contextBudget}
+                onInput={handleChange('contextBudget')}
+                min="1000"
+                max="1000000"
+                step="1000"
+                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.contextBudget ? 'border-red-500' : 'border-gray-300'
+                }`}
+                aria-describedby={errors.contextBudget ? 'contextBudget-error' : 'contextBudget-hint'}
+              />
+              {errors.contextBudget ? (
+                <p id="contextBudget-error" className="mt-1 text-sm text-red-600">
+                  {errors.contextBudget}
+                </p>
+              ) : (
+                <p id="contextBudget-hint" className="mt-1 text-xs text-gray-500">
+                  Maximum extracted content per request. Default: 50,000
+                </p>
+              )}
+            </div>
+
+            {/* Show Debug Prompt */}
+            <div>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  id="showDebugPrompt"
+                  type="checkbox"
+                  checked={formData.showDebugPrompt}
+                  onChange={handleChange('showDebugPrompt')}
+                  className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Show Debug Prompt</span>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Shows the full prompt being sent to the LLM
+                  </p>
+                </div>
+              </label>
+            </div>
+          </div>
+        </details>
 
         {/* Action Buttons */}
         <div className="flex gap-3 pt-4">
