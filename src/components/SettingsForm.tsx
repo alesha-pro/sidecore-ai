@@ -4,7 +4,6 @@ import { DEFAULT_SYSTEM_PROMPT } from '../lib/types';
 import { normalizeBaseUrl, validateBaseUrl } from '../lib/urlNormalization';
 import { listModels } from '../lib/llm/client';
 import { LLMError } from '../lib/llm/errors';
-import type { Model } from '../lib/llm/types';
 
 interface SettingsFormProps {
   settings: Settings;
@@ -26,7 +25,6 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
-  const [availableModels, setAvailableModels] = useState<Model[]>([]);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
   // Reset form when settings prop changes
@@ -110,13 +108,16 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
     try {
       const normalizedBaseUrl = normalizeBaseUrl(formData.baseUrl);
       const models = await listModels(normalizedBaseUrl, formData.apiKey);
-      setAvailableModels(models);
       setConnectionStatus('success');
 
-      // Auto-select first model if defaultModel is empty and models exist
-      if (!formData.defaultModel.trim() && models.length > 0) {
-        setFormData((prev) => ({ ...prev, defaultModel: models[0].id }));
-      }
+      // Save models to savedModels for persistence
+      const modelIds = models.map(m => m.id);
+      setFormData((prev) => ({
+        ...prev,
+        savedModels: modelIds,
+        // Auto-select first model if defaultModel is empty
+        defaultModel: prev.defaultModel.trim() || (modelIds[0] ?? ''),
+      }));
     } catch (error) {
       setConnectionStatus('error');
       if (error instanceof LLMError) {
@@ -212,7 +213,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
           <label htmlFor="defaultModel" className="block text-sm font-medium text-gray-700 mb-1">
             Default Model
           </label>
-          {connectionStatus === 'success' && availableModels.length > 0 ? (
+          {formData.savedModels.length > 0 ? (
             <select
               id="defaultModel"
               value={formData.defaultModel}
@@ -223,9 +224,9 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
               aria-describedby={errors.defaultModel ? 'defaultModel-error' : 'defaultModel-hint'}
             >
               <option value="">Select a model...</option>
-              {availableModels.map((model) => (
-                <option key={model.id} value={model.id}>
-                  {model.id}
+              {formData.savedModels.map((modelId) => (
+                <option key={modelId} value={modelId}>
+                  {modelId}
                 </option>
               ))}
             </select>
