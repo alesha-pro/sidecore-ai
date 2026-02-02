@@ -1,5 +1,7 @@
 import { useRef, useEffect, useCallback, useState } from 'preact/hooks';
 import type { TabInfo } from '../lib/tabs';
+import { CommandPicker, COMMANDS, type Command } from './CommandPicker';
+import { InputToolbar } from './InputToolbar';
 
 interface MentionInputProps {
   onSend: (content: string, tabIds: number[]) => void;
@@ -11,7 +13,8 @@ interface MentionInputProps {
   isPickerOpen: boolean;
   onPickerOpenChange: (open: boolean) => void;
   onInputChange?: (content: string) => void;
-  initialValue?: string;
+  currentModel: string;
+  onModelClick: () => void;
 }
 
 interface ExtractedContent {
@@ -29,12 +32,15 @@ export function MentionInput({
   isPickerOpen,
   onPickerOpenChange,
   onInputChange,
-  initialValue,
+  currentModel,
+  onModelClick,
 }: MentionInputProps) {
   const inputRef = useRef<HTMLDivElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
   const insertedTabsRef = useRef<Set<number>>(new Set());
   const [activeIndex, setActiveIndex] = useState(-1);
+  const [isCommandPickerOpen, setIsCommandPickerOpen] = useState(false);
+  const [commandFilter, setCommandFilter] = useState('');
 
   // Filter out already selected tabs from picker
   const pickerTabs = availableTabs.filter(
@@ -47,23 +53,6 @@ export function MentionInput({
       setActiveIndex(pickerTabs.length > 0 ? 0 : -1);
     }
   }, [isPickerOpen, pickerTabs.length]);
-
-  // Apply initialValue when it changes and is non-empty
-  useEffect(() => {
-    if (initialValue && inputRef.current) {
-      inputRef.current.textContent = initialValue;
-      // Move cursor to end
-      const range = document.createRange();
-      const selection = window.getSelection();
-      range.selectNodeContents(inputRef.current);
-      range.collapse(false);
-      selection?.removeAllRanges();
-      selection?.addRange(range);
-      inputRef.current.focus();
-      // Notify parent of content change
-      onInputChange?.(initialValue);
-    }
-  }, [initialValue, onInputChange]);
 
   // Close picker on click outside
   useEffect(() => {
@@ -335,7 +324,29 @@ export function MentionInput({
     }
   };
 
-  // Handle input to detect @ trigger and notify parent of content changes
+  // Handle command selection from picker
+  const handleCommandSelect = (command: Command) => {
+    const container = inputRef.current;
+    if (!container) return;
+
+    // Clear existing content and set command text
+    container.textContent = command.text;
+
+    // Move cursor to end
+    const range = document.createRange();
+    const selection = window.getSelection();
+    range.selectNodeContents(container);
+    range.collapse(false);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+
+    setIsCommandPickerOpen(false);
+    setCommandFilter('');
+    onInputChange?.(command.text);
+    container.focus();
+  };
+
+  // Handle input to detect @ and / triggers and notify parent of content changes
   const handleInput = () => {
     const container = inputRef.current;
     if (!container) return;
@@ -351,12 +362,26 @@ export function MentionInput({
     const range = selection.getRangeAt(0);
     const startContainer = range.startContainer;
 
-    // Check if cursor is in a text node and previous character is @
+    // Check if cursor is in a text node
     if (startContainer.nodeType === Node.TEXT_NODE) {
       const textContent = startContainer.textContent || '';
       const offset = range.startOffset;
+
+      // Check for @ trigger
       if (offset > 0 && textContent[offset - 1] === '@') {
         onPickerOpenChange(true);
+        setIsCommandPickerOpen(false);
+      }
+
+      // Check for / at the start of input (for commands)
+      if (textContent.startsWith('/')) {
+        const filter = textContent.slice(1); // Remove leading /
+        setCommandFilter(filter);
+        setIsCommandPickerOpen(true);
+        onPickerOpenChange(false);
+      } else {
+        setIsCommandPickerOpen(false);
+        setCommandFilter('');
       }
     }
   };
@@ -378,72 +403,112 @@ export function MentionInput({
     onInputChange?.('');
   };
 
-  return (
-    <div className="p-4 bg-white border-t border-gray-200">
-      <div className="relative">
-        {/* Inline Tab Picker - appears above input */}
-        {isPickerOpen && pickerTabs.length > 0 && (
-          <div
-            ref={pickerRef}
-            className="absolute bottom-full left-0 right-0 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-auto z-10"
-          >
-            <ul role="listbox" aria-label="Select a tab">
-              {pickerTabs.map((tab, index) => (
-                <li
-                  key={tab.id}
-                  role="option"
-                  aria-selected={index === activeIndex}
-                  onClick={() => handlePickerSelect(tab)}
-                  className={`flex items-center gap-2 px-3 py-2 cursor-pointer ${
-                    index === activeIndex
-                      ? 'bg-blue-50 text-blue-900'
-                      : 'hover:bg-gray-50'
-                  }`}
-                >
-                  {tab.favIconUrl ? (
-                    <img
-                      src={tab.favIconUrl}
-                      alt=""
-                      className="w-4 h-4 flex-shrink-0"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <span className="w-4 h-4 flex-shrink-0 text-gray-400">
-                      📄
-                    </span>
-                  )}
-                  <span className="truncate text-sm">{tab.title}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+  // Trigger @ picker from toolbar button
+  const handleAtClick = () => {
+    onPickerOpenChange(true);
+    inputRef.current?.focus();
+  };
 
-        {/* Input area */}
-        <div className="flex gap-2">
+  // Trigger / picker from toolbar button
+  const handleSlashClick = () => {
+    const container = inputRef.current;
+    if (!container) return;
+
+    // Set "/" in input and open command picker
+    container.textContent = '/';
+    setCommandFilter('');
+    setIsCommandPickerOpen(true);
+
+    // Move cursor to end
+    const range = document.createRange();
+    const selection = window.getSelection();
+    range.selectNodeContents(container);
+    range.collapse(false);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+
+    container.focus();
+    onInputChange?.('/');
+  };
+
+  return (
+    <div className="bg-white border-t border-gray-200">
+      <div className="p-3 pb-2">
+        <div className="relative">
+          {/* Inline Tab Picker - appears above input */}
+          {isPickerOpen && pickerTabs.length > 0 && (
+            <div
+              ref={pickerRef}
+              className="absolute bottom-full left-0 right-0 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-auto z-10"
+            >
+              <ul role="listbox" aria-label="Select a tab">
+                {pickerTabs.map((tab, index) => (
+                  <li
+                    key={tab.id}
+                    role="option"
+                    aria-selected={index === activeIndex}
+                    onClick={() => handlePickerSelect(tab)}
+                    className={`flex items-center gap-2 px-3 py-2 cursor-pointer ${
+                      index === activeIndex
+                        ? 'bg-blue-50 text-blue-900'
+                        : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    {tab.favIconUrl ? (
+                      <img
+                        src={tab.favIconUrl}
+                        alt=""
+                        className="w-4 h-4 flex-shrink-0"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <span className="w-4 h-4 flex-shrink-0 text-gray-400">
+                        📄
+                      </span>
+                    )}
+                    <span className="truncate text-sm">{tab.title}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Command Picker - appears above input */}
+          <CommandPicker
+            isOpen={isCommandPickerOpen}
+            onClose={() => {
+              setIsCommandPickerOpen(false);
+              setCommandFilter('');
+            }}
+            onSelect={handleCommandSelect}
+            filter={commandFilter}
+          />
+
+          {/* Input area */}
           <div
             ref={inputRef}
             contentEditable={!disabled}
             onKeyDown={handleKeyDown}
             onInput={handleInput}
-            className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg min-h-[38px] max-h-[150px] overflow-y-auto focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400"
-            data-placeholder="Type a message... (@ to add tabs)"
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg min-h-[38px] max-h-[150px] overflow-y-auto focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400"
+            data-placeholder="Type a message, @ for tabs, / for commands"
             role="textbox"
             aria-label="Message input"
             aria-multiline="true"
           />
-          <button
-            type="button"
-            onClick={handleSend}
-            disabled={disabled}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed self-end"
-          >
-            Send
-          </button>
         </div>
       </div>
+
+      {/* Toolbar below input */}
+      <InputToolbar
+        currentModel={currentModel}
+        onModelClick={onModelClick}
+        onAtClick={handleAtClick}
+        onSlashClick={handleSlashClick}
+        disabled={disabled}
+      />
     </div>
   );
 }

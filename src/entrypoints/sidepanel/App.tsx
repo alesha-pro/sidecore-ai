@@ -7,8 +7,7 @@ import { ContextBar } from '../../components/ContextBar';
 import { ExtractionStatus } from '../../components/ExtractionStatus';
 import { SelectedTabsBar } from '../../components/SelectedTabsBar';
 import { PromptDebugView } from '../../components/PromptDebugView';
-import ModelSelector from '../../components/ModelSelector';
-import QuickCommands from '../../components/QuickCommands';
+import { ModelSelectorPopup } from '../../components/ModelSelectorPopup';
 import { useTabs } from '../../hooks/useTabs';
 import { getSettings, saveSettings } from '../../lib/storage';
 import type { Message, Settings, TabSelection, Chat, ChatSummary } from '../../lib/types';
@@ -63,8 +62,8 @@ export default function App() {
   const [previewExtraction, setPreviewExtraction] = useState<ExtractedTabContent[]>([]);
   const [isPreviewExtracting, setIsPreviewExtracting] = useState(false);
 
-  // Quick commands state
-  const [quickCommandText, setQuickCommandText] = useState('');
+  // Model selector popup state
+  const [showModelSelector, setShowModelSelector] = useState(false);
 
   // Chat management state
   const [chats, setChats] = useState<ChatSummary[]>([]);
@@ -386,7 +385,6 @@ export default function App() {
 
     setTabSelection(DEFAULT_TAB_SELECTION);
     setIsTabPickerOpen(false);
-    setQuickCommandText(''); // Clear quick command after send
 
     setLLMError(null);
     setIsLLMLoading(true);
@@ -1069,18 +1067,6 @@ export default function App() {
                 isLoading={isPreviewExtracting}
               />
             )}
-            {settings && (
-              <ModelSelector
-                currentModel={settings.defaultModel}
-                savedModels={settings.savedModels}
-                onModelChange={handleModelChange}
-                disabled={isLLMLoading || isStreaming}
-              />
-            )}
-            <QuickCommands
-              onCommandSelect={setQuickCommandText}
-              disabled={!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel || isLLMLoading || isStreaming}
-            />
             <MentionInput
               onSend={handleSendMessage}
               disabled={!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel || isLLMLoading || isStreaming}
@@ -1091,10 +1077,25 @@ export default function App() {
               isPickerOpen={isTabPickerOpen}
               onPickerOpenChange={setIsTabPickerOpen}
               onInputChange={handleInputChange}
-              initialValue={quickCommandText}
+              currentModel={settings?.defaultModel || ''}
+              onModelClick={() => setShowModelSelector(true)}
             />
           </div>
         </div>
+      )}
+
+      {/* Model Selector Popup */}
+      {settings && (
+        <ModelSelectorPopup
+          isOpen={showModelSelector}
+          onClose={() => setShowModelSelector(false)}
+          currentModel={settings.defaultModel}
+          savedModels={settings.savedModels}
+          onModelChange={(model) => {
+            handleModelChange(model);
+            setShowModelSelector(false);
+          }}
+        />
       )}
     </div>
   );
