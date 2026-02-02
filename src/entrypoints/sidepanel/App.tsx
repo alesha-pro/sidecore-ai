@@ -1002,18 +1002,6 @@ export default function App() {
             <span className="text-sm text-gray-600">Agent Mode</span>
             <span className="sr-only">Enable automatic tool calling</span>
           </label>
-          <button
-            type="button"
-            onClick={() => setShowSettings(!showSettings)}
-            className={`px-3 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              showSettings
-                ? 'text-blue-600 border-blue-600 bg-blue-50'
-                : 'text-gray-600 border-gray-300 hover:bg-gray-50'
-            }`}
-            aria-pressed={showSettings}
-          >
-            Settings
-          </button>
         </div>
       </header>
 
@@ -1079,6 +1067,7 @@ export default function App() {
               onInputChange={handleInputChange}
               currentModel={settings?.defaultModel || ''}
               onModelClick={() => setShowModelSelector(true)}
+              onSettingsClick={() => setShowSettings(!showSettings)}
             />
           </div>
         </div>
