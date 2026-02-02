@@ -40,6 +40,20 @@ function getLanguageInstruction(languageCode: string): string {
   return `IMPORTANT: Always respond in ${language.label}.\n\n`;
 }
 
+// Helper function to get current date and time
+function getCurrentDateTime(): string {
+  const now = new Date();
+  return now.toLocaleString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short'
+  });
+}
+
 export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
@@ -290,7 +304,7 @@ export default function App() {
     // 1. System prompt with optional language instruction
     if (settings.systemPrompt?.trim() || settings.responseLanguage !== 'auto') {
       const languageInstruction = getLanguageInstruction(settings.responseLanguage);
-      const systemPromptContent = languageInstruction + (settings.systemPrompt || '');
+      const systemPromptContent = `Current date and time: ${getCurrentDateTime()}\n\n` + languageInstruction + (settings.systemPrompt || '');
       if (systemPromptContent.trim()) {
         preview.push({
           role: 'system',
@@ -420,7 +434,7 @@ export default function App() {
       // 1. Add system prompt first with optional language instruction
       if (settings.systemPrompt?.trim() || settings.responseLanguage !== 'auto') {
         const languageInstruction = getLanguageInstruction(settings.responseLanguage);
-        const systemPromptContent = languageInstruction + (settings.systemPrompt || '');
+        const systemPromptContent = `Current date and time: ${getCurrentDateTime()}\n\n` + languageInstruction + (settings.systemPrompt || '');
         if (systemPromptContent.trim()) {
           apiMessages.push({
             role: 'system' as const,
