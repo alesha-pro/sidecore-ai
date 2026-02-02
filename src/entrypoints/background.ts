@@ -1,6 +1,5 @@
 import { extractTabs } from '../background/extraction/extractTabs';
 import { fetchUrl } from '../background/tools/fetch';
-import { searchExa } from '../background/tools/search';
 import type { TabInfo } from '../lib/tabs';
 import type { ExtractedTabContent } from '../shared/extraction';
 
@@ -49,35 +48,6 @@ export default defineBackground(() => {
         })
         .catch((error) => {
           console.error('Tool fetch failed:', error);
-          sendResponse({
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
-          });
-        });
-
-      // Return true to indicate async response
-      return true;
-    }
-
-    // Handle tool search requests (Exa API)
-    if (message.type === 'tool-search') {
-      const { query, apiKey, numResults } = message as {
-        type: 'tool-search';
-        query: string;
-        apiKey: string;
-        numResults?: number;
-      };
-
-      searchExa({ query, apiKey, numResults })
-        .then((result) => {
-          if (result.ok) {
-            sendResponse({ success: true, result });
-          } else {
-            sendResponse({ success: false, error: result.error });
-          }
-        })
-        .catch((error) => {
-          console.error('Tool search failed:', error);
           sendResponse({
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error',

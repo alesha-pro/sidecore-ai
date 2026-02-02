@@ -41,7 +41,6 @@ export interface Settings {
   agentMode: boolean;
   agentMaxIterations: number;
   agentTimeoutMs: number;
-  exaApiKey: string;
   mcpServers: McpServerConfig[];
   /** Tool names to disable (won't be sent to LLM) */
   disabledTools: string[];
@@ -89,7 +88,6 @@ export const DEFAULT_SETTINGS: Settings = {
   agentMode: false,
   agentMaxIterations: 15,
   agentTimeoutMs: 5 * 60 * 1000,
-  exaApiKey: '',
   mcpServers: [],
   disabledTools: [],
   disabledServers: [],

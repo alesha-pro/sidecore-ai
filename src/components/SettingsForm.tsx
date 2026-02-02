@@ -516,25 +516,6 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                 </div>
               </label>
             </div>
-
-            {/* Web Search (Exa) API Key */}
-            <div>
-              <label htmlFor="exaApiKey" className="block text-sm font-medium text-gray-700 mb-1">
-                Web Search (Exa) API Key
-              </label>
-              <input
-                id="exaApiKey"
-                type="password"
-                value={formData.exaApiKey}
-                onInput={handleChange('exaApiKey')}
-                placeholder="exa_..."
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                aria-describedby="exaApiKey-hint"
-              />
-              <p id="exaApiKey-hint" className="mt-1 text-xs text-gray-500">
-                Optional. Required for the Web Search tool. Get your key at exa.ai
-              </p>
-            </div>
           </div>
         </details>
 
