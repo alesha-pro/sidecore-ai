@@ -3,11 +3,49 @@ import type { Message } from '../lib/types';
 import ThinkingBlock from './ThinkingBlock';
 import ToolCallBlock from './ToolCallBlock';
 import { marked } from 'marked';
+import hljs from 'highlight.js/lib/core';
+import javascript from 'highlight.js/lib/languages/javascript';
+import typescript from 'highlight.js/lib/languages/typescript';
+import python from 'highlight.js/lib/languages/python';
+import bash from 'highlight.js/lib/languages/bash';
+import json from 'highlight.js/lib/languages/json';
+import xml from 'highlight.js/lib/languages/xml';
+import css from 'highlight.js/lib/languages/css';
+import sql from 'highlight.js/lib/languages/sql';
+import markdown from 'highlight.js/lib/languages/markdown';
 
-// Configure marked for safe rendering
+// Register languages for syntax highlighting
+hljs.registerLanguage('javascript', javascript);
+hljs.registerLanguage('js', javascript);
+hljs.registerLanguage('typescript', typescript);
+hljs.registerLanguage('ts', typescript);
+hljs.registerLanguage('python', python);
+hljs.registerLanguage('py', python);
+hljs.registerLanguage('bash', bash);
+hljs.registerLanguage('sh', bash);
+hljs.registerLanguage('shell', bash);
+hljs.registerLanguage('json', json);
+hljs.registerLanguage('xml', xml);
+hljs.registerLanguage('html', xml);
+hljs.registerLanguage('css', css);
+hljs.registerLanguage('sql', sql);
+hljs.registerLanguage('markdown', markdown);
+hljs.registerLanguage('md', markdown);
+
+// Configure marked with syntax highlighting
+const renderer = new marked.Renderer();
+renderer.code = function(code: string, language: string | undefined) {
+  const validLang = language && hljs.getLanguage(language);
+  const highlighted = validLang
+    ? hljs.highlight(code, { language }).value
+    : hljs.highlightAuto(code).value;
+  return `<pre><code class="hljs${validLang ? ` language-${language}` : ''}">${highlighted}</code></pre>`;
+};
+
 marked.setOptions({
   breaks: true,
   gfm: true,
+  renderer,
 });
 
 interface ChatMessageProps {
