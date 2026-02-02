@@ -10,6 +10,7 @@ interface MentionInputProps {
   onSelectTab: (tabId: number) => void;
   isPickerOpen: boolean;
   onPickerOpenChange: (open: boolean) => void;
+  onInputChange?: (content: string) => void;
 }
 
 interface ExtractedContent {
@@ -26,6 +27,7 @@ export function MentionInput({
   onSelectTab,
   isPickerOpen,
   onPickerOpenChange,
+  onInputChange,
 }: MentionInputProps) {
   const inputRef = useRef<HTMLDivElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -314,10 +316,14 @@ export function MentionInput({
     }
   };
 
-  // Handle input to detect @ trigger
+  // Handle input to detect @ trigger and notify parent of content changes
   const handleInput = () => {
     const container = inputRef.current;
     if (!container) return;
+
+    // Notify parent of content change (for debug preview)
+    const { text } = extractContent();
+    onInputChange?.(text);
 
     // Get current text content at cursor position
     const selection = window.getSelection();
@@ -348,6 +354,9 @@ export function MentionInput({
       inputRef.current.innerHTML = '';
       insertedTabsRef.current.clear();
     }
+
+    // Notify parent that input is now empty
+    onInputChange?.('');
   };
 
   return (
