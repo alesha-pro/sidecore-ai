@@ -833,7 +833,7 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {/* Mini header with chat list toggle only */}
-      <header className="flex items-center px-3 py-2 bg-white border-b border-gray-200">
+      <header className="flex items-center gap-2 px-3 py-2 bg-white border-b border-gray-200">
         <button
           type="button"
           onClick={() => setShowChatList(!showChatList)}
@@ -854,6 +854,24 @@ export default function App() {
             className="w-5 h-5"
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          onClick={handleNewChat}
+          className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+          title="New Chat"
+          aria-label="New Chat"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={2}
+            stroke="currentColor"
+            className="w-5 h-5"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>
         </button>
       </header>
