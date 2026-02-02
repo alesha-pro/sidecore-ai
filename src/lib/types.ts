@@ -18,7 +18,19 @@ export interface Settings {
   savedModels: string[];
   showDebugPrompt: boolean;
   showExtractionStatus: boolean;
+  responseLanguage: string;
 }
+
+export const SUPPORTED_LANGUAGES = [
+  { code: 'auto', label: 'Auto (match page language)' },
+  { code: 'en', label: 'English' },
+  { code: 'ru', label: 'Russian' },
+  { code: 'zh', label: 'Chinese' },
+  { code: 'es', label: 'Spanish' },
+  { code: 'de', label: 'German' },
+  { code: 'fr', label: 'French' },
+  { code: 'ja', label: 'Japanese' },
+] as const;
 
 export const DEFAULT_SYSTEM_PROMPT = `You are an AI assistant integrated into a Chrome extension. Your role is to help users understand and analyze web page content from their browser tabs.
 
@@ -45,6 +57,7 @@ export const DEFAULT_SETTINGS: Settings = {
   savedModels: [],
   showDebugPrompt: false,
   showExtractionStatus: false,
+  responseLanguage: 'auto',
 };
 
 export interface TabSelection {

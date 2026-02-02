@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'preact/hooks';
 import type { Settings } from '../lib/types';
-import { DEFAULT_SYSTEM_PROMPT } from '../lib/types';
+import { DEFAULT_SYSTEM_PROMPT, SUPPORTED_LANGUAGES } from '../lib/types';
 import { normalizeBaseUrl, validateBaseUrl } from '../lib/urlNormalization';
 import { listModels } from '../lib/llm/client';
 import { LLMError } from '../lib/llm/errors';
@@ -105,8 +105,8 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
 
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear field error on change
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }));
+    if (errors[field as keyof FormErrors]) {
+      setErrors((prev) => ({ ...prev, [field as keyof FormErrors]: undefined }));
     }
   };
 
@@ -277,6 +277,28 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
             System Prompt
           </summary>
           <div className="px-4 pb-4 space-y-4 border-t border-gray-200 mt-2 pt-4">
+            {/* Response Language */}
+            <div>
+              <label htmlFor="responseLanguage" className="block text-sm font-medium text-gray-700 mb-1">
+                Response Language
+              </label>
+              <select
+                id="responseLanguage"
+                value={formData.responseLanguage}
+                onChange={handleChange('responseLanguage')}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <option key={lang.code} value={lang.code}>
+                    {lang.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                Language for AI responses
+              </p>
+            </div>
+
             <div>
               <label htmlFor="systemPrompt" className="block text-sm font-medium text-gray-700 mb-1">
                 System Prompt
