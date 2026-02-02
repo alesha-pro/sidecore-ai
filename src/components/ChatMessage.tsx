@@ -20,7 +20,12 @@ export default function ChatMessage({ message, isStreaming, streamingContent }: 
             : 'bg-white border border-gray-200 text-gray-900'
         }`}
       >
-        <p className="text-sm whitespace-pre-wrap break-words">{displayContent}</p>
+        <p className="text-sm whitespace-pre-wrap break-words">
+          {displayContent}
+          {message.isStreaming && (
+            <span className="inline-block w-2 h-4 ml-1 bg-gray-400 animate-pulse align-middle"></span>
+          )}
+        </p>
       </div>
     </div>
   );

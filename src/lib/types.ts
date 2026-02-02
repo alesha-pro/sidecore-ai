@@ -3,6 +3,8 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
+  isStreaming?: boolean;
+  isError?: boolean;
 }
 
 export interface Settings {
@@ -10,6 +12,7 @@ export interface Settings {
   apiKey: string;
   defaultModel: string;
   contextBudget: number;
+  stream: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -17,11 +20,12 @@ export const DEFAULT_SETTINGS: Settings = {
   apiKey: '',
   defaultModel: '',
   contextBudget: 50000,
+  stream: true,
 };
 
 export interface TabSelection {
-  includeActiveTab: boolean;    // CTX-01: active tab on by default
-  selectedTabIds: Set<number>;  // CTX-03: additionally selected tabs
+  includeActiveTab: boolean;
+  selectedTabIds: Set<number>;
 }
 
 export const DEFAULT_TAB_SELECTION: TabSelection = {

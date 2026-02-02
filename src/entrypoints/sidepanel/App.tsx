@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'preact/hooks';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'preact/hooks';
 import ChatHistory from '../../components/ChatHistory';
 import { MentionInput } from '../../components/MentionInput';
 import SettingsForm from '../../components/SettingsForm';
@@ -11,9 +11,10 @@ import type { Message, Settings, TabSelection } from '../../lib/types';
 import { DEFAULT_SETTINGS, DEFAULT_TAB_SELECTION } from '../../lib/types';
 import { createChatCompletion } from '../../lib/llm/client';
 import { LLMError } from '../../lib/llm/errors';
-import type { ChatMessage } from '../../lib/llm/types';
+import type { ChatMessage as LLMChatMessage } from '../../lib/llm/types';
 import type { ExtractedTabContent } from '../../shared/extraction';
 import type { TabInfo } from '../../lib/tabs';
+import { createStreamingClient } from '../../lib/streaming/streaming-client';
 
 export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -22,33 +23,33 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLLMLoading, setIsLLMLoading] = useState(false);
   const [llmError, setLLMError] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Tab selection state (ephemeral - resets after sending)
   const [tabSelection, setTabSelection] = useState<TabSelection>(DEFAULT_TAB_SELECTION);
   const [isTabPickerOpen, setIsTabPickerOpen] = useState(false);
 
-  // Extraction results state (for per-tab status display)
   const [extractionResults, setExtractionResults] = useState<ExtractedTabContent[]>([]);
 
-  // Handle tab close: remove closed tabs from selection
+  const isStreaming = useMemo(
+    () => messages.some((message) => message.isStreaming),
+    [messages]
+  );
+
   const handleTabClosed = useCallback((tabId: number) => {
     setTabSelection((prev) => ({
       ...prev,
-      selectedTabIds: prev.selectedTabIds.filter((id) => id !== tabId),
+      selectedTabIds: new Set(Array.from(prev.selectedTabIds).filter((id) => id !== tabId)),
     }));
   }, []);
 
-  // Use tabs hook with close callback for selection cleanup
   const { tabs, activeTab } = useTabs(handleTabClosed);
 
-  // Load settings on mount
   useEffect(() => {
     const loadSettings = async () => {
       try {
         const loadedSettings = await getSettings();
         setSettings(loadedSettings);
 
-        // If no settings configured, show settings form
         if (!loadedSettings.baseUrl || !loadedSettings.apiKey) {
           setShowSettings(true);
         }
@@ -64,13 +65,18 @@ export default function App() {
     loadSettings();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
   const handleSaveSettings = async (newSettings: Settings) => {
     await saveSettings(newSettings);
     setSettings(newSettings);
     setShowSettings(false);
   };
 
-  // Get all selected tabs for context
   const getSelectedTabs = useCallback((overrideTabIds?: number[]) => {
     const selected: TabInfo[] = [];
     const tabIdsToUse = overrideTabIds ?? Array.from(tabSelection.selectedTabIds);
@@ -81,7 +87,6 @@ export default function App() {
 
     for (const tabId of tabIdsToUse) {
       const tab = tabs.find((t) => t.id === tabId);
-      // Avoid duplicates (if activeTab is also in selectedTabIds)
       if (tab && tab.id !== activeTab?.id) {
         selected.push(tab);
       }
@@ -90,14 +95,12 @@ export default function App() {
     return selected;
   }, [tabSelection, tabs, activeTab]);
 
-  // Build selected tabs array for MentionInput (from selectedTabIds)
   const selectedTabsForInput = useMemo(() => {
     return Array.from(tabSelection.selectedTabIds)
       .map(id => tabs.find(t => t.id === id))
       .filter((t): t is TabInfo => t !== undefined);
   }, [tabSelection.selectedTabIds, tabs]);
 
-  // Handle chip removal from MentionInput or SelectedTabsBar
   const handleRemoveTab = useCallback((tabId: number) => {
     setTabSelection((prev) => {
       const newSet = new Set(prev.selectedTabIds);
@@ -109,7 +112,17 @@ export default function App() {
     });
   }, []);
 
-  // Handle active tab toggle from SelectedTabsBar
+  const handleSelectTab = useCallback((tabId: number) => {
+    setTabSelection((prev) => {
+      const nextSelected = new Set(prev.selectedTabIds);
+      nextSelected.add(tabId);
+      return {
+        ...prev,
+        selectedTabIds: nextSelected,
+      };
+    });
+  }, []);
+
   const handleToggleActiveTab = useCallback((include: boolean) => {
     setTabSelection((prev) => ({
       ...prev,
@@ -118,34 +131,29 @@ export default function App() {
   }, []);
 
   const handleSendMessage = async (content: string, tabIds: number[] = []) => {
-    // Early return if settings incomplete
     if (!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel) {
       return;
     }
 
-    // Get selected tabs from inline mentions (tabIds) + activeTab toggle
     const selectedTabs = getSelectedTabs(tabIds);
     console.log('Selected tabs for context:', selectedTabs.map(t => ({ id: t.id, title: t.title })));
 
-    // Add user message to state
-    const newMessage: Message = {
+    const userMessage: Message = {
       id: crypto.randomUUID(),
       role: 'user',
       content,
       timestamp: Date.now(),
     };
-    setMessages((prev) => [...prev, newMessage]);
+    setMessages((prev) => [...prev, userMessage]);
 
-    // Reset tab selection after capture (CTX-03: ephemeral selection)
     setTabSelection(DEFAULT_TAB_SELECTION);
     setIsTabPickerOpen(false);
 
-    // Reset error and set loading state
     setLLMError(null);
     setIsLLMLoading(true);
+    abortControllerRef.current = new AbortController();
 
     try {
-      // Extract content from selected tabs
       let extractionResults: ExtractedTabContent[] = [];
       if (selectedTabs.length > 0) {
         const response = await chrome.runtime.sendMessage({
@@ -162,7 +170,6 @@ export default function App() {
         }
       }
 
-      // Build system message from successful extractions
       const successfulExtractions = extractionResults.filter((r) => !r.error && r.markdown);
       let systemMessage = '';
       if (successfulExtractions.length > 0) {
@@ -171,15 +178,11 @@ export default function App() {
           .join('\n\n');
       }
 
-      // Build API messages from existing messages plus new user message
-      const apiMessages: ChatMessage[] = [
-        ...messages.map((msg) => ({
-          role: msg.role,
-          content: msg.content,
-        })),
-      ];
+      const apiMessages: LLMChatMessage[] = messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      }));
 
-      // Add system message with context if available
       if (systemMessage) {
         apiMessages.push({
           role: 'system' as const,
@@ -187,60 +190,133 @@ export default function App() {
         });
       }
 
-      // Add user message
       apiMessages.push({
         role: 'user' as const,
         content,
       });
 
-      // Call LLM API
-      const response = await createChatCompletion(
-        settings.baseUrl,
-        settings.apiKey,
-        {
-          model: settings.defaultModel,
-          messages: apiMessages,
-        }
-      );
+      if (settings.stream) {
+        const streamingMessageId = crypto.randomUUID();
+        setMessages((prev) => [...prev, {
+          id: streamingMessageId,
+          role: 'assistant',
+          content: '',
+          timestamp: Date.now(),
+          isStreaming: true,
+        }]);
 
-      // Create assistant message from response
-      const assistantMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: response.choices[0].message.content,
-        timestamp: Date.now(),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
+        const streamUrl = `${settings.baseUrl}/chat/completions`;
+        const generator = createStreamingClient(streamUrl, {
+          apiKey: settings.apiKey,
+          body: {
+            model: settings.defaultModel,
+            messages: apiMessages,
+          },
+          signal: abortControllerRef.current.signal,
+        });
+
+        for await (const chunk of generator) {
+          if (abortControllerRef.current.signal.aborted) {
+            console.log('Streaming aborted by user.');
+            break;
+          }
+
+          if (chunk.type === 'data' && typeof chunk.payload === 'object' && 'choices' in chunk.payload) {
+            const delta = chunk.payload.choices[0].delta.content || '';
+            setMessages((prev) => {
+              const lastMessage = prev[prev.length - 1];
+              if (lastMessage && lastMessage.id === streamingMessageId) {
+                return [
+                  ...prev.slice(0, -1),
+                  { ...lastMessage, content: lastMessage.content + delta },
+                ];
+              }
+              return prev;
+            });
+          } else if (chunk.type === 'error') {
+            console.error('Streaming error:', chunk.payload);
+            setLLMError( (chunk.payload as {message: string}).message || 'Streaming error');
+            setMessages((prev) => {
+              const lastMessage = prev[prev.length - 1];
+              if (lastMessage && lastMessage.id === streamingMessageId) {
+                return [
+                  ...prev.slice(0, -1),
+                  {
+                    ...lastMessage,
+                    content: lastMessage.content + `\n\n**Error: ${(chunk.payload as {message: string}).message || 'Stream interrupted'}**`,
+                    isStreaming: false,
+                    isError: true,
+                  },
+                ];
+              }
+              return prev;
+            });
+            break;
+          }
+        }
+
+        setMessages((prev) => {
+          const lastMessage = prev[prev.length - 1];
+          if (lastMessage && lastMessage.id === streamingMessageId) {
+            return [
+              ...prev.slice(0, -1),
+              { ...lastMessage, isStreaming: false, timestamp: Date.now() },
+            ];
+          }
+          return prev;
+        });
+
+      } else {
+        const response = await createChatCompletion(
+          settings.baseUrl,
+          settings.apiKey,
+          {
+            model: settings.defaultModel,
+            messages: apiMessages,
+          }
+        );
+
+        const assistantMessage: Message = {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: response.choices[0].message.content,
+          timestamp: Date.now(),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+      }
     } catch (error) {
       if (error instanceof LLMError) {
         setLLMError(error.userMessage);
         console.error(error.toLogString());
-      } else {
+      } else if (abortControllerRef.current?.signal.aborted) {
+        console.log('LLM request aborted successfully.');
+        setLLMError('Generation stopped.');
+        setMessages((prev) => {
+          const lastMessage = prev[prev.length - 1];
+          if (lastMessage && lastMessage.isStreaming) {
+            return [
+              ...prev.slice(0, -1),
+              { ...lastMessage, isStreaming: false },
+            ];
+          }
+          return prev;
+        });
+      }
+      else {
         setLLMError('An unexpected error occurred. Please try again.');
         console.error('LLM request error:', error);
       }
     } finally {
       setIsLLMLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
-  const handleTriggerTabPicker = () => {
-    setIsTabPickerOpen(true);
-  };
-
-  // Handle tab selection from MentionInput picker
-  const handleSelectTab = useCallback((tabId: number) => {
-    setTabSelection((prev) => {
-      const newSet = new Set(prev.selectedTabIds);
-      newSet.add(tabId);
-      return {
-        ...prev,
-        selectedTabIds: newSet,
-      };
-    });
+  const handleStopStreaming = useCallback(() => {
+    abortControllerRef.current?.abort();
+    setIsLLMLoading(false);
   }, []);
 
-  // Show loading state while fetching settings
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -289,10 +365,16 @@ export default function App() {
             onRemoveTab={handleRemoveTab}
             onToggleActiveTab={handleToggleActiveTab}
           />
-          <ChatHistory messages={messages} isLoading={isLLMLoading} error={llmError} />
+          <ChatHistory
+            messages={messages}
+            isLoading={isLLMLoading && !isStreaming}
+            error={llmError}
+            isStreaming={isStreaming}
+            onStop={handleStopStreaming}
+          />
           <MentionInput
             onSend={handleSendMessage}
-            disabled={!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel || isLLMLoading}
+            disabled={!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel || isLLMLoading || isStreaming}
             selectedTabs={selectedTabsForInput}
             onRemoveTab={handleRemoveTab}
             availableTabs={tabs}
