@@ -28,7 +28,7 @@ import {
   createChat,
 } from '../../lib/chat-storage';
 import { runAgentLoop } from '../../lib/agent/agent-loop';
-import { toolRegistry } from '../../lib/tools';
+import { toolRegistry, toToolDefinition } from '../../lib/tools';
 import { registerBuiltInTools } from '../../lib/tools/builtins';
 import { McpToolManager } from '../../lib/mcp';
 
@@ -469,7 +469,17 @@ export default function App() {
       if (settings.agentMode) {
         // Register built-in tools and get definitions
         registerBuiltInTools(toolRegistry);
-        const tools = toolRegistry.getDefinitions();
+        const disabledTools = new Set(settings.disabledTools ?? []);
+        const disabledServers = new Set(settings.disabledServers ?? []);
+        const tools = (await toolRegistry.getTools())
+          .filter((tool) => {
+            if (disabledTools.has(tool.name)) return false;
+            if (tool.source === 'mcp' && tool.serverId) {
+              return !disabledServers.has(tool.serverId);
+            }
+            return true;
+          })
+          .map(toToolDefinition);
 
         // Create executeTool callback
         const executeTool = async (name: string, args: unknown) => {
