@@ -14,6 +14,81 @@ import { Readability, isProbablyReaderable } from '@mozilla/readability';
 import TurndownService from 'turndown';
 import type { ArticleExtractionPayload } from '../shared/extraction';
 
+/**
+ * Site-specific handler interface
+ * Handlers prepare the DOM before Readability extraction
+ */
+type SiteHandler = (doc: Document) => void;
+
+/**
+ * Site handlers registry
+ * Each handler receives a cloned document and can modify it before Readability runs
+ */
+const siteHandlers: Record<string, SiteHandler> = {
+  /**
+   * Reddit handler - removes AI-generated "Related Answers" and sidebar content
+   * that Readability incorrectly prioritizes over the actual post content
+   */
+  'reddit.com': (doc: Document) => {
+    // Remove all aside elements (sidebars, related answers, ads, etc.)
+    const asides = doc.querySelectorAll('aside');
+    asides.forEach(el => el.remove());
+
+    // Remove elements with complementary role (another way sidebars are marked)
+    const complementary = doc.querySelectorAll('[role="complementary"]');
+    complementary.forEach(el => el.remove());
+
+    // Remove right sidebar container specifically
+    const rightSidebar = doc.querySelector('#right-sidebar-container');
+    rightSidebar?.remove();
+
+    // Remove promoted/ad content
+    const promoted = doc.querySelectorAll('[data-testid="promoted-link"], [data-testid="ad-slot"]');
+    promoted.forEach(el => el.remove());
+
+    console.log('[article-extractor] Reddit handler: removed', asides.length, 'aside elements');
+  },
+
+  /**
+   * Twitter/X handler - focuses on tweet content
+   */
+  'twitter.com': (doc: Document) => {
+    // Remove trending sidebar, who to follow, etc.
+    const sidebar = doc.querySelector('[data-testid="sidebarColumn"]');
+    sidebar?.remove();
+
+    // Remove bottom bar
+    const bottomBar = doc.querySelector('[data-testid="BottomBar"]');
+    bottomBar?.remove();
+  },
+
+  /**
+   * X.com handler (same as Twitter)
+   */
+  'x.com': (doc: Document) => {
+    siteHandlers['twitter.com'](doc);
+  },
+};
+
+/**
+ * Get the appropriate site handler for a hostname
+ */
+function getSiteHandler(hostname: string): SiteHandler | null {
+  // Direct match
+  if (siteHandlers[hostname]) {
+    return siteHandlers[hostname];
+  }
+
+  // Check for subdomain matches (e.g., www.reddit.com -> reddit.com)
+  for (const domain of Object.keys(siteHandlers)) {
+    if (hostname.endsWith('.' + domain) || hostname === domain) {
+      return siteHandlers[domain];
+    }
+  }
+
+  return null;
+}
+
 export default defineContentScript({
   matches: ['https://never-match-this-domain-wxt-dev-mode.invalid/*'],  // Never-matching pattern for WXT dev mode compatibility
   main() {
@@ -42,6 +117,14 @@ function extractArticle(): ArticleExtractionPayload {
 
     // Clone document to avoid modifying the live page
     const documentClone = document.cloneNode(true) as Document;
+
+    // Apply site-specific preprocessing if available
+    const hostname = document.location.hostname;
+    const siteHandler = getSiteHandler(hostname);
+    if (siteHandler) {
+      console.log('[article-extractor] Applying site handler for:', hostname);
+      siteHandler(documentClone);
+    }
 
     // Parse article content with Readability
     // We try extraction even if isProbablyReaderable is false (fallback)
