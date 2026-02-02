@@ -27,7 +27,9 @@ import {
   deleteChat,
   createChat,
 } from '../../lib/chat-storage';
-import { runAgentLoop } from '../../lib/agent/agent-loop';
+import { runAgentLoop, AgentLoopCallbacks } from '../../lib/agent/agent-loop';
+import type { StreamingToolCallDelta } from '../../lib/streaming/streaming-types';
+import type { ToolCall } from '../../lib/types';
 import { toolRegistry, toToolDefinition } from '../../lib/tools';
 import { registerBuiltInTools } from '../../lib/tools/builtins';
 import { McpToolManager } from '../../lib/mcp';
@@ -494,7 +496,114 @@ export default function App() {
           return await tool.execute(args);
         };
 
-        // Run the agent loop (clone apiMessages to avoid mutation)
+        // Create streaming message placeholder for agent mode
+        const agentStreamingMessageId = crypto.randomUUID();
+        setMessages((prev) => [...prev, {
+          id: agentStreamingMessageId,
+          role: 'assistant',
+          content: '',
+          timestamp: Date.now(),
+          isStreaming: true,
+        }]);
+
+        // Track current streaming message ID (changes on each iteration after tool results)
+        let currentStreamingId = agentStreamingMessageId;
+
+        // Define streaming callbacks for agent mode
+        const agentCallbacks: AgentLoopCallbacks = {
+          onContentDelta: (contentDelta: string) => {
+            setMessages((prev) => {
+              const lastMessage = prev[prev.length - 1];
+              if (lastMessage?.id === currentStreamingId) {
+                return [...prev.slice(0, -1), {
+                  ...lastMessage,
+                  content: lastMessage.content + contentDelta,
+                }];
+              }
+              return prev;
+            });
+          },
+          onToolCallDelta: (delta: StreamingToolCallDelta) => {
+            setMessages((prev) => {
+              const lastMessage = prev[prev.length - 1];
+              if (lastMessage?.id === currentStreamingId) {
+                // Initialize tool_calls array if not present
+                const existingToolCalls = lastMessage.tool_calls || [];
+                const toolCallsMap = new Map<number, ToolCall>(
+                  existingToolCalls.map((tc, idx) => [idx, tc])
+                );
+
+                const index = delta.index;
+                const existing = toolCallsMap.get(index);
+
+                if (existing) {
+                  // Append to existing tool call arguments
+                  if (delta.function?.arguments) {
+                    toolCallsMap.set(index, {
+                      ...existing,
+                      function: {
+                        ...existing.function,
+                        arguments: existing.function.arguments + delta.function.arguments,
+                      },
+                    });
+                  }
+                } else {
+                  // Create new tool call
+                  toolCallsMap.set(index, {
+                    id: delta.id || '',
+                    type: 'function',
+                    function: {
+                      name: delta.function?.name || '',
+                      arguments: delta.function?.arguments || '',
+                    },
+                  });
+                }
+
+                return [...prev.slice(0, -1), {
+                  ...lastMessage,
+                  tool_calls: Array.from(toolCallsMap.values()),
+                }];
+              }
+              return prev;
+            });
+          },
+          onIterationStart: (iteration: number) => {
+            console.log(`[agent] Starting iteration ${iteration}`);
+            // On iteration > 0, finalize previous message and create new streaming placeholder
+            if (iteration > 0) {
+              const newStreamingId = crypto.randomUUID();
+              currentStreamingId = newStreamingId;
+              setMessages((prev) => {
+                // Finalize last assistant message (remove isStreaming)
+                const lastMessage = prev[prev.length - 1];
+                const updatedPrev = lastMessage?.role === 'assistant' && lastMessage?.isStreaming
+                  ? [...prev.slice(0, -1), { ...lastMessage, isStreaming: false }]
+                  : prev;
+                // Add new streaming placeholder for this iteration
+                return [...updatedPrev, {
+                  id: newStreamingId,
+                  role: 'assistant',
+                  content: '',
+                  timestamp: Date.now(),
+                  isStreaming: true,
+                }];
+              });
+            }
+          },
+          onToolResult: (toolCallId: string, name: string, result: unknown) => {
+            // Add tool result message to UI
+            setMessages((prev) => [...prev, {
+              id: crypto.randomUUID(),
+              role: 'tool',
+              content: JSON.stringify(result),
+              tool_call_id: toolCallId,
+              name,
+              timestamp: Date.now(),
+            }]);
+          },
+        };
+
+        // Run the agent loop with streaming callbacks (clone apiMessages to avoid mutation)
         const result = await runAgentLoop({
           baseUrl: settings.baseUrl,
           apiKey: settings.apiKey,
@@ -505,23 +614,29 @@ export default function App() {
           maxIterations: settings.agentMaxIterations,
           timeoutMs: settings.agentTimeoutMs,
           signal: abortControllerRef.current.signal,
+          callbacks: agentCallbacks,
         });
 
-        // Extract thinking from final message
+        // Extract thinking from final message and finalize streaming
         const { thinking, mainContent } = extractThinking(
           result.finalMessage.content ?? '',
           result.finalMessage.reasoning_content
         );
 
-        // Add final assistant message to UI
-        const assistantMessage: Message = {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          content: mainContent,
-          thinking: thinking || undefined,
-          timestamp: Date.now(),
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
+        // Finalize the streaming message with extracted thinking
+        setMessages((prev) => {
+          const lastMessage = prev[prev.length - 1];
+          if (lastMessage && lastMessage.id === currentStreamingId) {
+            return [...prev.slice(0, -1), {
+              ...lastMessage,
+              content: mainContent,
+              thinking: thinking || undefined,
+              isStreaming: false,
+              timestamp: Date.now(),
+            }];
+          }
+          return prev;
+        });
       } else if (settings.stream) {
         const streamingMessageId = crypto.randomUUID();
         setMessages((prev) => [...prev, {
