@@ -525,12 +525,14 @@ export default function App() {
             onRemoveTab={handleRemoveTab}
             onToggleActiveTab={handleToggleActiveTab}
           />
-          <PromptDebugView
-            messages={previewMessages}
-            isOpen={isDebugViewOpen}
-            onToggle={handleDebugViewToggle}
-            isLoading={isPreviewExtracting}
-          />
+          {settings?.showDebugPrompt && (
+            <PromptDebugView
+              messages={previewMessages}
+              isOpen={isDebugViewOpen}
+              onToggle={handleDebugViewToggle}
+              isLoading={isPreviewExtracting}
+            />
+          )}
           {settings && (
             <ModelSelector
               currentModel={settings.defaultModel}
