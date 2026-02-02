@@ -24,6 +24,46 @@ export default function ChatHistory({
   const lastUserMessageIndex = messages.map((m, i) => ({ ...m, index: i }))
     .reverse()
     .find((m) => m.role === 'user')?.index;
+  // Look-ahead rendering: collect tool outputs for assistant messages
+  const renderedMessages: JSX.Element[] = [];
+  const skippedIndices = new Set<number>();
+
+  for (let i = 0; i < messages.length; i++) {
+    const message = messages[i];
+
+    // Skip tool messages already collected
+    if (skippedIndices.has(i)) {
+      continue;
+    }
+
+    // For assistant messages with tool_calls, look ahead for tool outputs
+    let toolOutputs: Message[] = [];
+    if (message.role === 'assistant' && message.tool_calls) {
+      // Collect subsequent tool messages
+      for (let j = i + 1; j < messages.length; j++) {
+        const nextMessage = messages[j];
+        if (nextMessage.role === 'tool') {
+          toolOutputs.push(nextMessage);
+          skippedIndices.add(j);
+        } else {
+          // Stop at first non-tool message
+          break;
+        }
+      }
+    }
+
+    renderedMessages.push(
+      <ChatMessage
+        key={message.id}
+        message={message}
+        isLastUserMessage={i === lastUserMessageIndex}
+        onEdit={onEditMessage}
+        onDelete={onDeleteMessage}
+        toolOutputs={toolOutputs.length > 0 ? toolOutputs : undefined}
+      />
+    );
+  }
+
   return (
     <div
       role="log"
@@ -37,15 +77,7 @@ export default function ChatHistory({
         </div>
       ) : (
         <>
-          {messages.map((message, index) => (
-            <ChatMessage
-              key={message.id}
-              message={message}
-              isLastUserMessage={index === lastUserMessageIndex}
-              onEdit={onEditMessage}
-              onDelete={onDeleteMessage}
-            />
-          ))}
+          {renderedMessages}
           {isLoading && (
             <div className="flex justify-start">
               <div className="max-w-[85%] px-4 py-2 rounded-lg bg-white border border-gray-200 text-gray-500 text-sm">
