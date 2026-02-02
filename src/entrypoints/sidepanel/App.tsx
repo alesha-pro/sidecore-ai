@@ -604,11 +604,7 @@ export default function App() {
 
     const message = messages[messageIndex];
 
-    // Update the message content
-    const updatedMessages = [...messages];
-    updatedMessages[messageIndex] = { ...message, content: newContent };
-
-    // If it's a user message, remove all messages after it and re-send
+    // If it's a user message, remove it and all messages after, then re-send
     if (message.role === 'user') {
       // Abort any in-flight request (if streaming)
       if (abortControllerRef.current) {
@@ -616,17 +612,19 @@ export default function App() {
         setIsLLMLoading(false);
       }
 
-      // Remove all messages after the edited message (including partial responses)
-      const messagesToKeep = updatedMessages.slice(0, messageIndex + 1);
+      // Remove the edited message and all after it (handleSendMessage will add new one)
+      const messagesToKeep = messages.slice(0, messageIndex);
       setMessages(messagesToKeep);
 
       // Clear any errors
       setLLMError(null);
 
-      // Re-send the message with updated content
+      // Re-send the message with updated content (creates new user message)
       await handleSendMessage(newContent);
     } else {
       // Just update the message content (for assistant messages)
+      const updatedMessages = [...messages];
+      updatedMessages[messageIndex] = { ...message, content: newContent };
       setMessages(updatedMessages);
     }
   }, [messages, handleSendMessage]);
