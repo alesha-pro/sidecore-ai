@@ -760,6 +760,8 @@ export default function App() {
       await saveChat(newChat);
       setCurrentChatId(newChat.id);
       setMessages([]);
+      setExtractionResults([]); // Reset extraction status for new chat
+      setPreviewExtraction([]); // Reset preview extraction for new chat
       const updatedChats = await listChats();
       setChats(updatedChats);
     } catch (error) {
@@ -774,6 +776,7 @@ export default function App() {
         setCurrentChatId(chat.id);
         setMessages(chat.messages);
         setExtractionResults([]); // Reset extraction status when switching chats
+        setPreviewExtraction([]); // Reset preview extraction when switching chats
       }
     } catch (error) {
       console.error('Failed to load chat:', error);
