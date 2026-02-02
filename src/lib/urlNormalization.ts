@@ -1,13 +1,11 @@
 /**
- * Normalize an OpenAI-compatible API base URL.
- * Handles common variations:
- * - With/without https:// prefix
- * - With/without trailing slash
- * - With/without /v1 suffix
+ * Normalize an API base URL.
+ * Minimal processing - preserves user's path as-is.
+ * Only adds https:// if missing and removes trailing slashes.
  *
  * @example
- * normalizeBaseUrl('api.openai.com') => 'https://api.openai.com/v1'
- * normalizeBaseUrl('https://api.openai.com/') => 'https://api.openai.com/v1'
+ * normalizeBaseUrl('api.openai.com/v1') => 'https://api.openai.com/v1'
+ * normalizeBaseUrl('https://my-server.com/api') => 'https://my-server.com/api'
  * normalizeBaseUrl('https://api.openai.com/v1/') => 'https://api.openai.com/v1'
  */
 export function normalizeBaseUrl(input: string): string {
@@ -31,14 +29,6 @@ export function normalizeBaseUrl(input: string): string {
 
   // Remove trailing slashes
   url = url.replace(/\/+$/, '');
-
-  // Remove /v1 suffix if present (we'll add it back)
-  if (url.endsWith('/v1')) {
-    url = url.slice(0, -3);
-  }
-
-  // Add /v1 suffix
-  url = url + '/v1';
 
   return url;
 }
