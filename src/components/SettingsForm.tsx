@@ -97,7 +97,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
 
     if (field === 'contextBudget') {
       value = parseInt(target.value, 10) || 0;
-    } else if (field === 'showDebugPrompt') {
+    } else if (field === 'showDebugPrompt' || field === 'showExtractionStatus') {
       value = (target as HTMLInputElement).checked;
     } else {
       value = target.value;
@@ -338,6 +338,25 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                   Maximum extracted content per request. Default: 50,000
                 </p>
               )}
+            </div>
+
+            {/* Show Extraction Status */}
+            <div>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  id="showExtractionStatus"
+                  type="checkbox"
+                  checked={formData.showExtractionStatus}
+                  onChange={handleChange('showExtractionStatus')}
+                  className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Show Extraction Status</span>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Shows extraction results after each message
+                  </p>
+                </div>
+              </label>
             </div>
 
             {/* Show Debug Prompt */}

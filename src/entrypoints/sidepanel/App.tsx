@@ -571,6 +571,7 @@ export default function App() {
       if (chat) {
         setCurrentChatId(chat.id);
         setMessages(chat.messages);
+        setExtractionResults([]); // Reset extraction status when switching chats
       }
     } catch (error) {
       console.error('Failed to load chat:', error);
@@ -703,7 +704,9 @@ export default function App() {
               selection={tabSelection}
               onSelectionChange={setTabSelection}
             />
-            <ExtractionStatus results={extractionResults} />
+            {settings?.showExtractionStatus && (
+              <ExtractionStatus results={extractionResults} />
+            )}
             <ChatHistory
               messages={messages}
               isLoading={isLLMLoading && !isStreaming}
