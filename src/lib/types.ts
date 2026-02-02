@@ -38,7 +38,6 @@ export interface Settings {
   showDebugPrompt: boolean;
   showExtractionStatus: boolean;
   responseLanguage: string;
-  agentMode: boolean;
   agentMaxIterations: number;
   agentTimeoutMs: number;
   mcpServers: McpServerConfig[];
@@ -85,7 +84,6 @@ export const DEFAULT_SETTINGS: Settings = {
   showDebugPrompt: false,
   showExtractionStatus: false,
   responseLanguage: 'auto',
-  agentMode: false,
   agentMaxIterations: 15,
   agentTimeoutMs: 5 * 60 * 1000,
   mcpServers: [],

@@ -5,9 +5,6 @@ interface InputToolbarProps {
   onSlashClick: () => void;
   onSettingsClick: () => void;
   disabled?: boolean;
-  // New props for moved controls
-  agentMode?: boolean;
-  onAgentModeChange?: (enabled: boolean) => void;
   includeActiveTab?: boolean;
   onActiveTabChange?: (included: boolean) => void;
 }
@@ -112,8 +109,6 @@ export function InputToolbar({
   onSlashClick,
   onSettingsClick,
   disabled = false,
-  agentMode = false,
-  onAgentModeChange,
   includeActiveTab = false,
   onActiveTabChange,
 }: InputToolbarProps) {
@@ -121,7 +116,7 @@ export function InputToolbar({
 
   return (
     <div className="flex items-center justify-between px-3 py-1.5 bg-white border-t border-gray-100 text-xs">
-      {/* Left side: Model, @, /, Agent Mode, Current Tab */}
+      {/* Left side: Model, @, /, Current Tab */}
       <div className="flex items-center gap-1">
         {/* Model button */}
         <button
@@ -156,23 +151,6 @@ export function InputToolbar({
         >
           <span className="font-medium">/</span>
         </button>
-
-        {/* Agent Mode checkbox with robot icon */}
-        {onAgentModeChange && (
-          <label className="flex items-center gap-1 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={agentMode}
-              disabled={disabled}
-              onChange={(e) => onAgentModeChange((e.target as HTMLInputElement).checked)}
-              className="h-3.5 w-3.5 text-blue-600 border-gray-300 rounded-full focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
-            />
-            <span className="flex items-center gap-0.5 text-gray-500">
-              <RobotIcon />
-            </span>
-            <span className="sr-only">Agent Mode</span>
-          </label>
-        )}
 
         {/* Current Tab checkbox */}
         {onActiveTabChange && (

@@ -519,30 +519,15 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
           </div>
         </details>
 
-        {/* Section 4: Agent Mode */}
+        {/* Section 4: Agent Settings */}
         <details className="border border-gray-200 rounded-lg bg-white">
           <summary className="px-4 py-3 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 rounded-lg select-none">
-            Agent Mode
+            Agent Settings
           </summary>
           <div className="px-4 pb-4 space-y-4 border-t border-gray-200 mt-2 pt-4">
-            {/* Agent Mode Toggle */}
-            <div>
-              <label className="flex items-start gap-2 cursor-pointer">
-                <input
-                  id="agentMode"
-                  type="checkbox"
-                  checked={formData.agentMode}
-                  onChange={handleChange('agentMode')}
-                  className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                />
-                <div>
-                  <span className="text-sm font-medium text-gray-700">Enable Agent Mode</span>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Allows the AI to automatically call tools and iterate
-                  </p>
-                </div>
-              </label>
-            </div>
+            <p className="text-xs text-gray-500">
+              Configure limits for the AI agent's tool execution behavior.
+            </p>
 
             {/* Max Iterations */}
             <div>

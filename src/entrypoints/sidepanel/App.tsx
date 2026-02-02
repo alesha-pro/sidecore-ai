@@ -482,345 +482,187 @@ export default function App() {
         content,
       });
 
-      // Agent Mode: use agentic loop with automatic tool execution
-      if (settings.agentMode) {
-        // Register built-in tools and get definitions
-        registerBuiltInTools(toolRegistry);
-        const disabledTools = new Set(settings.disabledTools ?? []);
-        const disabledServers = new Set(settings.disabledServers ?? []);
-        const tools = (await toolRegistry.getTools())
-          .filter((tool) => {
-            if (disabledTools.has(tool.name)) return false;
-            if (tool.source === 'mcp' && tool.serverId) {
-              return !disabledServers.has(tool.serverId);
-            }
-            return true;
-          })
-          .map(toToolDefinition);
-
-        // Create executeTool callback
-        const executeTool = async (name: string, args: unknown) => {
-          const tool = toolRegistry.get(name);
-          if (!tool) {
-            return { error: 'Tool not found', name };
+      // Always use agentic loop with automatic tool execution
+      // Register built-in tools and get definitions
+      registerBuiltInTools(toolRegistry);
+      const disabledTools = new Set(settings.disabledTools ?? []);
+      const disabledServers = new Set(settings.disabledServers ?? []);
+      const tools = (await toolRegistry.getTools())
+        .filter((tool) => {
+          if (disabledTools.has(tool.name)) return false;
+          if (tool.source === 'mcp' && tool.serverId) {
+            return !disabledServers.has(tool.serverId);
           }
-          return await tool.execute(args);
-        };
+          return true;
+        })
+        .map(toToolDefinition);
 
-        // Create streaming message placeholder for agent mode
-        const agentStreamingMessageId = crypto.randomUUID();
-        setMessages((prev) => [...prev, {
-          id: agentStreamingMessageId,
-          role: 'assistant',
-          content: '',
-          timestamp: Date.now(),
-          isStreaming: true,
-        }]);
+      // Create executeTool callback
+      const executeTool = async (name: string, args: unknown) => {
+        const tool = toolRegistry.get(name);
+        if (!tool) {
+          return { error: 'Tool not found', name };
+        }
+        return await tool.execute(args);
+      };
 
-        // Track current streaming message ID (changes on each iteration after tool results)
-        let currentStreamingId = agentStreamingMessageId;
+      // Create streaming message placeholder for agent mode
+      const agentStreamingMessageId = crypto.randomUUID();
+      setMessages((prev) => [...prev, {
+        id: agentStreamingMessageId,
+        role: 'assistant',
+        content: '',
+        timestamp: Date.now(),
+        isStreaming: true,
+      }]);
 
-        // Define streaming callbacks for agent mode
-        const agentCallbacks: AgentLoopCallbacks = {
-          onContentDelta: (contentDelta: string) => {
-            setMessages((prev) => {
-              const lastMessage = prev[prev.length - 1];
-              if (lastMessage?.id === currentStreamingId) {
-                return [...prev.slice(0, -1), {
-                  ...lastMessage,
-                  content: lastMessage.content + contentDelta,
-                }];
-              }
-              return prev;
-            });
-          },
-          onToolCallDelta: (delta: StreamingToolCallDelta) => {
-            setMessages((prev) => {
-              const lastMessage = prev[prev.length - 1];
-              if (lastMessage?.id === currentStreamingId) {
-                // Initialize tool_calls array if not present
-                const existingToolCalls = lastMessage.tool_calls || [];
-                const toolCallsMap = new Map<number, ToolCall>(
-                  existingToolCalls.map((tc, idx) => [idx, tc])
-                );
+      // Track current streaming message ID (changes on each iteration after tool results)
+      let currentStreamingId = agentStreamingMessageId;
 
-                const index = delta.index;
-                const existing = toolCallsMap.get(index);
+      // Define streaming callbacks for agent mode
+      const agentCallbacks: AgentLoopCallbacks = {
+        onContentDelta: (contentDelta: string) => {
+          setMessages((prev) => {
+            const lastMessage = prev[prev.length - 1];
+            if (lastMessage?.id === currentStreamingId) {
+              return [...prev.slice(0, -1), {
+                ...lastMessage,
+                content: lastMessage.content + contentDelta,
+              }];
+            }
+            return prev;
+          });
+        },
+        onToolCallDelta: (delta: StreamingToolCallDelta) => {
+          setMessages((prev) => {
+            const lastMessage = prev[prev.length - 1];
+            if (lastMessage?.id === currentStreamingId) {
+              // Initialize tool_calls array if not present
+              const existingToolCalls = lastMessage.tool_calls || [];
+              const toolCallsMap = new Map<number, ToolCall>(
+                existingToolCalls.map((tc, idx) => [idx, tc])
+              );
 
-                if (existing) {
-                  // Append to existing tool call arguments
-                  if (delta.function?.arguments) {
-                    toolCallsMap.set(index, {
-                      ...existing,
-                      function: {
-                        ...existing.function,
-                        arguments: existing.function.arguments + delta.function.arguments,
-                      },
-                    });
-                  }
-                } else {
-                  // Create new tool call
+              const index = delta.index;
+              const existing = toolCallsMap.get(index);
+
+              if (existing) {
+                // Append to existing tool call arguments
+                if (delta.function?.arguments) {
                   toolCallsMap.set(index, {
-                    id: delta.id || '',
-                    type: 'function',
+                    ...existing,
                     function: {
-                      name: delta.function?.name || '',
-                      arguments: delta.function?.arguments || '',
+                      ...existing.function,
+                      arguments: existing.function.arguments + delta.function.arguments,
                     },
                   });
                 }
-
-                return [...prev.slice(0, -1), {
-                  ...lastMessage,
-                  tool_calls: Array.from(toolCallsMap.values()),
-                }];
-              }
-              return prev;
-            });
-          },
-          onIterationStart: (iteration: number) => {
-            console.log(`[agent] Starting iteration ${iteration}`);
-            // On iteration > 0, finalize previous streaming message and create new placeholder
-            if (iteration > 0) {
-              const newStreamingId = crypto.randomUUID();
-              currentStreamingId = newStreamingId;
-              setMessages((prev) => {
-                // Find and finalize any streaming assistant message (may not be last due to tool messages)
-                const streamingIdx = prev.findIndex(
-                  (m) => m.role === 'assistant' && m.isStreaming
-                );
-                let updatedPrev = prev;
-                if (streamingIdx !== -1) {
-                  const streamingMessage = prev[streamingIdx];
-                  updatedPrev = [
-                    ...prev.slice(0, streamingIdx),
-                    { ...streamingMessage, isStreaming: false },
-                    ...prev.slice(streamingIdx + 1),
-                  ];
-                }
-                // Add new streaming placeholder for this iteration
-                return [...updatedPrev, {
-                  id: newStreamingId,
-                  role: 'assistant',
-                  content: '',
-                  timestamp: Date.now(),
-                  isStreaming: true,
-                }];
-              });
-            }
-          },
-          onToolResult: (toolCallId: string, name: string, result: unknown) => {
-            // Add tool result message to UI
-            setMessages((prev) => [...prev, {
-              id: crypto.randomUUID(),
-              role: 'tool',
-              content: JSON.stringify(result),
-              tool_call_id: toolCallId,
-              name,
-              timestamp: Date.now(),
-            }]);
-          },
-        };
-
-        // Run the agent loop with streaming callbacks (clone apiMessages to avoid mutation)
-        const result = await runAgentLoop({
-          baseUrl: settings.baseUrl,
-          apiKey: settings.apiKey,
-          model: settings.defaultModel,
-          messages: [...apiMessages],
-          tools,
-          executeTool,
-          maxIterations: settings.agentMaxIterations,
-          timeoutMs: settings.agentTimeoutMs,
-          signal: abortControllerRef.current.signal,
-          callbacks: agentCallbacks,
-        });
-
-        // Extract thinking from final message and finalize streaming
-        const { thinking, mainContent } = extractThinking(
-          result.finalMessage.content ?? '',
-          result.finalMessage.reasoning_content
-        );
-
-        // Finalize the last streaming message with extracted thinking
-        // Find any streaming assistant message (may not be last due to tool messages)
-        setMessages((prev) => {
-          const streamingIdx = prev.findIndex(
-            (m) => m.role === 'assistant' && m.isStreaming
-          );
-          if (streamingIdx === -1) {
-            return prev;
-          }
-          const streamingMessage = prev[streamingIdx];
-          return [
-            ...prev.slice(0, streamingIdx),
-            {
-              ...streamingMessage,
-              content: mainContent,
-              thinking: thinking || undefined,
-              isStreaming: false,
-              timestamp: Date.now(),
-            },
-            ...prev.slice(streamingIdx + 1),
-          ];
-        });
-      } else if (settings.stream) {
-        const streamingMessageId = crypto.randomUUID();
-        setMessages((prev) => [...prev, {
-          id: streamingMessageId,
-          role: 'assistant',
-          content: '',
-          timestamp: Date.now(),
-          isStreaming: true,
-        }]);
-
-        const streamUrl = `${settings.baseUrl}/chat/completions`;
-        const generator = createStreamingClient(streamUrl, {
-          apiKey: settings.apiKey,
-          body: {
-            model: settings.defaultModel,
-            messages: apiMessages,
-          },
-          signal: abortControllerRef.current.signal,
-        });
-
-        for await (const chunk of generator) {
-          if (abortControllerRef.current.signal.aborted) {
-            console.log('Streaming aborted by user.');
-            break;
-          }
-
-          if (chunk.type === 'data' && typeof chunk.payload === 'object' && 'choices' in chunk.payload) {
-            const delta = chunk.payload.choices[0].delta;
-            const contentDelta = delta.content || '';
-            const toolCallDeltas = delta.tool_calls;
-
-            setMessages((prev) => {
-              const lastMessage = prev[prev.length - 1];
-              if (lastMessage && lastMessage.id === streamingMessageId) {
-                let updatedMessage = { ...lastMessage };
-
-                // Accumulate content
-                if (contentDelta) {
-                  updatedMessage.content = lastMessage.content + contentDelta;
-                }
-
-                // Accumulate tool calls (index-based)
-                if (toolCallDeltas && toolCallDeltas.length > 0) {
-                  // Initialize tool_calls array if not present
-                  const existingToolCalls = lastMessage.tool_calls || [];
-                  const toolCallsMap = new Map(
-                    existingToolCalls.map((tc, idx) => [idx, tc])
-                  );
-
-                  // Process each delta
-                  for (const delta of toolCallDeltas) {
-                    const index = delta.index;
-                    const existing = toolCallsMap.get(index);
-
-                    if (existing) {
-                      // Append to existing tool call
-                      if (delta.function?.arguments) {
-                        toolCallsMap.set(index, {
-                          ...existing,
-                          function: {
-                            ...existing.function,
-                            arguments: existing.function.arguments + delta.function.arguments,
-                          },
-                        });
-                      }
-                    } else {
-                      // Create new tool call
-                      toolCallsMap.set(index, {
-                        id: delta.id || '',
-                        type: 'function',
-                        function: {
-                          name: delta.function?.name || '',
-                          arguments: delta.function?.arguments || '',
-                        },
-                      });
-                    }
-                  }
-
-                  // Convert map back to array
-                  updatedMessage.tool_calls = Array.from(toolCallsMap.values());
-                  console.log('[streaming] Tool calls accumulated:', updatedMessage.tool_calls);
-                }
-
-                return [
-                  ...prev.slice(0, -1),
-                  updatedMessage,
-                ];
-              }
-              return prev;
-            });
-          } else if (chunk.type === 'error') {
-            console.error('Streaming error:', chunk.payload);
-            setLLMError( (chunk.payload as {message: string}).message || 'Streaming error');
-            setMessages((prev) => {
-              const lastMessage = prev[prev.length - 1];
-              if (lastMessage && lastMessage.id === streamingMessageId) {
-                return [
-                  ...prev.slice(0, -1),
-                  {
-                    ...lastMessage,
-                    content: lastMessage.content + `\n\n**Error: ${(chunk.payload as {message: string}).message || 'Stream interrupted'}**`,
-                    isStreaming: false,
-                    isError: true,
+              } else {
+                // Create new tool call
+                toolCallsMap.set(index, {
+                  id: delta.id || '',
+                  type: 'function',
+                  function: {
+                    name: delta.function?.name || '',
+                    arguments: delta.function?.arguments || '',
                   },
+                });
+              }
+
+              return [...prev.slice(0, -1), {
+                ...lastMessage,
+                tool_calls: Array.from(toolCallsMap.values()),
+              }];
+            }
+            return prev;
+          });
+        },
+        onIterationStart: (iteration: number) => {
+          console.log(`[agent] Starting iteration ${iteration}`);
+          // On iteration > 0, finalize previous streaming message and create new placeholder
+          if (iteration > 0) {
+            const newStreamingId = crypto.randomUUID();
+            currentStreamingId = newStreamingId;
+            setMessages((prev) => {
+              // Find and finalize any streaming assistant message (may not be last due to tool messages)
+              const streamingIdx = prev.findIndex(
+                (m) => m.role === 'assistant' && m.isStreaming
+              );
+              let updatedPrev = prev;
+              if (streamingIdx !== -1) {
+                const streamingMessage = prev[streamingIdx];
+                updatedPrev = [
+                  ...prev.slice(0, streamingIdx),
+                  { ...streamingMessage, isStreaming: false },
+                  ...prev.slice(streamingIdx + 1),
                 ];
               }
-              return prev;
-            });
-            break;
-          }
-        }
-
-        // Extract thinking from accumulated content when streaming completes
-        setMessages((prev) => {
-          const lastMessage = prev[prev.length - 1];
-          if (lastMessage && lastMessage.id === streamingMessageId) {
-            const { thinking, mainContent } = extractThinking(lastMessage.content);
-            return [
-              ...prev.slice(0, -1),
-              {
-                ...lastMessage,
-                content: mainContent,
-                thinking: thinking || undefined,
-                isStreaming: false,
+              // Add new streaming placeholder for this iteration
+              return [...updatedPrev, {
+                id: newStreamingId,
+                role: 'assistant',
+                content: '',
                 timestamp: Date.now(),
-              },
-            ];
+                isStreaming: true,
+              }];
+            });
           }
-          return prev;
-        });
+        },
+        onToolResult: (toolCallId: string, name: string, result: unknown) => {
+          // Add tool result message to UI
+          setMessages((prev) => [...prev, {
+            id: crypto.randomUUID(),
+            role: 'tool',
+            content: JSON.stringify(result),
+            tool_call_id: toolCallId,
+            name,
+            timestamp: Date.now(),
+          }]);
+        },
+      };
 
-      } else {
-        const response = await createChatCompletion(
-          settings.baseUrl,
-          settings.apiKey,
-          {
-            model: settings.defaultModel,
-            messages: apiMessages,
-          }
+      // Run the agent loop with streaming callbacks (clone apiMessages to avoid mutation)
+      const result = await runAgentLoop({
+        baseUrl: settings.baseUrl,
+        apiKey: settings.apiKey,
+        model: settings.defaultModel,
+        messages: [...apiMessages],
+        tools,
+        executeTool,
+        maxIterations: settings.agentMaxIterations,
+        timeoutMs: settings.agentTimeoutMs,
+        signal: abortControllerRef.current.signal,
+        callbacks: agentCallbacks,
+      });
+
+      // Extract thinking from final message and finalize streaming
+      const { thinking, mainContent } = extractThinking(
+        result.finalMessage.content ?? '',
+        result.finalMessage.reasoning_content
+      );
+
+      // Finalize the last streaming message with extracted thinking
+      // Find any streaming assistant message (may not be last due to tool messages)
+      setMessages((prev) => {
+        const streamingIdx = prev.findIndex(
+          (m) => m.role === 'assistant' && m.isStreaming
         );
-
-        // Get response content and optional reasoning_content field
-        const responseContent = response.choices[0].message.content;
-        const reasoningContent = response.choices[0].message.reasoning_content;
-
-        // Extract thinking from tags or use reasoning_content field
-        const { thinking, mainContent } = extractThinking(responseContent ?? '', reasoningContent);
-
-        const assistantMessage: Message = {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          content: mainContent,
-          thinking: thinking || undefined,
-          timestamp: Date.now(),
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
-      }
+        if (streamingIdx === -1) {
+          return prev;
+        }
+        const streamingMessage = prev[streamingIdx];
+        return [
+          ...prev.slice(0, streamingIdx),
+          {
+            ...streamingMessage,
+            content: mainContent,
+            thinking: thinking || undefined,
+            isStreaming: false,
+            timestamp: Date.now(),
+          },
+          ...prev.slice(streamingIdx + 1),
+        ];
+      });
     } catch (error) {
       if (error instanceof LLMError) {
         setLLMError(error.userMessage);
@@ -1074,13 +916,6 @@ export default function App() {
               currentModel={settings?.defaultModel || ''}
               onModelClick={() => setShowModelSelector(true)}
               onSettingsClick={() => setShowSettings(!showSettings)}
-              agentMode={settings?.agentMode ?? false}
-              onAgentModeChange={async (enabled) => {
-                if (!settings) return;
-                const updatedSettings = { ...settings, agentMode: enabled };
-                await saveSettings(updatedSettings);
-                setSettings(updatedSettings);
-              }}
               includeActiveTab={tabSelection.includeActiveTab}
               onActiveTabChange={handleToggleActiveTab}
             />

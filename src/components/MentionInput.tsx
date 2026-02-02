@@ -16,9 +16,6 @@ interface MentionInputProps {
   currentModel: string;
   onModelClick: () => void;
   onSettingsClick?: () => void;
-  // New props for moved controls
-  agentMode?: boolean;
-  onAgentModeChange?: (enabled: boolean) => void;
   includeActiveTab?: boolean;
   onActiveTabChange?: (included: boolean) => void;
 }
@@ -41,8 +38,6 @@ export function MentionInput({
   currentModel,
   onModelClick,
   onSettingsClick,
-  agentMode = false,
-  onAgentModeChange,
   includeActiveTab = false,
   onActiveTabChange,
 }: MentionInputProps) {
@@ -535,8 +530,6 @@ export function MentionInput({
         onSlashClick={handleSlashClick}
         onSettingsClick={onSettingsClick || (() => {})}
         disabled={disabled}
-        agentMode={agentMode}
-        onAgentModeChange={onAgentModeChange}
         includeActiveTab={includeActiveTab}
         onActiveTabChange={onActiveTabChange}
       />
