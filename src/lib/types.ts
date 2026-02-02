@@ -15,6 +15,7 @@ export interface Settings {
   contextBudget: number;
   stream: boolean;
   systemPrompt: string;
+  savedModels: string[];
 }
 
 export const DEFAULT_SYSTEM_PROMPT = `You are an AI assistant integrated into a Chrome extension. Your role is to help users understand and analyze web page content from their browser tabs.
@@ -39,6 +40,7 @@ export const DEFAULT_SETTINGS: Settings = {
   contextBudget: 50000,
   stream: true,
   systemPrompt: DEFAULT_SYSTEM_PROMPT,
+  savedModels: [],
 };
 
 export interface TabSelection {
