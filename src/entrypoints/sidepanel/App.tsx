@@ -6,6 +6,7 @@ import { ContextBar } from '../../components/ContextBar';
 import { ExtractionStatus } from '../../components/ExtractionStatus';
 import { SelectedTabsBar } from '../../components/SelectedTabsBar';
 import { PromptDebugView } from '../../components/PromptDebugView';
+import ModelSelector from '../../components/ModelSelector';
 import { useTabs } from '../../hooks/useTabs';
 import { getSettings, saveSettings } from '../../lib/storage';
 import type { Message, Settings, TabSelection } from '../../lib/types';
@@ -449,6 +450,27 @@ export default function App() {
     setIsLLMLoading(false);
   }, []);
 
+  const handleModelChange = useCallback(async (model: string) => {
+    if (!settings) return;
+
+    const updatedSavedModels = settings.savedModels.includes(model)
+      ? settings.savedModels
+      : [...settings.savedModels, model];
+
+    const updatedSettings: Settings = {
+      ...settings,
+      defaultModel: model,
+      savedModels: updatedSavedModels,
+    };
+
+    try {
+      await saveSettings(updatedSettings);
+      setSettings(updatedSettings);
+    } catch (error) {
+      console.error('Failed to save model change:', error);
+    }
+  }, [settings]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -509,6 +531,14 @@ export default function App() {
             onToggle={handleDebugViewToggle}
             isLoading={isPreviewExtracting}
           />
+          {settings && (
+            <ModelSelector
+              currentModel={settings.defaultModel}
+              savedModels={settings.savedModels}
+              onModelChange={handleModelChange}
+              disabled={isLLMLoading || isStreaming}
+            />
+          )}
           <MentionInput
             onSend={handleSendMessage}
             disabled={!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel || isLLMLoading || isStreaming}
