@@ -17,6 +17,8 @@ interface FormErrors {
   defaultModel?: string;
   contextBudget?: string;
   systemPrompt?: string;
+  agentMaxIterations?: string;
+  agentTimeoutMs?: string;
 }
 
 export default function SettingsForm({ settings, onSave, onCancel }: SettingsFormProps) {
@@ -60,6 +62,20 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
       newErrors.contextBudget = 'Maximum budget is 1,000,000 characters';
     }
 
+    // Agent max iterations: 1-25
+    if (formData.agentMaxIterations < 1) {
+      newErrors.agentMaxIterations = 'Minimum is 1 iteration';
+    } else if (formData.agentMaxIterations > 25) {
+      newErrors.agentMaxIterations = 'Maximum is 25 iterations';
+    }
+
+    // Agent timeout: 60s - 15min
+    if (formData.agentTimeoutMs < 60_000) {
+      newErrors.agentTimeoutMs = 'Minimum timeout is 60,000 ms (1 minute)';
+    } else if (formData.agentTimeoutMs > 900_000) {
+      newErrors.agentTimeoutMs = 'Maximum timeout is 900,000 ms (15 minutes)';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -95,9 +111,9 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
     const target = e.target as HTMLInputElement | HTMLSelectElement;
     let value: string | number | boolean;
 
-    if (field === 'contextBudget') {
+    if (field === 'contextBudget' || field === 'agentMaxIterations' || field === 'agentTimeoutMs') {
       value = parseInt(target.value, 10) || 0;
-    } else if (field === 'showDebugPrompt' || field === 'showExtractionStatus') {
+    } else if (field === 'showDebugPrompt' || field === 'showExtractionStatus' || field === 'agentMode') {
       value = (target as HTMLInputElement).checked;
     } else {
       value = target.value;
@@ -398,6 +414,90 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                   </p>
                 </div>
               </label>
+            </div>
+          </div>
+        </details>
+
+        {/* Section 4: Agent Mode */}
+        <details className="border border-gray-200 rounded-lg bg-white">
+          <summary className="px-4 py-3 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 rounded-lg select-none">
+            Agent Mode
+          </summary>
+          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 mt-2 pt-4">
+            {/* Agent Mode Toggle */}
+            <div>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  id="agentMode"
+                  type="checkbox"
+                  checked={formData.agentMode}
+                  onChange={handleChange('agentMode')}
+                  className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                />
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Enable Agent Mode</span>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Allows the AI to automatically call tools and iterate
+                  </p>
+                </div>
+              </label>
+            </div>
+
+            {/* Max Iterations */}
+            <div>
+              <label htmlFor="agentMaxIterations" className="block text-sm font-medium text-gray-700 mb-1">
+                Max Iterations
+              </label>
+              <input
+                id="agentMaxIterations"
+                type="number"
+                value={formData.agentMaxIterations}
+                onInput={handleChange('agentMaxIterations')}
+                min="1"
+                max="25"
+                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.agentMaxIterations ? 'border-red-500' : 'border-gray-300'
+                }`}
+                aria-describedby={errors.agentMaxIterations ? 'agentMaxIterations-error' : 'agentMaxIterations-hint'}
+              />
+              {errors.agentMaxIterations ? (
+                <p id="agentMaxIterations-error" className="mt-1 text-sm text-red-600">
+                  {errors.agentMaxIterations}
+                </p>
+              ) : (
+                <p id="agentMaxIterations-hint" className="mt-1 text-xs text-gray-500">
+                  Maximum tool call cycles (1-25). Default: 15
+                </p>
+              )}
+            </div>
+
+            {/* Timeout */}
+            <div>
+              <label htmlFor="agentTimeoutMs" className="block text-sm font-medium text-gray-700 mb-1">
+                Timeout (ms)
+              </label>
+              <input
+                id="agentTimeoutMs"
+                type="number"
+                value={formData.agentTimeoutMs}
+                onInput={handleChange('agentTimeoutMs')}
+                min="60000"
+                max="900000"
+                step="1000"
+                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  errors.agentTimeoutMs ? 'border-red-500' : 'border-gray-300'
+                }`}
+                aria-describedby={errors.agentTimeoutMs ? 'agentTimeoutMs-error' : 'agentTimeoutMs-hint'}
+              />
+              {errors.agentTimeoutMs ? (
+                <p id="agentTimeoutMs-error" className="mt-1 text-sm text-red-600">
+                  {errors.agentTimeoutMs}
+                </p>
+              ) : (
+                <p id="agentTimeoutMs-hint" className="mt-1 text-xs text-gray-500">
+                  Maximum agent run time (60,000-900,000 ms). Default: 300,000 (5 min)
+                </p>
+              )}
             </div>
           </div>
         </details>

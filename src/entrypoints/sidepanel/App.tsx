@@ -686,18 +686,37 @@ export default function App() {
           </button>
           <h1 className="text-lg font-semibold text-gray-900">AI Agent</h1>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowSettings(!showSettings)}
-          className={`px-3 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-            showSettings
-              ? 'text-blue-600 border-blue-600 bg-blue-50'
-              : 'text-gray-600 border-gray-300 hover:bg-gray-50'
-          }`}
-          aria-pressed={showSettings}
-        >
-          Settings
-        </button>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={settings?.agentMode ?? false}
+              disabled={!settings || isLLMLoading || isStreaming}
+              onChange={async (e) => {
+                if (!settings) return;
+                const checked = (e.target as HTMLInputElement).checked;
+                const updatedSettings = { ...settings, agentMode: checked };
+                await saveSettings(updatedSettings);
+                setSettings(updatedSettings);
+              }}
+              className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            />
+            <span className="text-sm text-gray-600">Agent Mode</span>
+            <span className="sr-only">Enable automatic tool calling</span>
+          </label>
+          <button
+            type="button"
+            onClick={() => setShowSettings(!showSettings)}
+            className={`px-3 py-1.5 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+              showSettings
+                ? 'text-blue-600 border-blue-600 bg-blue-50'
+                : 'text-gray-600 border-gray-300 hover:bg-gray-50'
+            }`}
+            aria-pressed={showSettings}
+          >
+            Settings
+          </button>
+        </div>
       </header>
 
       {showSettings ? (
