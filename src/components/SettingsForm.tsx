@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'preact/hooks';
 import type { Settings } from '../lib/types';
+import { DEFAULT_SYSTEM_PROMPT } from '../lib/types';
 import { normalizeBaseUrl, validateBaseUrl } from '../lib/urlNormalization';
 import { listModels } from '../lib/llm/client';
 import { LLMError } from '../lib/llm/errors';
@@ -16,6 +17,7 @@ interface FormErrors {
   apiKey?: string;
   defaultModel?: string;
   contextBudget?: string;
+  systemPrompt?: string;
 }
 
 export default function SettingsForm({ settings, onSave, onCancel }: SettingsFormProps) {
@@ -278,6 +280,33 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
               Maximum extracted content per request. Default: 50,000
             </p>
           )}
+        </div>
+
+        {/* System Prompt */}
+        <div>
+          <label htmlFor="systemPrompt" className="block text-sm font-medium text-gray-700 mb-1">
+            System Prompt
+          </label>
+          <textarea
+            id="systemPrompt"
+            value={formData.systemPrompt}
+            onInput={handleChange('systemPrompt')}
+            rows={8}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+            placeholder="Define the AI assistant's role and behavior..."
+          />
+          <div className="flex justify-between mt-1">
+            <p className="text-xs text-gray-500">
+              {formData.systemPrompt.length.toLocaleString()} characters
+            </p>
+            <button
+              type="button"
+              onClick={() => setFormData(prev => ({ ...prev, systemPrompt: DEFAULT_SYSTEM_PROMPT }))}
+              className="text-xs text-blue-600 hover:text-blue-700"
+            >
+              Reset to default
+            </button>
+          </div>
         </div>
 
         {/* Action Buttons */}
