@@ -15,6 +15,7 @@ interface MentionInputProps {
   onInputChange?: (content: string) => void;
   currentModel: string;
   onModelClick: () => void;
+  onSettingsClick?: () => void;
 }
 
 interface ExtractedContent {
@@ -34,6 +35,7 @@ export function MentionInput({
   onInputChange,
   currentModel,
   onModelClick,
+  onSettingsClick,
 }: MentionInputProps) {
   const inputRef = useRef<HTMLDivElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -507,6 +509,7 @@ export function MentionInput({
         onModelClick={onModelClick}
         onAtClick={handleAtClick}
         onSlashClick={handleSlashClick}
+        onSettingsClick={onSettingsClick || (() => {})}
         disabled={disabled}
       />
     </div>
