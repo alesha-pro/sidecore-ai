@@ -1,3 +1,6 @@
+import { X } from 'lucide-preact';
+import { cn } from '../lib/utils';
+
 interface TabChipProps {
   tabId: number;
   title: string;
@@ -15,7 +18,11 @@ export function TabChip({ tabId, title, onRemove }: TabChipProps) {
     <span
       contentEditable={false}
       data-tab-id={tabId}
-      className="inline-flex items-center px-2 py-0.5 mx-1 text-xs bg-blue-100 text-blue-800 rounded select-none align-baseline"
+      className={cn(
+        'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 mx-1 text-xs font-medium select-none align-baseline',
+        'bg-accent-subtle text-accent border border-accent/20',
+        'dark:bg-accent-subtle-dark dark:text-accent-dark dark:border-accent-dark/20'
+      )}
     >
       <span className="truncate max-w-[120px]" title={title}>
         {title}
@@ -23,10 +30,14 @@ export function TabChip({ tabId, title, onRemove }: TabChipProps) {
       <button
         type="button"
         onClick={handleRemove}
-        className="ml-1 hover:text-blue-600 focus:outline-none"
+        className={cn(
+          'ml-0.5 rounded-full p-0.5',
+          'hover:bg-accent/20 focus:outline-none focus-visible:ring-1 focus-visible:ring-accent',
+          'dark:hover:bg-accent-dark/20 dark:focus-visible:ring-accent-dark'
+        )}
         aria-label={`Remove ${title}`}
       >
-        ×
+        <X size={12} />
       </button>
     </span>
   );
