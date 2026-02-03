@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'preact/hooks';
 import type { MCPServer, Tool } from '../lib/tools';
 import { getMockServers, getMockTools, getServers, getTools } from '../lib/tools';
 import type { Settings, McpHeader } from '../lib/types';
-import { DEFAULT_SYSTEM_PROMPT, SUPPORTED_LANGUAGES } from '../lib/types';
+import { DEFAULT_SYSTEM_PROMPT, SUPPORTED_LANGUAGES, LLM_PROVIDERS } from '../lib/types';
 import { normalizeBaseUrl, validateBaseUrl } from '../lib/urlNormalization';
 import { listModels } from '../lib/llm/client';
 import { LLMError } from '../lib/llm/errors';
@@ -54,6 +54,14 @@ function isValidHttpUrl(str: string): boolean {
   }
 }
 
+function getProviderFromUrl(url: string): string {
+  const normalized = url.trim().toLowerCase();
+  const provider = LLM_PROVIDERS.find(
+    p => p.id !== 'custom' && normalized === p.baseUrl.toLowerCase()
+  );
+  return provider?.id ?? 'custom';
+}
+
 export default function SettingsForm({ settings, onSave, onCancel, header }: SettingsFormProps) {
   const [formData, setFormData] = useState<Settings>(settings);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -65,6 +73,11 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
 
   const [availableTools, setAvailableTools] = useState<Tool[]>([]);
   const [availableServers, setAvailableServers] = useState<MCPServer[]>([]);
+
+  // Provider selection state
+  const [selectedProvider, setSelectedProvider] = useState(() =>
+    getProviderFromUrl(settings.baseUrl)
+  );
 
   // MCP Server draft state
   const [mcpDraft, setMcpDraft] = useState<McpServerDraft>(emptyMcpServerDraft());
@@ -78,6 +91,7 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
     setMcpDraft(emptyMcpServerDraft());
     setMcpUrlError(null);
     savedThemeRef.current = settings.theme;
+    setSelectedProvider(getProviderFromUrl(settings.baseUrl));
   }, [settings]);
 
   useEffect(() => {
@@ -223,6 +237,20 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
     }
   };
 
+  const handleProviderChange = (e: Event) => {
+    const providerId = (e.target as HTMLSelectElement).value;
+    setSelectedProvider(providerId);
+
+    const provider = LLM_PROVIDERS.find(p => p.id === providerId);
+    if (provider && provider.id !== 'custom') {
+      setFormData(prev => ({ ...prev, baseUrl: provider.baseUrl }));
+      // Clear baseUrl error since we're using a known-good URL
+      setErrors(prev => ({ ...prev, baseUrl: undefined }));
+      // Reset connection status since URL changed
+      setConnectionStatus('idle');
+    }
+  };
+
   const handleTestConnection = async () => {
     setConnectionStatus('testing');
     setConnectionError(null);
@@ -337,13 +365,31 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
           </summary>
           <Divider className="my-0" />
           <div className="px-4 pb-4 pt-3 space-y-4">
+            {/* Provider */}
+            <Select
+              id="provider"
+              label="Provider"
+              value={selectedProvider}
+              onChange={handleProviderChange}
+            >
+              {LLM_PROVIDERS.map((provider) => (
+                <option key={provider.id} value={provider.id}>
+                  {provider.name}
+                </option>
+              ))}
+            </Select>
+
             {/* Base URL */}
             <Input
               id="baseUrl"
               label="Base URL"
               type="text"
               value={formData.baseUrl}
-              onInput={handleChange('baseUrl')}
+              onInput={(e) => {
+                handleChange('baseUrl')(e);
+                setSelectedProvider('custom');
+                setConnectionStatus('idle');
+              }}
               placeholder="api.openai.com"
               error={errors.baseUrl}
             />
