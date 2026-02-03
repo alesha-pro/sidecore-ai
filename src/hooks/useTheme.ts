@@ -5,7 +5,7 @@ import type { ThemeMode } from '@/lib/types';
 /**
  * Apply theme class to document element
  */
-function applyTheme(mode: ThemeMode): void {
+export function applyTheme(mode: ThemeMode): void {
   const isDark =
     mode === 'dark' ||
     (mode === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);

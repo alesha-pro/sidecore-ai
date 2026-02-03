@@ -1,5 +1,5 @@
 import type { ComponentChildren } from 'preact';
-import { useState, useEffect } from 'preact/hooks';
+import { useState, useEffect, useRef } from 'preact/hooks';
 import type { MCPServer, Tool } from '../lib/tools';
 import { getMockServers, getMockTools, getServers, getTools } from '../lib/tools';
 import type { Settings, McpHeader } from '../lib/types';
@@ -7,6 +7,8 @@ import { DEFAULT_SYSTEM_PROMPT, SUPPORTED_LANGUAGES } from '../lib/types';
 import { normalizeBaseUrl, validateBaseUrl } from '../lib/urlNormalization';
 import { listModels } from '../lib/llm/client';
 import { LLMError } from '../lib/llm/errors';
+import { applyTheme } from '../hooks/useTheme';
+import { ThemeToggle } from './ThemeToggle';
 
 interface McpServerDraft {
   name: string;
@@ -53,6 +55,7 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
   const [saveError, setSaveError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const savedThemeRef = useRef(settings.theme);
 
   const [availableTools, setAvailableTools] = useState<Tool[]>([]);
   const [availableServers, setAvailableServers] = useState<MCPServer[]>([]);
@@ -68,6 +71,7 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
     setSaveError(null);
     setMcpDraft(emptyMcpServerDraft());
     setMcpUrlError(null);
+    savedThemeRef.current = settings.theme;
   }, [settings]);
 
   useEffect(() => {
@@ -181,6 +185,19 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
     }
   };
 
+  const handleThemeChange = (mode: Settings['theme']) => {
+    setFormData((prev) => ({
+      ...prev,
+      theme: mode,
+    }));
+    applyTheme(mode);
+  };
+
+  const handleCancel = () => {
+    applyTheme(savedThemeRef.current);
+    onCancel();
+  };
+
   const handleChange = (field: keyof Settings) => (e: Event) => {
     const target = e.target as HTMLInputElement | HTMLSelectElement;
     let value: string | number | boolean;
@@ -268,6 +285,13 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
             {header}
           </div>
         )}
+
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+            Appearance
+          </h3>
+          <ThemeToggle value={formData.theme} onChange={handleThemeChange} />
+        </div>
 
         {saveError && (
           <div className="p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg">
@@ -935,7 +959,7 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
           </button>
           <button
             type="button"
-            onClick={onCancel}
+            onClick={handleCancel}
             disabled={isSaving}
             className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
           >

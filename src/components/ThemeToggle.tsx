@@ -1,4 +1,3 @@
-import { useTheme } from '@/hooks/useTheme';
 import type { ThemeMode } from '@/lib/types';
 
 interface ThemeOption {
@@ -13,11 +12,15 @@ const themeOptions: ThemeOption[] = [
   { mode: 'auto', label: 'Auto', icon: '💻' },
 ];
 
+interface ThemeToggleProps {
+  value: ThemeMode;
+  onChange: (mode: ThemeMode) => void;
+}
+
 /**
  * Three-way theme toggle for light, dark, and auto (system) modes
  */
-export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+export function ThemeToggle({ value, onChange }: ThemeToggleProps) {
 
   return (
     <div class="flex items-center gap-2">
@@ -27,17 +30,17 @@ export function ThemeToggle() {
           <button
             key={mode}
             type="button"
-            onClick={() => setTheme(mode)}
+            onClick={() => onChange(mode)}
             class={`
               flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium
               transition-colors duration-150
-              ${theme === mode
+              ${value === mode
                 ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }
             `}
             aria-label={`Switch to ${label} theme`}
-            aria-pressed={theme === mode}
+            aria-pressed={value === mode}
           >
             <span aria-hidden="true">{icon}</span>
             <span>{label}</span>
