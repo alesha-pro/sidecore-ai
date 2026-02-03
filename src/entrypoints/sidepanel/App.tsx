@@ -730,40 +730,42 @@ export default function App() {
     }
   };
 
-  // Handle context menu actions from background script
+  // Handle pending context menu action (stored in session storage by background)
   useEffect(() => {
-    const handleContextMenuAction = (message: any) => {
-      if (message.type !== 'context-menu-action') return;
+    const checkPendingAction = async () => {
+      const result = await chrome.storage.session.get('pendingContextMenuAction');
+      const pending = result.pendingContextMenuAction;
 
-      const { action, tab } = message;
+      if (!pending) return;
+
+      // Clear immediately to prevent re-execution
+      await chrome.storage.session.remove('pendingContextMenuAction');
+
+      // Check if action is recent (within 5 seconds)
+      if (Date.now() - pending.timestamp > 5000) return;
+
+      const { action } = pending;
 
       // Ensure we're on chat view
       if (currentView !== 'chat') {
         setCurrentView('chat');
       }
 
-      // Set the tab as selected for context
-      if (tab?.id) {
-        setTabSelection({
-          includeActiveTab: true,
-          selectedTabIds: new Set(),
-        });
-      }
+      // Set active tab as context
+      setTabSelection({
+        includeActiveTab: true,
+        selectedTabIds: new Set(),
+      });
 
       // Trigger action based on menu item
       if (action === 'summarize-page') {
         // Auto-send summarize request
         handleSendMessage('Please summarize this page concisely, highlighting the key points.');
-      } else if (action === 'ask-about-page') {
-        // Just prepare context, user will type question
-        // Focus will be on input automatically
       }
+      // 'ask-about-page' just prepares context, user types question
     };
 
-    chrome.runtime.onMessage.addListener(handleContextMenuAction);
-    return () => {
-      chrome.runtime.onMessage.removeListener(handleContextMenuAction);
-    };
+    checkPendingAction();
   }, [currentView]);
 
   const handleStopStreaming = useCallback(() => {

@@ -25,17 +25,17 @@ export default defineBackground(() => {
   chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     if (!tab?.id || !tab.windowId) return;
 
-    // Open side panel first
-    await chrome.sidePanel.open({ windowId: tab.windowId });
-
-    // Small delay to ensure panel is ready
-    setTimeout(() => {
-      chrome.runtime.sendMessage({
-        type: 'context-menu-action',
+    // Store pending action in session storage (survives panel open)
+    await chrome.storage.session.set({
+      pendingContextMenuAction: {
         action: info.menuItemId,
         tab: { id: tab.id, title: tab.title, url: tab.url },
-      });
-    }, 300);
+        timestamp: Date.now(),
+      },
+    });
+
+    // Open side panel - App.tsx will check for pending action on mount
+    await chrome.sidePanel.open({ windowId: tab.windowId });
   });
 
   // Handle messages from sidepanel
