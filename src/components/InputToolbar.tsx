@@ -115,7 +115,7 @@ export function InputToolbar({
   const shortName = getShortModelName(currentModel);
 
   return (
-    <div className="flex items-center justify-between px-3 py-1.5 bg-white border-t border-gray-100 text-xs">
+    <div className="flex items-center justify-between px-3 py-1.5 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 text-xs">
       {/* Left side: Model, @, /, Current Tab */}
       <div className="flex items-center gap-1">
         {/* Model button */}
@@ -123,7 +123,7 @@ export function InputToolbar({
           type="button"
           onClick={onModelClick}
           disabled={disabled}
-          className="flex items-center gap-1 px-2 py-1 text-blue-600 hover:bg-blue-50 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1 px-2 py-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-800 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title={`Current model: ${currentModel}`}
         >
           <ModelIcon />
@@ -135,7 +135,7 @@ export function InputToolbar({
           type="button"
           onClick={onAtClick}
           disabled={disabled}
-          className="px-2 py-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-2 py-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Add tab context (@)"
         >
           <span className="font-medium">@</span>
@@ -146,7 +146,7 @@ export function InputToolbar({
           type="button"
           onClick={onSlashClick}
           disabled={disabled}
-          className="px-2 py-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-2 py-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Commands (/)"
         >
           <span className="font-medium">/</span>
@@ -160,9 +160,9 @@ export function InputToolbar({
               checked={includeActiveTab}
               disabled={disabled}
               onChange={(e) => onActiveTabChange((e.target as HTMLInputElement).checked)}
-              className="h-3.5 w-3.5 text-blue-600 border-gray-300 rounded-full focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+              className="h-3.5 w-3.5 text-blue-600 dark:text-blue-500 border-gray-300 dark:border-gray-600 rounded-full focus:ring-1 focus:ring-blue-500 disabled:opacity-50 dark:bg-gray-800"
             />
-            <span className="text-gray-500">Current Tab</span>
+            <span className="text-gray-500 dark:text-gray-400">Current Tab</span>
           </label>
         )}
       </div>
@@ -172,7 +172,7 @@ export function InputToolbar({
         type="button"
         onClick={onSettingsClick}
         disabled={disabled}
-        className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         title="Settings"
       >
         <GearIcon />
