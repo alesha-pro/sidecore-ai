@@ -935,19 +935,21 @@ export default function App() {
 
       {/* NAV-01: Chat list as full-screen view */}
       {currentView === 'chat-list' && (
-        <ChatList
-          chats={chats}
-          currentChatId={currentChatId}
-          onSelectChat={(id) => {
-            handleSelectChat(id);
-            navigateTo('chat');
-          }}
-          onNewChat={() => {
-            handleNewChat();
-            navigateTo('chat');
-          }}
-          onDeleteChat={handleDeleteChat}
-        />
+        <div className="animate-slide-in-from-left motion-reduce:animate-none">
+          <ChatList
+            chats={chats}
+            currentChatId={currentChatId}
+            onSelectChat={(id) => {
+              handleSelectChat(id);
+              navigateTo('chat');
+            }}
+            onNewChat={() => {
+              handleNewChat();
+              navigateTo('chat');
+            }}
+            onDeleteChat={handleDeleteChat}
+          />
+        </div>
       )}
 
       {/* Chat view - contains all streaming logic */}
@@ -1001,11 +1003,13 @@ export default function App() {
 
       {/* NAV-03: Settings as separate screen */}
       {currentView === 'settings' && (
-        <SettingsForm
-          settings={settings || DEFAULT_SETTINGS}
-          onSave={handleSaveSettings}
-          onCancel={handleBack}
-        />
+        <div className="animate-slide-in-from-right motion-reduce:animate-none">
+          <SettingsForm
+            settings={settings || DEFAULT_SETTINGS}
+            onSave={handleSaveSettings}
+            onCancel={handleBack}
+          />
+        </div>
       )}
 
       {/* Model Selector Popup */}
