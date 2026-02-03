@@ -11,6 +11,11 @@ export interface ToolCall {
   };
 }
 
+/**
+ * Theme mode for UI appearance
+ */
+export type ThemeMode = 'light' | 'dark' | 'auto';
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant' | 'tool';
@@ -45,6 +50,7 @@ export interface Settings {
   disabledTools: string[];
   /** MCP server IDs to disable (tools won't be registered) */
   disabledServers: string[];
+  theme: ThemeMode;
 }
 
 export const SUPPORTED_LANGUAGES = [
@@ -89,6 +95,7 @@ export const DEFAULT_SETTINGS: Settings = {
   mcpServers: [],
   disabledTools: [],
   disabledServers: [],
+  theme: 'auto',
 };
 
 export interface TabSelection {
