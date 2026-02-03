@@ -1,5 +1,6 @@
 import { useState } from 'preact/hooks';
 import type { ChatMessage } from '../lib/llm/types';
+import { cn } from '../lib/utils';
 
 interface PromptDebugViewProps {
   messages: ChatMessage[];
@@ -48,16 +49,28 @@ export function PromptDebugView({ messages, isOpen, onToggle, isLoading = false 
   }
 
   return (
-    <div className="border-t border-gray-200 bg-gray-50">
+    <div className={cn(
+      'border-t',
+      'bg-surface border-border',
+      'dark:bg-surface-dark dark:border-border-dark'
+    )}>
       <button
         onClick={onToggle}
-        className="w-full px-4 py-2 flex items-center justify-between text-sm text-gray-700 hover:bg-gray-100"
+        className={cn(
+          'w-full px-4 py-2 flex items-center justify-between text-sm',
+          'text-text-primary hover:bg-surface-hover',
+          'dark:text-text-primary-dark dark:hover:bg-surface-hover-dark'
+        )}
         aria-expanded={isOpen}
       >
         <span className="font-medium">
           {isOpen ? '\u25BC' : '\u25B6'} View Full Prompt
         </span>
-        <span className="text-xs text-gray-500">
+        <span className={cn(
+          'text-xs',
+          'text-text-secondary',
+          'dark:text-text-secondary-dark'
+        )}>
           {totalChars.toLocaleString()} chars (~{estimatedTokens.toLocaleString()} tokens)
         </span>
       </button>
@@ -65,7 +78,11 @@ export function PromptDebugView({ messages, isOpen, onToggle, isLoading = false 
       {isOpen && (
         <div className="px-4 pb-4 space-y-3">
           {isLoading ? (
-            <div className="flex items-center justify-center py-8 text-gray-500">
+            <div className={cn(
+              'flex items-center justify-center py-8',
+              'text-text-secondary',
+              'dark:text-text-secondary-dark'
+            )}>
               <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
@@ -77,7 +94,11 @@ export function PromptDebugView({ messages, isOpen, onToggle, isLoading = false 
               <div className="flex justify-end">
                 <button
                   onClick={handleCopy}
-                  className="px-3 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-50"
+                  className={cn(
+                    'px-3 py-1 text-xs rounded',
+                    'bg-surface border border-border hover:bg-surface-hover',
+                    'dark:bg-surface-dark dark:border-border-dark dark:hover:bg-surface-hover-dark'
+                  )}
                 >
                   {copyStatus === 'copied' ? '\u2713 Copied' : 'Copy to Clipboard'}
                 </button>
@@ -87,11 +108,19 @@ export function PromptDebugView({ messages, isOpen, onToggle, isLoading = false 
                 {messages.map((msg, idx) => {
                   const style = getRoleStyle(msg.role);
                   return (
-                    <div key={idx} className="bg-white border border-gray-200 rounded p-3 overflow-hidden">
+                    <div key={idx} className={cn(
+                      'rounded p-3 overflow-hidden',
+                      'bg-surface border border-border',
+                      'dark:bg-surface-dark dark:border-border-dark'
+                    )}>
                       <div className={`inline-block px-2 py-0.5 text-xs font-semibold rounded mb-2 ${style.color}`}>
                         {style.label}
                       </div>
-                      <pre className="text-xs text-gray-700 whitespace-pre-wrap break-words font-mono">
+                      <pre className={cn(
+                        'text-xs whitespace-pre-wrap break-words font-mono',
+                        'text-text-primary',
+                        'dark:text-text-primary-dark'
+                      )}>
                         {msg.content ?? ''}
                       </pre>
                     </div>
