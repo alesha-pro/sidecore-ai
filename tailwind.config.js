@@ -39,6 +39,22 @@ export default {
         10: 'var(--space-10)',
         12: 'var(--space-12)',
       },
+      fontFamily: {
+        sans: ['var(--font-sans)'],
+      },
+      fontSize: {
+        xs: ['var(--text-xs)', { lineHeight: 'var(--leading-tight)' }],
+        sm: ['var(--text-sm)', { lineHeight: 'var(--leading-normal)' }],
+        base: ['var(--text-base)', { lineHeight: 'var(--leading-normal)' }],
+        md: ['var(--text-md)', { lineHeight: 'var(--leading-normal)' }],
+        lg: ['var(--text-lg)', { lineHeight: 'var(--leading-tight)' }],
+      },
+      fontWeight: {
+        normal: 'var(--font-normal)',
+        medium: 'var(--font-medium)',
+        semibold: 'var(--font-semibold)',
+        bold: 'var(--font-bold)',
+      },
     },
   },
   plugins: [],
