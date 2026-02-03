@@ -2,6 +2,8 @@ import { useMemo, useState } from 'preact/hooks';
 import type { Message } from '../lib/types';
 import ThinkingBlock from './ThinkingBlock';
 import ToolCallBlock from './ToolCallBlock';
+import { Trash2, Pencil } from 'lucide-preact';
+import { cn } from '../lib/utils';
 import { marked } from 'marked';
 import hljs from 'highlight.js/lib/core';
 import javascript from 'highlight.js/lib/languages/javascript';
@@ -115,26 +117,30 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
             <button
               type="button"
               onClick={handleDelete}
-              className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-red-600 transition-colors shadow-sm"
+              className={cn(
+                'p-1.5 rounded-full transition-colors shadow-sm',
+                'bg-surface hover:bg-surface-hover text-text-secondary hover:text-red-500',
+                'dark:bg-surface-dark dark:hover:bg-surface-hover-dark dark:text-text-secondary-dark'
+              )}
               title="Delete message"
               aria-label="Delete message"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-              </svg>
+              <Trash2 size={14} />
             </button>
           )}
           {isLastUserMessage && onEdit && (
             <button
               type="button"
               onClick={() => setIsEditing(true)}
-              className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-blue-600 transition-colors shadow-sm"
+              className={cn(
+                'p-1.5 rounded-full transition-colors shadow-sm',
+                'bg-surface hover:bg-surface-hover text-text-secondary hover:text-accent',
+                'dark:bg-surface-dark dark:hover:bg-surface-hover-dark dark:text-text-secondary-dark'
+              )}
               title="Edit message"
               aria-label="Edit message"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-              </svg>
+              <Pencil size={14} />
             </button>
           )}
         </div>
@@ -148,7 +154,12 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
 
         {/* Thinking bubble - shown while streaming with no content yet */}
         {message.role === 'assistant' && message.isStreaming && !message.content && !message.tool_calls?.length && (
-          <div className="px-4 py-2 rounded-lg bg-white border border-gray-200 text-gray-500 text-sm flex items-center gap-2">
+          <div className={cn(
+            'px-4 py-2 rounded-lg',
+            'bg-surface border border-border text-text-secondary',
+            'dark:bg-surface-dark dark:border-border-dark dark:text-text-secondary-dark',
+            'text-sm flex items-center gap-2'
+          )}>
             <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-pulse"></span>
             Thinking...
           </div>
@@ -159,11 +170,18 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
             2. Assistant with empty content (tool-only message) */}
         {!(message.role === 'assistant' && !message.content) && (
           <div
-            className={`px-4 py-2 rounded-lg ${
-              isUser
-                ? 'bg-blue-600 text-white'
-                : 'bg-white border border-gray-200 text-gray-900'
-            }`}
+            className={cn(
+              // MSG-01: User message - soft subtle bubble (not bright blue)
+              isUser && cn(
+                'px-4 py-2.5 rounded-2xl',
+                'bg-accent-subtle text-text-primary',
+                'dark:bg-accent-subtle-dark dark:text-text-primary-dark'
+              ),
+              // MSG-02: Assistant message - no bubble, generous whitespace
+              !isUser && cn(
+                'py-3' // Generous vertical whitespace, no background/border
+              )
+            )}
           >
             {/* Content */}
             {isEditing ? (
@@ -171,21 +189,34 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
               <textarea
                 value={editContent}
                 onChange={(e) => setEditContent((e.target as HTMLTextAreaElement).value)}
-                className="w-full min-h-[100px] px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                className={cn(
+                  'w-full min-h-[100px] px-2 py-1 text-sm rounded',
+                  'border border-border bg-background text-text-primary',
+                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                  'dark:bg-background-dark dark:border-border-dark dark:text-text-primary-dark'
+                )}
                 autoFocus
               />
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={handleSaveEdit}
-                  className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors"
+                  className={cn(
+                    'px-3 py-1 text-xs font-medium rounded transition-colors',
+                    'bg-accent text-accent-text hover:bg-accent-hover',
+                    'dark:bg-accent-dark dark:text-accent-text-dark dark:hover:bg-accent-hover-dark'
+                  )}
                 >
                   Save
                 </button>
                 <button
                   type="button"
                   onClick={handleCancelEdit}
-                  className="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
+                  className={cn(
+                    'px-3 py-1 text-xs font-medium rounded transition-colors',
+                    'bg-surface text-text-primary hover:bg-surface-hover',
+                    'dark:bg-surface-dark dark:text-text-primary-dark dark:hover:bg-surface-hover-dark'
+                  )}
                 >
                   Cancel
                 </button>
@@ -194,10 +225,21 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
           ) : (
             <>
               {message.role === 'assistant' ? (
-                <div className="prose prose-sm max-w-none text-gray-900 break-words overflow-hidden">
+                <div className={cn(
+                  'prose prose-sm max-w-none break-words overflow-hidden',
+                  'text-text-primary',
+                  'dark:prose-invert dark:text-text-primary-dark',
+                  // Generous whitespace between elements (MSG-02)
+                  '[&>*+*]:mt-4',
+                  '[&>pre]:my-4',
+                  '[&>ul]:my-3 [&>ol]:my-3'
+                )}>
                   <div dangerouslySetInnerHTML={{ __html: renderedContent || '' }} />
                   {message.isStreaming && (
-                    <span className="inline-block w-2 h-4 ml-1 bg-gray-400 animate-pulse align-middle"></span>
+                    <span className={cn(
+                      'inline-block w-2 h-4 ml-1 animate-pulse align-middle',
+                      'bg-text-secondary dark:bg-text-secondary-dark'
+                    )}></span>
                   )}
                 </div>
               ) : (
@@ -235,13 +277,15 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
           <button
             type="button"
             onClick={handleDelete}
-            className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-red-600 transition-colors shadow-sm"
+            className={cn(
+              'p-1.5 rounded-full transition-colors shadow-sm',
+              'bg-surface hover:bg-surface-hover text-text-secondary hover:text-red-500',
+              'dark:bg-surface-dark dark:hover:bg-surface-hover-dark dark:text-text-secondary-dark'
+            )}
             title="Delete message"
             aria-label="Delete message"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-            </svg>
+            <Trash2 size={14} />
           </button>
         </div>
       )}
