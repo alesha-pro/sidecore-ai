@@ -289,3 +289,22 @@ html.dark {
 .hljs-strong {
   font-weight: bold;
 }
+
+/* ============================================================================
+   Animation utilities with reduced motion support
+   ============================================================================ */
+
+/* Reduced motion support - disable animations for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-slide-in-from-right,
+  .animate-slide-out-to-right,
+  .animate-slide-in-from-left,
+  .animate-slide-out-to-left,
+  .animate-fade-in,
+  .animate-fade-out,
+  .animate-scale-in,
+  .animate-scale-out {
+    animation: none;
+    transition: none;
+  }
+}
