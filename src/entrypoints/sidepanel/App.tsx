@@ -168,42 +168,6 @@ export default function App() {
     }
   }, [settings?.mcpServers, settings?.disabledServers]);
 
-  // Handle context menu actions from background script
-  useEffect(() => {
-    const handleContextMenuAction = (message: any) => {
-      if (message.type !== 'context-menu-action') return;
-
-      const { action, tab } = message;
-
-      // Ensure we're on chat view
-      if (currentView !== 'chat') {
-        setCurrentView('chat');
-      }
-
-      // Set the tab as selected for context
-      if (tab?.id) {
-        setTabSelection({
-          includeActiveTab: true,
-          selectedTabIds: new Set(),
-        });
-      }
-
-      // Trigger action based on menu item
-      if (action === 'summarize-page') {
-        // Auto-send summarize request
-        handleSendMessage('Please summarize this page concisely, highlighting the key points.');
-      } else if (action === 'ask-about-page') {
-        // Just prepare context, user will type question
-        // Focus will be on input automatically
-      }
-    };
-
-    chrome.runtime.onMessage.addListener(handleContextMenuAction);
-    return () => {
-      chrome.runtime.onMessage.removeListener(handleContextMenuAction);
-    };
-  }, [currentView, handleSendMessage]);
-
   // Auto-save current chat when messages change
   useEffect(() => {
     const saveChatAsync = async () => {
@@ -765,6 +729,42 @@ export default function App() {
       abortControllerRef.current = null;
     }
   };
+
+  // Handle context menu actions from background script
+  useEffect(() => {
+    const handleContextMenuAction = (message: any) => {
+      if (message.type !== 'context-menu-action') return;
+
+      const { action, tab } = message;
+
+      // Ensure we're on chat view
+      if (currentView !== 'chat') {
+        setCurrentView('chat');
+      }
+
+      // Set the tab as selected for context
+      if (tab?.id) {
+        setTabSelection({
+          includeActiveTab: true,
+          selectedTabIds: new Set(),
+        });
+      }
+
+      // Trigger action based on menu item
+      if (action === 'summarize-page') {
+        // Auto-send summarize request
+        handleSendMessage('Please summarize this page concisely, highlighting the key points.');
+      } else if (action === 'ask-about-page') {
+        // Just prepare context, user will type question
+        // Focus will be on input automatically
+      }
+    };
+
+    chrome.runtime.onMessage.addListener(handleContextMenuAction);
+    return () => {
+      chrome.runtime.onMessage.removeListener(handleContextMenuAction);
+    };
+  }, [currentView]);
 
   const handleStopStreaming = useCallback(() => {
     abortControllerRef.current?.abort();
