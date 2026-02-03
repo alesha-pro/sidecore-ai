@@ -731,25 +731,39 @@ export default function App() {
   };
 
   // Handle pending context menu action (stored in session storage by background)
+  // Uses storage.onChanged listener to react when sidepanel is already open
   useEffect(() => {
-    // Wait for settings to load before checking pending action
+    // Wait for settings to load
     if (!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel) {
+      console.log('[App] Context menu handler: waiting for settings...');
       return;
     }
 
-    const checkPendingAction = async () => {
+    const processPendingAction = async () => {
+      console.log('[App] Checking for pending context menu action...');
       const result = await chrome.storage.session.get('pendingContextMenuAction');
       const pending = result.pendingContextMenuAction;
 
-      if (!pending) return;
+      if (!pending) {
+        console.log('[App] No pending action found');
+        return;
+      }
+
+      console.log('[App] Found pending action:', pending.action, 'timestamp:', pending.timestamp);
 
       // Clear immediately to prevent re-execution
       await chrome.storage.session.remove('pendingContextMenuAction');
+      console.log('[App] Cleared pending action from storage');
 
       // Check if action is recent (within 10 seconds)
-      if (Date.now() - pending.timestamp > 10000) return;
+      const age = Date.now() - pending.timestamp;
+      if (age > 10000) {
+        console.log('[App] Action too old, ignoring. Age:', age, 'ms');
+        return;
+      }
 
       const { action } = pending;
+      console.log('[App] Processing action:', action);
 
       // Always create a new chat for context menu actions
       const newChat = await createChat();
@@ -760,6 +774,7 @@ export default function App() {
       setPreviewExtraction([]);
       const updatedChats = await listChats();
       setChats(updatedChats);
+      console.log('[App] Created new chat:', newChat.id);
 
       // Switch to chat view
       setCurrentView('chat');
@@ -769,16 +784,37 @@ export default function App() {
         includeActiveTab: true,
         selectedTabIds: new Set(),
       });
+      console.log('[App] Set tab selection, includeActiveTab: true');
 
       // Trigger action based on menu item
       if (action === 'summarize-page') {
-        // Auto-send summarize request
-        handleSendMessage('Please summarize this page concisely, highlighting the key points.');
+        console.log('[App] Sending summarize request...');
+        // Small delay to ensure state updates are applied
+        setTimeout(() => {
+          handleSendMessage('Please summarize this page concisely, highlighting the key points.');
+        }, 100);
       }
       // 'ask-about-page' just prepares context, user types question
     };
 
-    checkPendingAction();
+    // Check on mount (for when sidepanel was closed)
+    processPendingAction();
+
+    // Listen for storage changes (for when sidepanel is already open)
+    const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
+      if (areaName === 'session' && changes.pendingContextMenuAction?.newValue) {
+        console.log('[App] Storage changed, new pending action detected');
+        processPendingAction();
+      }
+    };
+
+    chrome.storage.onChanged.addListener(handleStorageChange);
+    console.log('[App] Context menu storage listener registered');
+
+    return () => {
+      chrome.storage.onChanged.removeListener(handleStorageChange);
+      console.log('[App] Context menu storage listener removed');
+    };
   }, [settings]);
 
   const handleStopStreaming = useCallback(() => {

@@ -25,8 +25,11 @@ export default defineBackground(() => {
   chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (!tab?.id || !tab.windowId) return;
 
+    console.log('[background] Context menu clicked:', info.menuItemId, 'tab:', tab.id);
+
     // Open side panel FIRST (must be synchronous response to user gesture)
     chrome.sidePanel.open({ windowId: tab.windowId });
+    console.log('[background] Side panel open called');
 
     // Then store pending action in session storage
     chrome.storage.session.set({
@@ -35,6 +38,8 @@ export default defineBackground(() => {
         tab: { id: tab.id, title: tab.title, url: tab.url },
         timestamp: Date.now(),
       },
+    }).then(() => {
+      console.log('[background] Pending action saved to session storage');
     });
   });
 
