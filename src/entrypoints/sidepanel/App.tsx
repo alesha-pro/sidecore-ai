@@ -64,9 +64,8 @@ export default function App() {
   const [currentView, setCurrentView] = useState<View>('chat-list');
   const [previousView, setPreviousView] = useState<View | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isLLMLoading, setIsLLMLoading] = useState(false);
   const [llmError, setLLMError] = useState<string | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const [streamingChats, setStreamingChats] = useState<Map<string, { abortController: AbortController }>>(new Map());
   const mcpManagerRef = useRef(new McpToolManager(toolRegistry));
 
   const [tabSelection, setTabSelection] = useState<TabSelection>(DEFAULT_TAB_SELECTION);
@@ -86,6 +85,9 @@ export default function App() {
   // Chat management state
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+
+  // Derive current chat's streaming state
+  const isCurrentChatStreaming = currentChatId ? streamingChats.has(currentChatId) : false;
 
   const isStreaming = useMemo(
     () => messages.some((message) => message.isStreaming),
@@ -151,9 +153,12 @@ export default function App() {
 
   useEffect(() => {
     return () => {
-      abortControllerRef.current?.abort();
+      // Abort all streaming chats on unmount
+      streamingChats.forEach(({ abortController }) => {
+        abortController.abort();
+      });
     };
-  }, []);
+  }, [streamingChats]);
 
   // Sync MCP tools when mcpServers setting changes
   useEffect(() => {
@@ -404,6 +409,10 @@ export default function App() {
       return;
     }
 
+    // Capture chatId at start to handle chat switching during streaming
+    const chatId = currentChatId;
+    if (!chatId) return;
+
     const selectedTabs = getSelectedTabs(tabIds);
     console.log('Selected tabs for context:', selectedTabs.map(t => ({ id: t.id, title: t.title })));
 
@@ -419,8 +428,10 @@ export default function App() {
     setIsTabPickerOpen(false);
 
     setLLMError(null);
-    setIsLLMLoading(true);
-    abortControllerRef.current = new AbortController();
+
+    // Create new AbortController and add to streamingChats Map
+    const abortController = new AbortController();
+    setStreamingChats((prev) => new Map(prev).set(chatId, { abortController }));
 
     try {
       let extractionResults: ExtractedTabContent[] = [];
@@ -650,7 +661,7 @@ export default function App() {
         executeTool,
         maxIterations: settings.agentMaxIterations,
         timeoutMs: settings.agentTimeoutMs,
-        signal: abortControllerRef.current.signal,
+        signal: abortController.signal,
         callbacks: agentCallbacks,
       });
 
@@ -700,7 +711,7 @@ export default function App() {
           }
           return prev;
         });
-      } else if (abortControllerRef.current?.signal.aborted) {
+      } else if (abortController.signal.aborted) {
         console.log('LLM request aborted successfully.');
         setLLMError('Generation stopped.');
         setMessages((prev) => {
@@ -725,8 +736,12 @@ export default function App() {
         console.error('LLM request error:', error);
       }
     } finally {
-      setIsLLMLoading(false);
-      abortControllerRef.current = null;
+      // Remove chatId from streamingChats Map
+      setStreamingChats((prev) => {
+        const next = new Map(prev);
+        next.delete(chatId);
+        return next;
+      });
     }
   };
 
@@ -818,9 +833,17 @@ export default function App() {
   }, [settings]);
 
   const handleStopStreaming = useCallback(() => {
-    abortControllerRef.current?.abort();
-    setIsLLMLoading(false);
-  }, []);
+    if (!currentChatId) return;
+    const streamingChat = streamingChats.get(currentChatId);
+    if (streamingChat) {
+      streamingChat.abortController.abort();
+      setStreamingChats((prev) => {
+        const next = new Map(prev);
+        next.delete(currentChatId);
+        return next;
+      });
+    }
+  }, [currentChatId, streamingChats]);
 
   const handleModelChange = useCallback(async (model: string) => {
     if (!settings) return;
@@ -902,9 +925,16 @@ export default function App() {
     // If it's a user message, remove it and all messages after, then re-send
     if (message.role === 'user') {
       // Abort any in-flight request (if streaming)
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        setIsLLMLoading(false);
+      if (currentChatId) {
+        const streamingChat = streamingChats.get(currentChatId);
+        if (streamingChat) {
+          streamingChat.abortController.abort();
+          setStreamingChats((prev) => {
+            const next = new Map(prev);
+            next.delete(currentChatId);
+            return next;
+          });
+        }
       }
 
       // Remove the edited message and all after it (handleSendMessage will add new one)
@@ -922,7 +952,7 @@ export default function App() {
       updatedMessages[messageIndex] = { ...message, content: newContent };
       setMessages(updatedMessages);
     }
-  }, [messages, handleSendMessage]);
+  }, [messages, currentChatId, streamingChats, handleSendMessage]);
 
   const handleDeleteMessage = useCallback((id: string) => {
     setMessages((prev) => prev.filter((m) => m.id !== id));
@@ -1043,7 +1073,7 @@ export default function App() {
           )}
           <ChatHistory
             messages={messages}
-            isLoading={isLLMLoading && !isStreaming}
+            isLoading={isCurrentChatStreaming && !isStreaming}
             error={llmError}
             isStreaming={isStreaming}
             onStop={handleStopStreaming}
@@ -1067,7 +1097,7 @@ export default function App() {
           )}
           <MentionInput
             onSend={handleSendMessage}
-            disabled={!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel || isLLMLoading || isStreaming}
+            disabled={!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel || isCurrentChatStreaming}
             selectedTabs={selectedTabsForInput}
             onRemoveTab={handleRemoveTab}
             availableTabs={tabs}
