@@ -7,6 +7,8 @@ import { ExtractionStatus } from '../../components/ExtractionStatus';
 import { SelectedTabsBar } from '../../components/SelectedTabsBar';
 import { PromptDebugView } from '../../components/PromptDebugView';
 import { ModelSelectorPopup } from '../../components/ModelSelectorPopup';
+import { ChevronLeft, Settings, MessageSquarePlus } from 'lucide-preact';
+import { cn } from '../../lib/utils';
 import { useTheme } from '@/hooks/useTheme';
 import { useTabs } from '../../hooks/useTabs';
 import { getSettings, saveSettings } from '../../lib/storage';
@@ -53,11 +55,13 @@ function getCurrentDateTime(): string {
   });
 }
 
+type View = 'chat-list' | 'chat' | 'settings';
+
 export default function App() {
   useTheme();
   const [messages, setMessages] = useState<Message[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
+  const [currentView, setCurrentView] = useState<View>('chat-list');
   const [isLoading, setIsLoading] = useState(true);
   const [isLLMLoading, setIsLLMLoading] = useState(false);
   const [llmError, setLLMError] = useState<string | null>(null);
@@ -81,7 +85,6 @@ export default function App() {
   // Chat management state
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-  const [showChatList, setShowChatList] = useState(false);
 
   const isStreaming = useMemo(
     () => messages.some((message) => message.isStreaming),
@@ -104,7 +107,7 @@ export default function App() {
         setSettings(loadedSettings);
 
         if (!loadedSettings.baseUrl || !loadedSettings.apiKey) {
-          setShowSettings(true);
+          setCurrentView('settings');
         }
 
         // Load chats
@@ -135,7 +138,7 @@ export default function App() {
       } catch (error) {
         console.error('Failed to load settings or chats:', error);
         setSettings({ ...DEFAULT_SETTINGS });
-        setShowSettings(true);
+        setCurrentView('settings');
       } finally {
         setIsLoading(false);
       }
@@ -207,7 +210,7 @@ export default function App() {
   const handleSaveSettings = async (newSettings: Settings) => {
     await saveSettings(newSettings);
     setSettings(newSettings);
-    setShowSettings(false);
+    setCurrentView('chat');
   };
 
   const getSelectedTabs = useCallback((overrideTabIds?: number[]) => {
@@ -824,121 +827,169 @@ export default function App() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-900 dark:text-gray-100">
-        <div className="text-gray-500 dark:text-gray-400 text-sm">Loading...</div>
+      <div className={cn(
+        'flex items-center justify-center h-screen',
+        'bg-background',
+        'dark:bg-background-dark'
+      )}>
+        <div className={cn(
+          'text-sm',
+          'text-text-secondary',
+          'dark:text-text-secondary-dark'
+        )}>Loading...</div>
       </div>
     );
   }
 
+  const currentChat = chats.find(c => c.id === currentChatId);
+
   return (
-    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 dark:text-gray-100">
-      {/* Mini header with chat list toggle only */}
-      <header className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-        <button
-          type="button"
-          onClick={() => setShowChatList(!showChatList)}
-          className={`p-1 transition-colors ${
-            showChatList
-              ? 'text-blue-600 hover:bg-blue-50 dark:hover:bg-gray-800'
-              : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
-          } rounded`}
-          title={showChatList ? 'Hide chat list' : 'Show chat list'}
-          aria-label="Toggle chat list"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-            className="w-5 h-5"
+    <div className={cn(
+      'flex flex-col h-screen',
+      'bg-background',
+      'dark:bg-background-dark'
+    )}>
+      {/* NAV-02: Header with back button */}
+      <header className={cn(
+        'flex items-center gap-3 px-4 py-3 shrink-0',
+        'bg-surface border-b border-border',
+        'dark:bg-surface-dark dark:border-border-dark'
+      )}>
+        {/* Back button (not shown on chat-list) */}
+        {currentView !== 'chat-list' && (
+          <button
+            type="button"
+            onClick={() => setCurrentView('chat-list')}
+            className={cn(
+              'p-1.5 -ml-1.5 rounded-lg',
+              'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+              'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark'
+            )}
+            aria-label="Back to chat list"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          onClick={handleNewChat}
-          className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
-          title="New Chat"
-          aria-label="New Chat"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-            className="w-5 h-5"
+            <ChevronLeft size={20} />
+          </button>
+        )}
+
+        {/* Title */}
+        <h1 className={cn(
+          'flex-1 text-lg font-semibold truncate',
+          'text-text-primary',
+          'dark:text-text-primary-dark'
+        )}>
+          {currentView === 'chat-list' && 'Chats'}
+          {currentView === 'chat' && (currentChat?.title || 'New Chat')}
+          {currentView === 'settings' && 'Settings'}
+        </h1>
+
+        {/* Actions */}
+        {currentView === 'chat-list' && (
+          <button
+            type="button"
+            onClick={() => { handleNewChat(); setCurrentView('chat'); }}
+            className={cn(
+              'p-1.5 rounded-lg',
+              'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+              'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark'
+            )}
+            aria-label="New chat"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-        </button>
+            <MessageSquarePlus size={20} />
+          </button>
+        )}
+
+        {currentView === 'chat' && (
+          <button
+            type="button"
+            onClick={() => setCurrentView('settings')}
+            className={cn(
+              'p-1.5 rounded-lg',
+              'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+              'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark'
+            )}
+            aria-label="Open settings"
+          >
+            <Settings size={20} />
+          </button>
+        )}
       </header>
 
-      {showSettings ? (
+      {/* NAV-01: Chat list as full-screen view */}
+      {currentView === 'chat-list' && (
+        <ChatList
+          chats={chats}
+          currentChatId={currentChatId}
+          onSelectChat={(id) => {
+            handleSelectChat(id);
+            setCurrentView('chat');
+          }}
+          onNewChat={() => {
+            handleNewChat();
+            setCurrentView('chat');
+          }}
+          onDeleteChat={handleDeleteChat}
+        />
+      )}
+
+      {/* Chat view - contains all streaming logic */}
+      {currentView === 'chat' && (
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+          {settings?.showExtractionStatus && (
+            <ExtractionStatus results={extractionResults} />
+          )}
+          <ChatHistory
+            messages={messages}
+            isLoading={isLLMLoading && !isStreaming}
+            error={llmError}
+            isStreaming={isStreaming}
+            onStop={handleStopStreaming}
+            onEditMessage={handleEditMessage}
+            onDeleteMessage={handleDeleteMessage}
+          />
+          <SelectedTabsBar
+            tabs={selectedTabsForInput}
+            includeActiveTab={tabSelection.includeActiveTab}
+            activeTab={activeTab}
+            onRemoveTab={handleRemoveTab}
+            onToggleActiveTab={handleToggleActiveTab}
+          />
+          {settings?.showDebugPrompt && (
+            <PromptDebugView
+              messages={previewMessages}
+              isOpen={isDebugViewOpen}
+              onToggle={handleDebugViewToggle}
+              isLoading={isPreviewExtracting}
+            />
+          )}
+          <MentionInput
+            onSend={handleSendMessage}
+            disabled={!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel || isLLMLoading || isStreaming}
+            selectedTabs={selectedTabsForInput}
+            onRemoveTab={handleRemoveTab}
+            availableTabs={tabs}
+            onSelectTab={handleSelectTab}
+            isPickerOpen={isTabPickerOpen}
+            onPickerOpenChange={setIsTabPickerOpen}
+            onInputChange={handleInputChange}
+            currentModel={settings?.defaultModel || ''}
+            onModelClick={() => setShowModelSelector(true)}
+            onSettingsClick={() => setCurrentView('settings')}
+            includeActiveTab={tabSelection.includeActiveTab}
+            onActiveTabChange={handleToggleActiveTab}
+          />
+        </div>
+      )}
+
+      {/* NAV-03: Settings as separate screen */}
+      {currentView === 'settings' && (
         <SettingsForm
           settings={settings || DEFAULT_SETTINGS}
           onSave={handleSaveSettings}
-          onCancel={() => setShowSettings(false)}
+          onCancel={() => setCurrentView('chat')}
         />
-      ) : (
-        <div className="flex flex-1 overflow-hidden">
-          {showChatList && (
-            <ChatList
-              chats={chats}
-              currentChatId={currentChatId}
-              onSelectChat={handleSelectChat}
-              onNewChat={handleNewChat}
-              onDeleteChat={handleDeleteChat}
-            />
-          )}
-          <div className="flex flex-col flex-1 min-w-0">
-            {settings?.showExtractionStatus && (
-              <ExtractionStatus results={extractionResults} />
-            )}
-            <ChatHistory
-              messages={messages}
-              isLoading={isLLMLoading && !isStreaming}
-              error={llmError}
-              isStreaming={isStreaming}
-              onStop={handleStopStreaming}
-              onEditMessage={handleEditMessage}
-              onDeleteMessage={handleDeleteMessage}
-            />
-            <SelectedTabsBar
-              tabs={selectedTabsForInput}
-              includeActiveTab={tabSelection.includeActiveTab}
-              activeTab={activeTab}
-              onRemoveTab={handleRemoveTab}
-              onToggleActiveTab={handleToggleActiveTab}
-            />
-            {settings?.showDebugPrompt && (
-              <PromptDebugView
-                messages={previewMessages}
-                isOpen={isDebugViewOpen}
-                onToggle={handleDebugViewToggle}
-                isLoading={isPreviewExtracting}
-              />
-            )}
-            <MentionInput
-              onSend={handleSendMessage}
-              disabled={!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel || isLLMLoading || isStreaming}
-              selectedTabs={selectedTabsForInput}
-              onRemoveTab={handleRemoveTab}
-              availableTabs={tabs}
-              onSelectTab={handleSelectTab}
-              isPickerOpen={isTabPickerOpen}
-              onPickerOpenChange={setIsTabPickerOpen}
-              onInputChange={handleInputChange}
-              currentModel={settings?.defaultModel || ''}
-              onModelClick={() => setShowModelSelector(true)}
-              onSettingsClick={() => setShowSettings(!showSettings)}
-              includeActiveTab={tabSelection.includeActiveTab}
-              onActiveTabChange={handleToggleActiveTab}
-            />
-          </div>
-        </div>
       )}
 
       {/* Model Selector Popup */}
