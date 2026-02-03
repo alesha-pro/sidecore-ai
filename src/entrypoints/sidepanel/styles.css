@@ -217,145 +217,68 @@ html.dark {
   font-weight: 600;
 }
 
-/* highlight.js GitHub theme for code blocks */
+/* Theme-aware code block syntax highlighting (MSG-05) */
+
+/* Light theme code blocks */
 .hljs {
-  color: #24292e;
-  background: #f6f8fa;
+  background: var(--color-surface-code, #f6f8fa);
+  color: var(--color-text-code, #24292f);
+  padding: 1rem;
+  border-radius: 0.375rem;
+  overflow-x: auto;
 }
 
-.hljs-comment,
-.hljs-quote {
-  color: #6a737d;
-  font-style: italic;
-}
+.hljs-keyword { color: #cf222e; }
+.hljs-string { color: #0a3069; }
+.hljs-comment { color: #6e7781; font-style: italic; }
+.hljs-function { color: #8250df; }
+.hljs-number { color: #0550ae; }
+.hljs-operator { color: #24292f; }
+.hljs-punctuation { color: #24292f; }
+.hljs-property { color: #0550ae; }
+.hljs-variable { color: #953800; }
+.hljs-attr { color: #0550ae; }
+.hljs-selector-tag { color: #116329; }
+.hljs-selector-class { color: #0550ae; }
+.hljs-selector-id { color: #0550ae; }
+.hljs-title { color: #8250df; }
+.hljs-title.function_ { color: #8250df; }
+.hljs-params { color: #24292f; }
+.hljs-built_in { color: #0550ae; }
+.hljs-literal { color: #0550ae; }
+.hljs-type { color: #0550ae; }
+.hljs-meta { color: #0550ae; }
+.hljs-name { color: #116329; }
+.hljs-attribute { color: #0550ae; }
 
-.hljs-keyword,
-.hljs-selector-tag,
-.hljs-literal,
-.hljs-type {
-  color: #d73a49;
-}
-
-.hljs-number,
-.hljs-attr,
-.hljs-variable,
-.hljs-template-variable {
-  color: #005cc5;
-}
-
-.hljs-string,
-.hljs-doctag,
-.hljs-regexp {
-  color: #032f62;
-}
-
-.hljs-title,
-.hljs-section,
-.hljs-selector-id {
-  color: #6f42c1;
-  font-weight: bold;
-}
-
-.hljs-subst {
-  color: #24292e;
-}
-
-.hljs-symbol,
-.hljs-bullet {
-  color: #e36209;
-}
-
-.hljs-built_in,
-.hljs-builtin-name,
-.hljs-class .hljs-title,
-.hljs-function .hljs-title {
-  color: #6f42c1;
-}
-
-.hljs-meta {
-  color: #005cc5;
-  font-weight: bold;
-}
-
-.hljs-deletion {
-  color: #24292e;
-  background-color: #ffeef0;
-}
-
-.hljs-addition {
-  color: #24292e;
-  background-color: #e6ffed;
-}
-
-/* Dark mode highlight.js (GitHub Dark theme) */
+/* Dark theme code blocks */
 .dark .hljs {
-  color: #e6edf3;
-  background: #0d1117;
+  background: var(--color-surface-code-dark, #161b22);
+  color: var(--color-text-code-dark, #c9d1d9);
 }
 
-.dark .hljs-comment,
-.dark .hljs-quote {
-  color: #8b949e;
-  font-style: italic;
-}
-
-.dark .hljs-keyword,
-.dark .hljs-selector-tag,
-.dark .hljs-literal,
-.dark .hljs-type {
-  color: #ff7b72;
-}
-
-.dark .hljs-number,
-.dark .hljs-attr,
-.dark .hljs-variable,
-.dark .hljs-template-variable {
-  color: #79c0ff;
-}
-
-.dark .hljs-string,
-.dark .hljs-doctag,
-.dark .hljs-regexp {
-  color: #a5d6ff;
-}
-
-.dark .hljs-title,
-.dark .hljs-section,
-.dark .hljs-selector-id {
-  color: #d2a8ff;
-  font-weight: bold;
-}
-
-.dark .hljs-subst {
-  color: #e6edf3;
-}
-
-.dark .hljs-symbol,
-.dark .hljs-bullet {
-  color: #ffa657;
-}
-
-.dark .hljs-built_in,
-.dark .hljs-builtin-name,
-.dark .hljs-class .hljs-title,
-.dark .hljs-function .hljs-title {
-  color: #d2a8ff;
-}
-
-.dark .hljs-meta {
-  color: #79c0ff;
-  font-weight: bold;
-}
-
-.dark .hljs-deletion {
-  color: #ffdcd7;
-  background-color: #67060c;
-}
-
-.dark .hljs-addition {
-  color: #aff5b4;
-  background-color: #033a16;
-}
+.dark .hljs-keyword { color: #ff7b72; }
+.dark .hljs-string { color: #a5d6ff; }
+.dark .hljs-comment { color: #8b949e; font-style: italic; }
+.dark .hljs-function { color: #d2a8ff; }
+.dark .hljs-number { color: #79c0ff; }
+.dark .hljs-operator { color: #c9d1d9; }
+.dark .hljs-punctuation { color: #c9d1d9; }
+.dark .hljs-property { color: #79c0ff; }
+.dark .hljs-variable { color: #ffa657; }
+.dark .hljs-attr { color: #79c0ff; }
+.dark .hljs-selector-tag { color: #7ee787; }
+.dark .hljs-selector-class { color: #79c0ff; }
+.dark .hljs-selector-id { color: #79c0ff; }
+.dark .hljs-title { color: #d2a8ff; }
+.dark .hljs-title.function_ { color: #d2a8ff; }
+.dark .hljs-params { color: #c9d1d9; }
+.dark .hljs-built_in { color: #79c0ff; }
+.dark .hljs-literal { color: #79c0ff; }
+.dark .hljs-type { color: #79c0ff; }
+.dark .hljs-meta { color: #79c0ff; }
+.dark .hljs-name { color: #7ee787; }
+.dark .hljs-attribute { color: #79c0ff; }
 
 .hljs-emphasis {
   font-style: italic;
