@@ -7,6 +7,7 @@ import { ExtractionStatus } from '../../components/ExtractionStatus';
 import { SelectedTabsBar } from '../../components/SelectedTabsBar';
 import { PromptDebugView } from '../../components/PromptDebugView';
 import { ModelSelectorPopup } from '../../components/ModelSelectorPopup';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { useTabs } from '../../hooks/useTabs';
 import { getSettings, saveSettings } from '../../lib/storage';
 import type { Message, Settings, TabSelection, Chat, ChatSummary } from '../../lib/types';
@@ -824,23 +825,23 @@ export default function App() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
-        <div className="text-gray-500 text-sm">Loading...</div>
+      <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-900 dark:text-gray-100">
+        <div className="text-gray-500 dark:text-gray-400 text-sm">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 dark:text-gray-100">
       {/* Mini header with chat list toggle only */}
-      <header className="flex items-center gap-2 px-3 py-2 bg-white border-b border-gray-200">
+      <header className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
         <button
           type="button"
           onClick={() => setShowChatList(!showChatList)}
           className={`p-1 transition-colors ${
             showChatList
-              ? 'text-blue-600 hover:bg-blue-50'
-              : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
+              ? 'text-blue-600 hover:bg-blue-50 dark:hover:bg-gray-800'
+              : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
           } rounded`}
           title={showChatList ? 'Hide chat list' : 'Show chat list'}
           aria-label="Toggle chat list"
@@ -859,7 +860,7 @@ export default function App() {
         <button
           type="button"
           onClick={handleNewChat}
-          className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+          className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
           title="New Chat"
           aria-label="New Chat"
         >
@@ -881,6 +882,14 @@ export default function App() {
           settings={settings || DEFAULT_SETTINGS}
           onSave={handleSaveSettings}
           onCancel={() => setShowSettings(false)}
+          header={(
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                Appearance
+              </h3>
+              <ThemeToggle />
+            </div>
+          )}
         />
       ) : (
         <div className="flex flex-1 overflow-hidden">

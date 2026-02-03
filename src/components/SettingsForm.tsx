@@ -1,3 +1,4 @@
+import type { ComponentChildren } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
 import type { MCPServer, Tool } from '../lib/tools';
 import { getMockServers, getMockTools, getServers, getTools } from '../lib/tools';
@@ -17,6 +18,7 @@ interface SettingsFormProps {
   settings: Settings;
   onSave: (settings: Settings) => Promise<void>;
   onCancel: () => void;
+  header?: ComponentChildren;
 }
 
 interface FormErrors {
@@ -44,7 +46,7 @@ function isValidHttpUrl(str: string): boolean {
   }
 }
 
-export default function SettingsForm({ settings, onSave, onCancel }: SettingsFormProps) {
+export default function SettingsForm({ settings, onSave, onCancel, header }: SettingsFormProps) {
   const [formData, setFormData] = useState<Settings>(settings);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -257,9 +259,15 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
 
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+    <div className="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-gray-900">
       <form onSubmit={handleSubmit} className="max-w-md mx-auto space-y-6">
-        <h2 className="text-xl font-semibold text-gray-900">Settings</h2>
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Settings</h2>
+
+        {header && (
+          <div>
+            {header}
+          </div>
+        )}
 
         {saveError && (
           <div className="p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg">
@@ -268,14 +276,14 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
         )}
 
         {/* Section 1: LLM Provider */}
-        <details open className="border border-gray-200 rounded-lg bg-white">
-          <summary className="px-4 py-3 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 rounded-lg select-none">
+        <details open className="border border-gray-200 rounded-lg bg-white dark:border-gray-800 dark:bg-gray-900">
+          <summary className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg select-none">
             LLM Provider
           </summary>
-          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 mt-2 pt-4">
+          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 dark:border-gray-800 mt-2 pt-4">
             {/* Base URL */}
             <div>
-              <label htmlFor="baseUrl" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="baseUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Base URL
               </label>
               <input
@@ -284,7 +292,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                 value={formData.baseUrl}
                 onInput={handleChange('baseUrl')}
                 placeholder="api.openai.com"
-                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white ${
                   errors.baseUrl ? 'border-red-500' : 'border-gray-300'
                 }`}
                 aria-describedby={errors.baseUrl ? 'baseUrl-error' : 'baseUrl-hint'}
@@ -294,7 +302,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                   {errors.baseUrl}
                 </p>
               ) : (
-                <p id="baseUrl-hint" className="mt-1 text-xs text-gray-500">
+                <p id="baseUrl-hint" className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   Will be normalized to https://...../v1
                 </p>
               )}
@@ -302,7 +310,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
 
             {/* API Key */}
             <div>
-              <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 API Key
               </label>
               <input
@@ -311,7 +319,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                 value={formData.apiKey}
                 onInput={handleChange('apiKey')}
                 placeholder="sk-..."
-                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white ${
                   errors.apiKey ? 'border-red-500' : 'border-gray-300'
                 }`}
                 aria-describedby={errors.apiKey ? 'apiKey-error' : undefined}
@@ -329,7 +337,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                 type="button"
                 onClick={handleTestConnection}
                 disabled={connectionStatus === 'testing' || !formData.baseUrl.trim() || !formData.apiKey.trim()}
-                className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {connectionStatus === 'testing' && 'Testing...'}
                 {connectionStatus === 'success' && '✓ Connected'}
@@ -342,7 +350,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
 
             {/* Default Model */}
             <div>
-              <label htmlFor="defaultModel" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="defaultModel" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Default Model
               </label>
               {formData.savedModels.length > 0 ? (
@@ -350,7 +358,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                   id="defaultModel"
                   value={formData.defaultModel}
                   onChange={handleChange('defaultModel')}
-                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white ${
                     errors.defaultModel ? 'border-red-500' : 'border-gray-300'
                   }`}
                   aria-describedby={errors.defaultModel ? 'defaultModel-error' : 'defaultModel-hint'}
@@ -369,7 +377,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                   value={formData.defaultModel}
                   onInput={handleChange('defaultModel')}
                   placeholder="gpt-4o"
-                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white ${
                     errors.defaultModel ? 'border-red-500' : 'border-gray-300'
                   }`}
                   aria-describedby={errors.defaultModel ? 'defaultModel-error' : 'defaultModel-hint'}
@@ -380,7 +388,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                   {errors.defaultModel}
                 </p>
               ) : (
-                <p id="defaultModel-hint" className="mt-1 text-xs text-gray-500">
+                <p id="defaultModel-hint" className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   Click 'Test Connection' to load available models
                 </p>
               )}
@@ -389,21 +397,21 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
         </details>
 
         {/* Section 2: System Prompt */}
-        <details open className="border border-gray-200 rounded-lg bg-white">
-          <summary className="px-4 py-3 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 rounded-lg select-none">
+        <details open className="border border-gray-200 rounded-lg bg-white dark:border-gray-800 dark:bg-gray-900">
+          <summary className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg select-none">
             System Prompt
           </summary>
-          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 mt-2 pt-4">
+          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 dark:border-gray-800 mt-2 pt-4">
             {/* Response Language */}
             <div>
-              <label htmlFor="responseLanguage" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="responseLanguage" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Response Language
               </label>
               <select
                 id="responseLanguage"
                 value={formData.responseLanguage}
                 onChange={handleChange('responseLanguage')}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {SUPPORTED_LANGUAGES.map((lang) => (
                   <option key={lang.code} value={lang.code}>
@@ -411,13 +419,13 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                   </option>
                 ))}
               </select>
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                 Language for AI responses
               </p>
             </div>
 
             <div>
-              <label htmlFor="systemPrompt" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="systemPrompt" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 System Prompt
               </label>
               <textarea
@@ -425,17 +433,17 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                 value={formData.systemPrompt}
                 onInput={handleChange('systemPrompt')}
                 rows={8}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
                 placeholder="Define the AI assistant's role and behavior..."
               />
               <div className="flex justify-between mt-1">
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
                   {formData.systemPrompt.length.toLocaleString()} characters
                 </p>
                 <button
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, systemPrompt: DEFAULT_SYSTEM_PROMPT }))}
-                  className="text-xs text-blue-600 hover:text-blue-700"
+                  className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                 >
                   Reset to default
                 </button>
@@ -445,14 +453,14 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
         </details>
 
         {/* Section 3: Advanced */}
-        <details className="border border-gray-200 rounded-lg bg-white">
-          <summary className="px-4 py-3 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 rounded-lg select-none">
+        <details className="border border-gray-200 rounded-lg bg-white dark:border-gray-800 dark:bg-gray-900">
+          <summary className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg select-none">
             Advanced
           </summary>
-          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 mt-2 pt-4">
+          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 dark:border-gray-800 mt-2 pt-4">
             {/* Context Budget */}
             <div>
-              <label htmlFor="contextBudget" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="contextBudget" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Context Budget (characters)
               </label>
               <input
@@ -463,7 +471,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                 min="1000"
                 max="1000000"
                 step="1000"
-                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white ${
                   errors.contextBudget ? 'border-red-500' : 'border-gray-300'
                 }`}
                 aria-describedby={errors.contextBudget ? 'contextBudget-error' : 'contextBudget-hint'}
@@ -473,7 +481,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                   {errors.contextBudget}
                 </p>
               ) : (
-                <p id="contextBudget-hint" className="mt-1 text-xs text-gray-500">
+                <p id="contextBudget-hint" className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   Maximum extracted content per request. Default: 50,000
                 </p>
               )}
@@ -490,8 +498,8 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                   className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                 />
                 <div>
-                  <span className="text-sm font-medium text-gray-700">Show Extraction Status</span>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Show Extraction Status</span>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Shows extraction results after each message
                   </p>
                 </div>
@@ -509,8 +517,8 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                   className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                 />
                 <div>
-                  <span className="text-sm font-medium text-gray-700">Show Debug Prompt</span>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Show Debug Prompt</span>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     Shows the full prompt being sent to the LLM
                   </p>
                 </div>
@@ -520,18 +528,18 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
         </details>
 
         {/* Section 4: Agent Settings */}
-        <details className="border border-gray-200 rounded-lg bg-white">
-          <summary className="px-4 py-3 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 rounded-lg select-none">
+        <details className="border border-gray-200 rounded-lg bg-white dark:border-gray-800 dark:bg-gray-900">
+          <summary className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg select-none">
             Agent Settings
           </summary>
-          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 mt-2 pt-4">
-            <p className="text-xs text-gray-500">
+          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 dark:border-gray-800 mt-2 pt-4">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Configure limits for the AI agent's tool execution behavior.
             </p>
 
             {/* Max Iterations */}
             <div>
-              <label htmlFor="agentMaxIterations" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="agentMaxIterations" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Max Iterations
               </label>
               <input
@@ -541,7 +549,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                 onInput={handleChange('agentMaxIterations')}
                 min="1"
                 max="25"
-                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white ${
                   errors.agentMaxIterations ? 'border-red-500' : 'border-gray-300'
                 }`}
                 aria-describedby={errors.agentMaxIterations ? 'agentMaxIterations-error' : 'agentMaxIterations-hint'}
@@ -551,7 +559,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                   {errors.agentMaxIterations}
                 </p>
               ) : (
-                <p id="agentMaxIterations-hint" className="mt-1 text-xs text-gray-500">
+                <p id="agentMaxIterations-hint" className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   Maximum tool call cycles (1-25). Default: 15
                 </p>
               )}
@@ -559,7 +567,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
 
             {/* Timeout */}
             <div>
-              <label htmlFor="agentTimeoutMs" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="agentTimeoutMs" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Timeout (ms)
               </label>
               <input
@@ -570,7 +578,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                 min="60000"
                 max="900000"
                 step="1000"
-                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white ${
                   errors.agentTimeoutMs ? 'border-red-500' : 'border-gray-300'
                 }`}
                 aria-describedby={errors.agentTimeoutMs ? 'agentTimeoutMs-error' : 'agentTimeoutMs-hint'}
@@ -580,7 +588,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                   {errors.agentTimeoutMs}
                 </p>
               ) : (
-                <p id="agentTimeoutMs-hint" className="mt-1 text-xs text-gray-500">
+                <p id="agentTimeoutMs-hint" className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   Maximum agent run time (60,000-900,000 ms). Default: 300,000 (5 min)
                 </p>
               )}
@@ -589,20 +597,20 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
         </details>
 
         {/* Section 5: Tools & Capabilities */}
-        <details className="border border-gray-200 rounded-lg bg-white">
-          <summary className="px-4 py-3 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 rounded-lg select-none">
+        <details className="border border-gray-200 rounded-lg bg-white dark:border-gray-800 dark:bg-gray-900">
+          <summary className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg select-none">
             Tools &amp; Capabilities
           </summary>
-          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 mt-2 pt-4">
-            <p className="text-xs text-gray-500">
+          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 dark:border-gray-800 mt-2 pt-4">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Enable or disable specific tools and MCP servers available to Agent Mode.
             </p>
 
             <div>
-              <div className="text-sm font-medium text-gray-900">Built-in Tools</div>
+              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Built-in Tools</div>
               <div className="mt-2 space-y-2">
                 {availableTools.filter((tool) => tool.source === 'built-in').length === 0 ? (
-                  <p className="text-xs text-gray-500">No built-in tools registered yet.</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">No built-in tools registered yet.</p>
                 ) : (
                   availableTools
                     .filter((tool) => tool.source === 'built-in')
@@ -622,8 +630,8 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                             className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                           />
                           <div className="min-w-0">
-                            <div className="text-sm font-medium text-gray-900">{tool.name}</div>
-                            <div className="text-xs text-gray-500">{tool.description}</div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{tool.name}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">{tool.description}</div>
                           </div>
                         </label>
                       );
@@ -633,15 +641,15 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
             </div>
 
             <div>
-              <div className="text-sm font-medium text-gray-900">MCP Servers</div>
+              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">MCP Servers</div>
               <div className="mt-2 space-y-3">
                 {availableServers.length === 0 ? (
-                  <p className="text-xs text-gray-500">No MCP servers connected.</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">No MCP servers connected.</p>
                 ) : (
                   availableServers.map((server) => {
                     const serverDisabled = formData.disabledServers.includes(server.id);
                     return (
-                      <div key={server.id} className="border border-gray-200 rounded-lg p-3">
+                      <div key={server.id} className="border border-gray-200 dark:border-gray-800 rounded-lg p-3">
                         <label className="flex items-start gap-2">
                           <input
                             type="checkbox"
@@ -650,16 +658,16 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                             className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                           />
                           <div className="min-w-0">
-                            <div className="text-sm font-medium text-gray-900">
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                               {server.name || server.id}
                             </div>
-                            <div className="text-xs text-gray-500">Status: {server.status}</div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">Status: {server.status}</div>
                           </div>
                         </label>
 
                         <div className={`mt-3 space-y-2 pl-6 ${serverDisabled ? 'opacity-50' : ''}`}>
                           {server.tools.length === 0 ? (
-                            <p className="text-xs text-gray-500">No tools registered for this server.</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">No tools registered for this server.</p>
                           ) : (
                             server.tools.map((tool) => {
                               const toolDisabled = formData.disabledTools.includes(tool.name);
@@ -680,8 +688,8 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                                     className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                                   />
                                   <div className="min-w-0">
-                                    <div className="text-sm font-medium text-gray-900">{tool.name}</div>
-                                    <div className="text-xs text-gray-500">{tool.description}</div>
+                                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{tool.name}</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">{tool.description}</div>
                                   </div>
                                 </label>
                               );
@@ -698,12 +706,12 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
         </details>
 
         {/* Section 6: MCP Servers */}
-        <details className="border border-gray-200 rounded-lg bg-white">
-          <summary className="px-4 py-3 font-medium text-gray-900 cursor-pointer hover:bg-gray-50 rounded-lg select-none">
+        <details className="border border-gray-200 rounded-lg bg-white dark:border-gray-800 dark:bg-gray-900">
+          <summary className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg select-none">
             MCP Servers
           </summary>
-          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 mt-2 pt-4">
-            <p className="text-xs text-gray-500">
+          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 dark:border-gray-800 mt-2 pt-4">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Add MCP (Model Context Protocol) servers to provide additional tools in Agent Mode.
             </p>
 
@@ -766,7 +774,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
 
               {/* Server Name */}
               <div>
-                <label htmlFor="mcpServerName" className="block text-xs text-gray-600 mb-1">
+                <label htmlFor="mcpServerName" className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
                   Name (optional)
                 </label>
                 <input
@@ -775,13 +783,13 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                   value={mcpDraft.name}
                   onInput={(e) => setMcpDraft((prev) => ({ ...prev, name: (e.target as HTMLInputElement).value }))}
                   placeholder="My MCP Server"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               {/* Server URL */}
               <div>
-                <label htmlFor="mcpServerUrl" className="block text-xs text-gray-600 mb-1">
+                <label htmlFor="mcpServerUrl" className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
                   URL (required)
                 </label>
                 <input
@@ -793,7 +801,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                     setMcpUrlError(null);
                   }}
                   placeholder="https://mcp-server.example.com/mcp"
-                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white ${
                     mcpUrlError ? 'border-red-500' : 'border-gray-300'
                   }`}
                 />
@@ -805,8 +813,8 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
               {/* Headers */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <div className="block text-xs text-gray-600">Headers (optional)</div>
-                  <button
+                <div className="block text-xs text-gray-600 dark:text-gray-400">Headers (optional)</div>
+                <button
                     type="button"
                     onClick={() => {
                       setMcpDraft((prev) => ({
@@ -814,7 +822,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                         headers: [...prev.headers, { key: '', value: '' }],
                       }));
                     }}
-                    className="text-xs text-blue-600 hover:text-blue-700"
+                    className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                   >
                     + Add header
                   </button>
@@ -832,7 +840,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                             setMcpDraft((prev) => ({ ...prev, headers: newHeaders }));
                           }}
                           placeholder="Header name"
-                          className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="flex-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         <input
                           type="text"
@@ -843,7 +851,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                             setMcpDraft((prev) => ({ ...prev, headers: newHeaders }));
                           }}
                           placeholder="Value"
-                          className="flex-1 px-2 py-1.5 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="flex-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                         <button
                           type="button"
@@ -908,7 +916,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
                   setMcpUrlError(null);
                 }}
                 disabled={!mcpDraft.url.trim()}
-                className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add Server
               </button>
@@ -921,7 +929,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
           <button
             type="submit"
             disabled={isSaving}
-            className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-blue-300 disabled:cursor-not-allowed"
+            className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-500 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-blue-300 disabled:cursor-not-allowed"
           >
             {isSaving ? 'Saving...' : 'Save Settings'}
           </button>
@@ -929,7 +937,7 @@ export default function SettingsForm({ settings, onSave, onCancel }: SettingsFor
             type="button"
             onClick={onCancel}
             disabled={isSaving}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
           >
             Cancel
           </button>
