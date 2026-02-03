@@ -13,7 +13,7 @@ export default defineConfig({
   }),
   manifest: {
     name: 'Sidepanel AI Agent',
-    permissions: ['sidePanel', 'storage', 'tabs', 'scripting'],
+    permissions: ['sidePanel', 'storage', 'tabs', 'scripting', 'contextMenus'],
     host_permissions: [
       '<all_urls>',  // Required for on-demand content extraction via chrome.scripting.executeScript
       'https://api.openai.com/*',

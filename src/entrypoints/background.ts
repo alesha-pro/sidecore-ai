@@ -7,6 +7,37 @@ export default defineBackground(() => {
   // Open side panel when extension icon is clicked
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
 
+  // Create context menu items on install
+  chrome.runtime.onInstalled.addListener(() => {
+    chrome.contextMenus.create({
+      id: 'summarize-page',
+      title: 'Summarize this page',
+      contexts: ['page'],
+    });
+    chrome.contextMenus.create({
+      id: 'ask-about-page',
+      title: 'Ask about this page',
+      contexts: ['page'],
+    });
+  });
+
+  // Handle context menu clicks
+  chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+    if (!tab?.id || !tab.windowId) return;
+
+    // Open side panel first
+    await chrome.sidePanel.open({ windowId: tab.windowId });
+
+    // Small delay to ensure panel is ready
+    setTimeout(() => {
+      chrome.runtime.sendMessage({
+        type: 'context-menu-action',
+        action: info.menuItemId,
+        tab: { id: tab.id, title: tab.title, url: tab.url },
+      });
+    }, 300);
+  });
+
   // Handle messages from sidepanel
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Handle extraction requests
