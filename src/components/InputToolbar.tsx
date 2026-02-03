@@ -1,4 +1,4 @@
-import { AtSign, Slash, ChevronDown, Settings, Sparkles } from 'lucide-preact';
+import { AtSign, Slash, ChevronDown, Sparkles, MonitorSmartphone } from 'lucide-preact';
 import { cn } from '../lib/utils';
 
 interface InputToolbarProps {
@@ -6,7 +6,6 @@ interface InputToolbarProps {
   onModelClick: () => void;
   onAtClick: () => void;
   onSlashClick: () => void;
-  onSettingsClick: () => void;
   disabled?: boolean;
   includeActiveTab?: boolean;
   onActiveTabChange?: (included: boolean) => void;
@@ -46,7 +45,6 @@ export function InputToolbar({
   onModelClick,
   onAtClick,
   onSlashClick,
-  onSettingsClick,
   disabled = false,
   includeActiveTab = false,
   onActiveTabChange,
@@ -55,94 +53,33 @@ export function InputToolbar({
 
   return (
     <div className={cn(
-      'flex items-center justify-between px-2 @sm:px-3 py-1.5 text-xs min-w-0',
+      'flex items-center gap-1 px-2 @sm:px-3 py-1.5 text-xs min-w-0',
       'bg-surface border-t border-border',
       'dark:bg-surface-dark dark:border-border-dark'
     )}>
-      {/* Left side: Model, @, /, Current Tab */}
-      <div className="flex items-center gap-1 min-w-0 flex-1">
-        {/* Model button */}
-        <button
-          type="button"
-          onClick={onModelClick}
-          disabled={disabled}
-          className={cn(
-            'flex items-center gap-1 px-2 py-1 rounded transition-colors flex-shrink-0',
-            'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
-            'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1',
-            'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark dark:focus-visible:ring-accent-dark',
-            'disabled:opacity-50 disabled:cursor-not-allowed'
-          )}
-          title={`Current model: ${currentModel}`}
-        >
-          <Sparkles size={16} />
-          <span className="font-medium truncate max-w-[120px]">{shortName}</span>
-          <ChevronDown size={14} />
-        </button>
-
-        {/* @ button */}
-        <button
-          type="button"
-          onClick={onAtClick}
-          disabled={disabled}
-          className={cn(
-            'p-1.5 rounded transition-colors flex-shrink-0',
-            'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
-            'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1',
-            'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark dark:focus-visible:ring-accent-dark',
-            'disabled:opacity-50 disabled:cursor-not-allowed'
-          )}
-          title="Add tab context (@)"
-        >
-          <AtSign size={16} />
-        </button>
-
-        {/* / button */}
-        <button
-          type="button"
-          onClick={onSlashClick}
-          disabled={disabled}
-          className={cn(
-            'p-1.5 rounded transition-colors flex-shrink-0',
-            'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
-            'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1',
-            'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark dark:focus-visible:ring-accent-dark',
-            'disabled:opacity-50 disabled:cursor-not-allowed'
-          )}
-          title="Commands (/)"
-        >
-          <Slash size={16} />
-        </button>
-
-        {/* Current Tab checkbox */}
-        {onActiveTabChange && (
-          <label className={cn(
-            'flex items-center gap-1.5 px-2 py-1 cursor-pointer select-none flex-shrink-0',
-            'text-text-secondary hover:text-text-primary',
-            'dark:text-text-secondary-dark dark:hover:text-text-primary-dark'
-          )}>
-            <input
-              type="checkbox"
-              checked={includeActiveTab}
-              disabled={disabled}
-              onChange={(e) => onActiveTabChange((e.target as HTMLInputElement).checked)}
-              className={cn(
-                'h-3.5 w-3.5 rounded-full border flex-shrink-0',
-                'text-accent border-border',
-                'focus:ring-2 focus:ring-accent focus:ring-offset-1',
-                'dark:text-accent-dark dark:border-border-dark dark:bg-surface-dark dark:focus:ring-accent-dark',
-                'disabled:opacity-50'
-              )}
-            />
-            <span className="text-xs whitespace-nowrap">Current Tab</span>
-          </label>
-        )}
-      </div>
-
-      {/* Right side: Settings gear only */}
+      {/* Model button */}
       <button
         type="button"
-        onClick={onSettingsClick}
+        onClick={onModelClick}
+        disabled={disabled}
+        className={cn(
+          'flex items-center gap-1 px-2 py-1 rounded transition-colors flex-shrink-0',
+          'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
+          'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1',
+          'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark dark:focus-visible:ring-accent-dark',
+          'disabled:opacity-50 disabled:cursor-not-allowed'
+        )}
+        title={`Current model: ${currentModel}`}
+      >
+        <Sparkles size={16} />
+        <span className="font-medium truncate max-w-[120px]">{shortName}</span>
+        <ChevronDown size={14} />
+      </button>
+
+      {/* @ button */}
+      <button
+        type="button"
+        onClick={onAtClick}
         disabled={disabled}
         className={cn(
           'p-1.5 rounded transition-colors flex-shrink-0',
@@ -151,10 +88,48 @@ export function InputToolbar({
           'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark dark:focus-visible:ring-accent-dark',
           'disabled:opacity-50 disabled:cursor-not-allowed'
         )}
-        title="Settings"
+        title="Add tab context (@)"
       >
-        <Settings size={16} />
+        <AtSign size={16} />
       </button>
+
+      {/* / button */}
+      <button
+        type="button"
+        onClick={onSlashClick}
+        disabled={disabled}
+        className={cn(
+          'p-1.5 rounded transition-colors flex-shrink-0',
+          'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
+          'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1',
+          'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark dark:focus-visible:ring-accent-dark',
+          'disabled:opacity-50 disabled:cursor-not-allowed'
+        )}
+        title="Commands (/)"
+      >
+        <Slash size={16} />
+      </button>
+
+      {/* Current Tab toggle button */}
+      {onActiveTabChange && (
+        <button
+          type="button"
+          onClick={() => onActiveTabChange(!includeActiveTab)}
+          disabled={disabled}
+          className={cn(
+            'flex items-center gap-1 px-2 py-1 rounded transition-colors flex-shrink-0',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1',
+            'disabled:opacity-50 disabled:cursor-not-allowed',
+            includeActiveTab
+              ? 'text-accent bg-accent-subtle dark:text-accent-dark dark:bg-accent-subtle-dark'
+              : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark'
+          )}
+          title={includeActiveTab ? "Current tab included" : "Include current tab"}
+        >
+          <MonitorSmartphone size={16} />
+          <span className="text-xs whitespace-nowrap">Current</span>
+        </button>
+      )}
     </div>
   );
 }
