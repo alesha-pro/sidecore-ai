@@ -54,12 +54,12 @@ export function SelectedTabsBar({
   };
 
   return (
-    <div className="px-3 py-1 bg-gray-50 border-t border-gray-200">
+    <div className="px-3 py-1 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
       {/* Collapsed view - thin strip */}
       <button
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center gap-1.5 w-full text-left text-xs text-gray-600 hover:text-gray-800"
+        className="flex items-center gap-1.5 w-full text-left text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
         aria-expanded={isExpanded}
       >
         <svg
@@ -70,11 +70,11 @@ export function SelectedTabsBar({
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>
-        <span className="text-gray-500">
+        <span className="text-gray-500 dark:text-gray-400">
           {displayTabs.length} {displayTabs.length === 1 ? 'tab' : 'tabs'} selected
         </span>
         {!isExpanded && (
-          <span className="text-gray-400 truncate flex-1">
+          <span className="text-gray-400 dark:text-gray-500 truncate flex-1">
             — {getSummaryText()}
           </span>
         )}
@@ -100,7 +100,7 @@ export function SelectedTabsBar({
                 />
               ) : (
                 <svg
-                  className="w-3 h-3 text-gray-400 flex-shrink-0"
+                  className="w-3 h-3 text-gray-400 dark:text-gray-500 flex-shrink-0"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -116,12 +116,12 @@ export function SelectedTabsBar({
 
               {/* Title */}
               <span
-                className="flex-1 text-xs text-gray-700 truncate"
+                className="flex-1 text-xs text-gray-700 dark:text-gray-300 truncate"
                 title={tab.title}
               >
                 {tab.title}
                 {'isActive' in tab && tab.isActive && (
-                  <span className="ml-1 text-blue-500">(active)</span>
+                  <span className="ml-1 text-blue-500 dark:text-blue-400">(active)</span>
                 )}
               </span>
 
@@ -133,7 +133,7 @@ export function SelectedTabsBar({
                     e.stopPropagation();
                     onToggleActiveTab(false);
                   }}
-                  className="text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"
                   aria-label="Exclude active tab"
                   title="Exclude active tab"
                 >
@@ -148,7 +148,7 @@ export function SelectedTabsBar({
                     e.stopPropagation();
                     onRemoveTab(tab.id);
                   }}
-                  className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="text-gray-400 hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
                   aria-label={`Remove ${tab.title}`}
                 >
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
