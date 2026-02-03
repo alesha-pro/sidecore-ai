@@ -144,3 +144,23 @@ export interface McpServerConfig {
   url: string;
   headers: McpHeader[];
 }
+
+// ============================================================================
+// LLM Provider Presets
+// ============================================================================
+
+/**
+ * Preset LLM providers with OpenAI-compatible endpoints
+ */
+export const LLM_PROVIDERS = [
+  { id: 'custom', name: 'Custom', baseUrl: '' },
+  { id: 'openai', name: 'OpenAI', baseUrl: 'https://api.openai.com/v1' },
+  { id: 'openrouter', name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1' },
+  { id: 'zai', name: 'z.ai', baseUrl: 'https://api.z.ai/api/coding/paas/v4' },
+  { id: 'together', name: 'Together AI', baseUrl: 'https://api.together.xyz/v1' },
+  { id: 'groq', name: 'Groq', baseUrl: 'https://api.groq.com/openai/v1' },
+  { id: 'mistral', name: 'Mistral', baseUrl: 'https://api.mistral.ai/v1' },
+  { id: 'deepseek', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1' },
+] as const;
+
+export type LLMProvider = typeof LLM_PROVIDERS[number];
