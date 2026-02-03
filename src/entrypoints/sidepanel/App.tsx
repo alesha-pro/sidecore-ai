@@ -62,6 +62,7 @@ export default function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [currentView, setCurrentView] = useState<View>('chat-list');
+  const [previousView, setPreviousView] = useState<View | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLLMLoading, setIsLLMLoading] = useState(false);
   const [llmError, setLLMError] = useState<string | null>(null);
@@ -107,6 +108,7 @@ export default function App() {
         setSettings(loadedSettings);
 
         if (!loadedSettings.baseUrl || !loadedSettings.apiKey) {
+          setPreviousView('chat-list');
           setCurrentView('settings');
         }
 
@@ -207,10 +209,24 @@ export default function App() {
     saveChatAsync();
   }, [messages, currentChatId]);
 
+  const navigateTo = useCallback((view: View) => {
+    setPreviousView(currentView);
+    setCurrentView(view);
+  }, [currentView]);
+
+  const handleBack = useCallback(() => {
+    if (previousView) {
+      setCurrentView(previousView);
+      setPreviousView(null);
+    } else {
+      setCurrentView('chat-list');
+    }
+  }, [previousView]);
+
   const handleSaveSettings = async (newSettings: Settings) => {
     await saveSettings(newSettings);
     setSettings(newSettings);
-    setCurrentView('chat');
+    navigateTo('chat');
   };
 
   const getSelectedTabs = useCallback((overrideTabIds?: number[]) => {
@@ -859,14 +875,14 @@ export default function App() {
         {currentView !== 'chat-list' && (
           <button
             type="button"
-            onClick={() => setCurrentView('chat-list')}
+            onClick={handleBack}
             className={cn(
               'p-1.5 -ml-1.5 rounded-lg',
               'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
               'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
               'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark'
             )}
-            aria-label="Back to chat list"
+            aria-label="Back"
           >
             <ChevronLeft size={20} />
           </button>
@@ -887,7 +903,7 @@ export default function App() {
         {currentView === 'chat-list' && (
           <button
             type="button"
-            onClick={() => { handleNewChat(); setCurrentView('chat'); }}
+            onClick={() => { handleNewChat(); navigateTo('chat'); }}
             className={cn(
               'p-1.5 rounded-lg',
               'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
@@ -903,7 +919,7 @@ export default function App() {
         {currentView === 'chat' && (
           <button
             type="button"
-            onClick={() => setCurrentView('settings')}
+            onClick={() => navigateTo('settings')}
             className={cn(
               'p-1.5 rounded-lg',
               'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
@@ -924,11 +940,11 @@ export default function App() {
           currentChatId={currentChatId}
           onSelectChat={(id) => {
             handleSelectChat(id);
-            setCurrentView('chat');
+            navigateTo('chat');
           }}
           onNewChat={() => {
             handleNewChat();
-            setCurrentView('chat');
+            navigateTo('chat');
           }}
           onDeleteChat={handleDeleteChat}
         />
@@ -976,7 +992,7 @@ export default function App() {
             onInputChange={handleInputChange}
             currentModel={settings?.defaultModel || ''}
             onModelClick={() => setShowModelSelector(true)}
-            onSettingsClick={() => setCurrentView('settings')}
+            onSettingsClick={() => navigateTo('settings')}
             includeActiveTab={tabSelection.includeActiveTab}
             onActiveTabChange={handleToggleActiveTab}
           />
@@ -988,7 +1004,7 @@ export default function App() {
         <SettingsForm
           settings={settings || DEFAULT_SETTINGS}
           onSave={handleSaveSettings}
-          onCancel={() => setCurrentView('chat')}
+          onCancel={handleBack}
         />
       )}
 
