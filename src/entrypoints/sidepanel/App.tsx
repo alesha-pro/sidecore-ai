@@ -7,17 +7,15 @@ import { ExtractionStatus } from '../../components/ExtractionStatus';
 import { SelectedTabsBar } from '../../components/SelectedTabsBar';
 import { PromptDebugView } from '../../components/PromptDebugView';
 import { ModelSelectorPopup } from '../../components/ModelSelectorPopup';
-import { ThemeToggle } from '@/components/ThemeToggle';
+import { useTheme } from '@/hooks/useTheme';
 import { useTabs } from '../../hooks/useTabs';
 import { getSettings, saveSettings } from '../../lib/storage';
 import type { Message, Settings, TabSelection, Chat, ChatSummary } from '../../lib/types';
 import { DEFAULT_SETTINGS, DEFAULT_TAB_SELECTION, SUPPORTED_LANGUAGES } from '../../lib/types';
-import { createChatCompletion } from '../../lib/llm/client';
 import { LLMError } from '../../lib/llm/errors';
 import type { ChatMessage as LLMChatMessage } from '../../lib/llm/types';
 import type { ExtractedTabContent } from '../../shared/extraction';
 import type { TabInfo } from '../../lib/tabs';
-import { createStreamingClient } from '../../lib/streaming/streaming-client';
 import { extractThinking } from '../../lib/thinking';
 import {
   listChats,
@@ -56,6 +54,7 @@ function getCurrentDateTime(): string {
 }
 
 export default function App() {
+  useTheme();
   const [messages, setMessages] = useState<Message[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -882,14 +881,6 @@ export default function App() {
           settings={settings || DEFAULT_SETTINGS}
           onSave={handleSaveSettings}
           onCancel={() => setShowSettings(false)}
-          header={(
-            <div className="mb-6">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                Appearance
-              </h3>
-              <ThemeToggle />
-            </div>
-          )}
         />
       ) : (
         <div className="flex flex-1 overflow-hidden">
