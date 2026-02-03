@@ -240,13 +240,25 @@ export default function App() {
 
   const getSelectedTabs = useCallback((overrideTabIds?: number[]) => {
     const selected: TabInfo[] = [];
-    const tabIdsToUse = overrideTabIds ?? Array.from(tabSelection.selectedTabIds);
 
+    // If explicit tab IDs are provided (e.g., from context menu), use ONLY those
+    // This bypasses tabSelection state entirely to avoid race conditions
+    if (overrideTabIds && overrideTabIds.length > 0) {
+      for (const tabId of overrideTabIds) {
+        const tab = tabs.find((t) => t.id === tabId);
+        if (tab) {
+          selected.push(tab);
+        }
+      }
+      return selected;
+    }
+
+    // Otherwise use tabSelection state (normal UI flow)
     if (tabSelection.includeActiveTab && activeTab) {
       selected.push(activeTab);
     }
 
-    for (const tabId of tabIdsToUse) {
+    for (const tabId of Array.from(tabSelection.selectedTabIds)) {
       const tab = tabs.find((t) => t.id === tabId);
       if (tab && tab.id !== activeTab?.id) {
         selected.push(tab);
