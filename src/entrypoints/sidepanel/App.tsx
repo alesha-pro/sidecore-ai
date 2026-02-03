@@ -151,14 +151,18 @@ export default function App() {
     loadSettingsAndChats();
   }, []);
 
+  // Store streamingChats in a ref for cleanup to avoid re-running effect on every Map update
+  const streamingChatsRef = useRef(streamingChats);
+  streamingChatsRef.current = streamingChats;
+
   useEffect(() => {
     return () => {
-      // Abort all streaming chats on unmount
-      streamingChats.forEach(({ abortController }) => {
+      // Abort all streaming chats on unmount (only runs once on unmount)
+      streamingChatsRef.current.forEach(({ abortController }) => {
         abortController.abort();
       });
     };
-  }, [streamingChats]);
+  }, []);
 
   // Sync MCP tools when mcpServers setting changes
   useEffect(() => {
