@@ -751,10 +751,18 @@ export default function App() {
 
       const { action } = pending;
 
-      // Ensure we're on chat view
-      if (currentView !== 'chat') {
-        setCurrentView('chat');
-      }
+      // Always create a new chat for context menu actions
+      const newChat = await createChat();
+      await saveChat(newChat);
+      setCurrentChatId(newChat.id);
+      setMessages([]);
+      setExtractionResults([]);
+      setPreviewExtraction([]);
+      const updatedChats = await listChats();
+      setChats(updatedChats);
+
+      // Switch to chat view
+      setCurrentView('chat');
 
       // Set active tab as context
       setTabSelection({
@@ -771,7 +779,7 @@ export default function App() {
     };
 
     checkPendingAction();
-  }, [settings, currentView]);
+  }, [settings]);
 
   const handleStopStreaming = useCallback(() => {
     abortControllerRef.current?.abort();
