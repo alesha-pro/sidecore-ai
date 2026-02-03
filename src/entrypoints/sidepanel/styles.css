@@ -3,52 +3,65 @@
 @tailwind utilities;
 
 /* ============================================================================
-   Theme Color Tokens (CSS Custom Properties)
+   Design Tokens (CSS Custom Properties)
    ============================================================================ */
 
 :root {
   /* Background colors */
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f9fafb;
-  --color-bg-tertiary: #f3f4f6;
+  --color-background: #ffffff;
+  --color-surface: #f8f9fa;
+  --color-surface-hover: #e9ecef;
 
   /* Text colors */
-  --color-text-primary: #111827;
-  --color-text-secondary: #6b7280;
-  --color-text-tertiary: #9ca3af;
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #6c757d;
+  --color-text-tertiary: #adb5bd;
 
   /* Border colors */
-  --color-border: #e5e7eb;
-  --color-border-strong: #d1d5db;
+  --color-border: #dee2e6;
+  --color-border-hover: #ced4da;
 
   /* Accent colors */
   --color-accent: #3b82f6;
   --color-accent-hover: #2563eb;
+  --color-accent-text: #ffffff;
 
   /* Status colors */
   --color-success: #10b981;
   --color-error: #ef4444;
   --color-warning: #f59e0b;
+
+  /* Spacing scale (4px base unit) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
 }
 
-.dark {
+html.dark {
   /* Background colors */
-  --color-bg-primary: #111827;
-  --color-bg-secondary: #1f2937;
-  --color-bg-tertiary: #374151;
+  --color-background: #0a0a0a;
+  --color-surface: #1a1a1a;
+  --color-surface-hover: #2a2a2a;
 
   /* Text colors */
-  --color-text-primary: #f9fafb;
-  --color-text-secondary: #9ca3af;
-  --color-text-tertiary: #6b7280;
+  --color-text-primary: #e0e0e0;
+  --color-text-secondary: #a0a0a0;
+  --color-text-tertiary: #707070;
 
   /* Border colors */
-  --color-border: #374151;
-  --color-border-strong: #4b5563;
+  --color-border: #2a2a2a;
+  --color-border-hover: #3a3a3a;
 
   /* Accent colors */
   --color-accent: #60a5fa;
   --color-accent-hover: #3b82f6;
+  --color-accent-text: #0a0a0a;
 
   /* Status colors */
   --color-success: #34d399;
@@ -57,20 +70,21 @@
 }
 
 /* ============================================================================
-   Utility classes using theme tokens
+   Utility classes using design tokens
    ============================================================================ */
 
 @layer utilities {
-  .bg-primary { background-color: var(--color-bg-primary); }
-  .bg-secondary { background-color: var(--color-bg-secondary); }
-  .bg-tertiary { background-color: var(--color-bg-tertiary); }
+  /* Legacy aliases for backward compatibility */
+  .bg-primary { background-color: var(--color-background); }
+  .bg-secondary { background-color: var(--color-surface); }
+  .bg-tertiary { background-color: var(--color-surface-hover); }
 
   .text-primary { color: var(--color-text-primary); }
   .text-secondary { color: var(--color-text-secondary); }
   .text-tertiary { color: var(--color-text-tertiary); }
 
   .border-default { border-color: var(--color-border); }
-  .border-strong { border-color: var(--color-border-strong); }
+  .border-strong { border-color: var(--color-border-hover); }
 
   .text-accent { color: var(--color-accent); }
   .bg-accent { background-color: var(--color-accent); }
