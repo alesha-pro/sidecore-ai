@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'preact/hooks';
+import { cn } from '../lib/utils';
 
 export interface Command {
   name: string;
@@ -119,27 +120,41 @@ export function CommandPicker({
   return (
     <div
       ref={pickerRef}
-      className="absolute bottom-full left-0 right-0 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-auto z-10"
+      className={cn(
+        'absolute bottom-full left-0 right-0 mb-1 max-h-48 overflow-auto z-10',
+        'rounded-lg border border-border bg-surface shadow-lg',
+        'dark:bg-surface-dark dark:border-border-dark'
+      )}
     >
       <ul role="listbox" aria-label="Select a command">
-        {filteredCommands.map((cmd, index) => (
-          <li
-            key={cmd.name}
-            role="option"
-            aria-selected={index === activeIndex}
-            onClick={() => onSelect(cmd)}
-            className={`flex items-center justify-between px-3 py-2 cursor-pointer ${
-              index === activeIndex
-                ? 'bg-blue-50 text-blue-900'
-                : 'hover:bg-gray-50'
-            }`}
-          >
-            <div className="flex flex-col">
-              <span className="text-sm font-medium">{cmd.label}</span>
-              <span className="text-xs text-gray-500">{cmd.description}</span>
-            </div>
-          </li>
-        ))}
+        {filteredCommands.map((cmd, index) => {
+          const isHighlighted = index === activeIndex;
+          return (
+            <li
+              key={cmd.name}
+              role="option"
+              aria-selected={isHighlighted}
+              onClick={() => onSelect(cmd)}
+              className={cn(
+                'px-3 py-2 cursor-pointer',
+                'hover:bg-surface-hover',
+                'dark:hover:bg-surface-hover-dark',
+                isHighlighted && 'bg-accent-subtle dark:bg-accent-subtle-dark'
+              )}
+            >
+              <div className="flex flex-col">
+                <span className={cn(
+                  'text-sm font-medium',
+                  'text-text-primary dark:text-text-primary-dark'
+                )}>{cmd.label}</span>
+                <span className={cn(
+                  'text-xs',
+                  'text-text-secondary dark:text-text-secondary-dark'
+                )}>{cmd.description}</span>
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

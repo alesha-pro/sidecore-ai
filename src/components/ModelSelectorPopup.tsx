@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from 'preact/hooks';
+import { Check } from 'lucide-preact';
+import { cn } from '../lib/utils';
 
 interface ModelSelectorPopupProps {
   isOpen: boolean;
@@ -96,14 +98,27 @@ export function ModelSelectorPopup({
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/20">
       <div
         ref={popupRef}
-        className="w-full max-w-md mx-4 mb-4 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden"
+        className={cn(
+          'w-full max-w-md mx-4 mb-4 overflow-hidden',
+          'rounded-xl border border-border bg-surface shadow-xl',
+          'dark:bg-surface-dark dark:border-border-dark'
+        )}
       >
-        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-sm font-medium text-gray-900">Select Model</h3>
+        <div className={cn(
+          'px-4 py-3 border-b border-border flex items-center justify-between',
+          'dark:border-border-dark'
+        )}>
+          <h3 className={cn(
+            'text-sm font-medium',
+            'text-text-primary dark:text-text-primary-dark'
+          )}>Select Model</h3>
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className={cn(
+              'text-text-tertiary hover:text-text-primary',
+              'dark:text-text-tertiary-dark dark:hover:text-text-primary-dark'
+            )}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -122,13 +137,23 @@ export function ModelSelectorPopup({
                   onInput={(e) => setCustomInput((e.target as HTMLInputElement).value)}
                   onKeyDown={handleCustomKeyDown}
                   placeholder="Enter model name..."
-                  className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className={cn(
+                    'flex-1 px-3 py-2 text-sm rounded-lg',
+                    'border border-border bg-background text-text-primary',
+                    'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                    'dark:bg-background-dark dark:border-border-dark dark:text-text-primary-dark'
+                  )}
                 />
                 <button
                   type="button"
                   onClick={handleCustomSave}
                   disabled={!customInput.trim()}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  className={cn(
+                    'px-4 py-2 text-sm font-medium rounded-lg',
+                    'bg-accent text-white hover:opacity-90',
+                    'disabled:opacity-50 disabled:cursor-not-allowed',
+                    'dark:bg-accent-dark'
+                  )}
                 >
                   Add
                 </button>
@@ -139,36 +164,53 @@ export function ModelSelectorPopup({
                   setIsCustomMode(false);
                   setCustomInput('');
                 }}
-                className="mt-2 text-xs text-gray-500 hover:text-gray-700"
+                className={cn(
+                  'mt-2 text-xs',
+                  'text-text-secondary hover:text-text-primary',
+                  'dark:text-text-secondary-dark dark:hover:text-text-primary-dark'
+                )}
               >
                 ← Back to list
               </button>
             </div>
           ) : (
             <ul className="py-1">
-              {allModels.map((model) => (
-                <li key={model}>
-                  <button
-                    type="button"
-                    onClick={() => handleSelectModel(model)}
-                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center justify-between ${
-                      model === currentModel ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-                    }`}
-                  >
-                    <span className="truncate">{model}</span>
-                    {model === currentModel && (
-                      <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                  </button>
-                </li>
-              ))}
+              {allModels.map((model) => {
+                const isSelected = model === currentModel;
+                return (
+                  <li key={model}>
+                    <button
+                      type="button"
+                      onClick={() => handleSelectModel(model)}
+                      className={cn(
+                        'w-full px-4 py-2 text-left text-sm flex items-center justify-between',
+                        'hover:bg-surface-hover',
+                        'dark:hover:bg-surface-hover-dark',
+                        isSelected && 'bg-accent-subtle dark:bg-accent-subtle-dark'
+                      )}
+                    >
+                      <span className={cn(
+                        'truncate',
+                        'text-text-primary dark:text-text-primary-dark'
+                      )}>{model}</span>
+                      {isSelected && (
+                        <Check size={16} className={cn(
+                          'text-accent dark:text-accent-dark'
+                        )} />
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
               <li>
                 <button
                   type="button"
                   onClick={() => setIsCustomMode(true)}
-                  className="w-full px-4 py-2 text-left text-sm text-blue-600 hover:bg-blue-50 flex items-center gap-2"
+                  className={cn(
+                    'w-full px-4 py-2 text-left text-sm flex items-center gap-2',
+                    'text-accent hover:bg-accent-subtle',
+                    'dark:text-accent-dark dark:hover:bg-accent-subtle-dark'
+                  )}
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
