@@ -867,7 +867,7 @@ export default function App() {
     )}>
       {/* NAV-02: Header with back button */}
       <header className={cn(
-        'flex items-center gap-3 px-4 py-2 shrink-0 min-w-0',
+        'flex items-center gap-2 px-4 py-1.5 shrink-0 min-w-0',
         'bg-surface border-b border-border',
         'dark:bg-surface-dark dark:border-border-dark'
       )}>
@@ -877,20 +877,20 @@ export default function App() {
             type="button"
             onClick={handleBack}
             className={cn(
-              'p-1.5 -ml-1.5 rounded-lg flex-shrink-0',
+              'p-1 -ml-1.5 rounded-lg flex-shrink-0',
               'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
               'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
               'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark'
             )}
             aria-label="Back"
           >
-            <ChevronLeft size={20} />
+            <ChevronLeft size={16} />
           </button>
         )}
 
         {/* Title */}
         <h1 className={cn(
-          'flex-1 text-lg font-semibold truncate min-w-0',
+          'flex-1 text-sm font-semibold truncate min-w-0',
           'text-text-primary',
           'dark:text-text-primary-dark'
         )}>
@@ -905,14 +905,14 @@ export default function App() {
             type="button"
             onClick={() => { handleNewChat(); navigateTo('chat'); }}
             className={cn(
-              'p-1.5 rounded-lg flex-shrink-0',
+              'p-1 rounded-lg flex-shrink-0',
               'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
               'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
               'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark'
             )}
             aria-label="New chat"
           >
-            <MessageSquarePlus size={20} />
+            <MessageSquarePlus size={16} />
           </button>
         )}
 
@@ -921,14 +921,14 @@ export default function App() {
             type="button"
             onClick={() => handleNewChat()}
             className={cn(
-              'p-1.5 rounded-lg flex-shrink-0',
+              'p-1 rounded-lg flex-shrink-0',
               'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
               'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
               'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark'
             )}
             aria-label="New chat"
           >
-            <MessageSquarePlus size={20} />
+            <MessageSquarePlus size={16} />
           </button>
         )}
       </header>
