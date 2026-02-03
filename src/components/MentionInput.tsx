@@ -2,6 +2,7 @@ import { useRef, useEffect, useCallback, useState } from 'preact/hooks';
 import type { TabInfo } from '../lib/tabs';
 import { CommandPicker, COMMANDS, type Command } from './CommandPicker';
 import { InputToolbar } from './InputToolbar';
+import { cn } from '../lib/utils';
 
 interface MentionInputProps {
   onSend: (content: string, tabIds: number[]) => void;
@@ -120,8 +121,12 @@ export function MentionInput({
       const chip = document.createElement('span');
       chip.contentEditable = 'false';
       chip.setAttribute('data-tab-id', String(tabId));
-      chip.className =
-        'inline-flex items-center px-2 py-0.5 mx-1 text-xs bg-blue-100 text-blue-800 rounded select-none align-baseline';
+      chip.className = cn(
+        'inline-flex items-center gap-0.5 px-1.5 py-0.5 mx-0.5 rounded text-xs',
+        'bg-accent-subtle text-accent',
+        'dark:bg-accent-subtle-dark dark:text-accent-dark',
+        'select-none align-baseline'
+      );
 
       const titleSpan = document.createElement('span');
       titleSpan.className = 'truncate max-w-[120px]';
@@ -132,7 +137,10 @@ export function MentionInput({
 
       const removeBtn = document.createElement('button');
       removeBtn.type = 'button';
-      removeBtn.className = 'ml-1 hover:text-blue-600 focus:outline-none';
+      removeBtn.className = cn(
+        'ml-0.5 hover:opacity-70 focus:outline-none',
+        'text-accent dark:text-accent-dark'
+      );
       removeBtn.textContent = '×';
       removeBtn.onclick = (e) => {
         e.preventDefault();
@@ -438,14 +446,21 @@ export function MentionInput({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+    <div className={cn(
+      'bg-surface border-t border-border',
+      'dark:bg-surface-dark dark:border-border-dark'
+    )}>
       <div className="p-3 pb-2">
         <div className="relative">
           {/* Inline Tab Picker - appears above input */}
           {isPickerOpen && pickerTabs.length > 0 && (
             <div
               ref={pickerRef}
-              className="absolute bottom-full left-0 right-0 mb-1 bg-white dark:bg-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-auto z-10"
+              className={cn(
+                'absolute bottom-full left-0 right-0 mb-1 max-h-48 overflow-auto z-10',
+                'rounded-lg border border-border bg-surface shadow-lg',
+                'dark:bg-surface-dark dark:border-border-dark'
+              )}
             >
               <ul role="listbox" aria-label="Select a tab">
                 {pickerTabs.map((tab, index) => (
@@ -454,11 +469,12 @@ export function MentionInput({
                     role="option"
                     aria-selected={index === activeIndex}
                     onClick={() => handlePickerSelect(tab)}
-                    className={`flex items-center gap-2 px-3 py-2 cursor-pointer ${
-                      index === activeIndex
-                        ? 'bg-blue-50 dark:bg-blue-900 text-blue-900 dark:text-white'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-700'
-                    }`}
+                    className={cn(
+                      'flex items-center gap-2 px-3 py-2 cursor-pointer',
+                      'hover:bg-surface-hover',
+                      'dark:hover:bg-surface-hover-dark',
+                      index === activeIndex && 'bg-accent-subtle dark:bg-accent-subtle-dark'
+                    )}
                   >
                     {tab.favIconUrl ? (
                       <img
@@ -470,11 +486,17 @@ export function MentionInput({
                         }}
                       />
                     ) : (
-                      <span className="w-4 h-4 flex-shrink-0 text-gray-400">
+                      <span className={cn(
+                        'w-4 h-4 flex-shrink-0',
+                        'text-text-tertiary dark:text-text-tertiary-dark'
+                      )}>
                         📄
                       </span>
                     )}
-                    <span className="truncate text-sm">{tab.title}</span>
+                    <span className={cn(
+                      'truncate text-sm',
+                      'text-text-primary dark:text-text-primary-dark'
+                    )}>{tab.title}</span>
                   </li>
                 ))}
               </ul>
@@ -499,7 +521,17 @@ export function MentionInput({
               contentEditable={!disabled}
               onKeyDown={handleKeyDown}
               onInput={handleInput}
-              className="w-full px-3 py-2 pr-10 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg min-h-[38px] max-h-[150px] overflow-y-auto focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 dark:empty:before:text-gray-500 dark:text-white"
+              className={cn(
+                'w-full min-h-[40px] max-h-[200px] overflow-y-auto',
+                'px-3 py-2 pr-10 rounded-lg',
+                'border border-border bg-background',
+                'text-sm text-text-primary',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+                'empty:before:content-[attr(data-placeholder)] empty:before:text-text-tertiary',
+                'dark:bg-background-dark dark:border-border-dark dark:text-text-primary-dark',
+                'dark:empty:before:text-text-tertiary-dark'
+              )}
               data-placeholder="Type a message, @ for tabs, / for commands"
               role="textbox"
               aria-label="Message input"
@@ -511,7 +543,12 @@ export function MentionInput({
               type="button"
               onClick={handleSend}
               disabled={disabled}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              className={cn(
+                'absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-md transition-colors',
+                'text-accent hover:bg-accent-subtle',
+                'dark:text-accent-dark dark:hover:bg-accent-subtle-dark',
+                'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent'
+              )}
               title="Send message (Enter)"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
