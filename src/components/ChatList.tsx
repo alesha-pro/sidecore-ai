@@ -1,12 +1,11 @@
 import type { ChatSummary } from '../lib/types';
-import { Plus, Trash2 } from 'lucide-preact';
+import { Trash2 } from 'lucide-preact';
 import { cn } from '../lib/utils';
 
 interface ChatListProps {
   chats: ChatSummary[];
   currentChatId: string | null;
   onSelectChat: (id: string) => void;
-  onNewChat: () => void;
   onDeleteChat: (id: string) => void;
 }
 
@@ -28,7 +27,6 @@ export default function ChatList({
   chats,
   currentChatId,
   onSelectChat,
-  onNewChat,
   onDeleteChat,
 }: ChatListProps) {
   const handleDelete = (id: string, title: string) => {
@@ -43,32 +41,6 @@ export default function ChatList({
       'bg-background',
       'dark:bg-background-dark'
     )}>
-      {/* Header */}
-      <div className={cn(
-        'p-3 border-b flex items-center justify-between',
-        'border-border',
-        'dark:border-border-dark'
-      )}>
-        <h2 className={cn(
-          'text-sm font-semibold',
-          'text-text-primary',
-          'dark:text-text-primary-dark'
-        )}>Chats</h2>
-        <button
-          type="button"
-          onClick={onNewChat}
-          className={cn(
-            'p-1 rounded transition-colors',
-            'text-text-secondary hover:text-accent hover:bg-surface-hover',
-            'dark:text-text-secondary-dark dark:hover:text-accent-dark dark:hover:bg-surface-hover-dark'
-          )}
-          title="New Chat"
-          aria-label="New Chat"
-        >
-          <Plus size={16} />
-        </button>
-      </div>
-
       {/* Chat list */}
       <div className="flex-1 overflow-y-auto">
         {chats.length === 0 ? (

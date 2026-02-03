@@ -943,10 +943,6 @@ export default function App() {
               handleSelectChat(id);
               navigateTo('chat');
             }}
-            onNewChat={() => {
-              handleNewChat();
-              navigateTo('chat');
-            }}
             onDeleteChat={handleDeleteChat}
           />
         </div>
