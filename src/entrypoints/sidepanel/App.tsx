@@ -732,6 +732,11 @@ export default function App() {
 
   // Handle pending context menu action (stored in session storage by background)
   useEffect(() => {
+    // Wait for settings to load before checking pending action
+    if (!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel) {
+      return;
+    }
+
     const checkPendingAction = async () => {
       const result = await chrome.storage.session.get('pendingContextMenuAction');
       const pending = result.pendingContextMenuAction;
@@ -741,8 +746,8 @@ export default function App() {
       // Clear immediately to prevent re-execution
       await chrome.storage.session.remove('pendingContextMenuAction');
 
-      // Check if action is recent (within 5 seconds)
-      if (Date.now() - pending.timestamp > 5000) return;
+      // Check if action is recent (within 10 seconds)
+      if (Date.now() - pending.timestamp > 10000) return;
 
       const { action } = pending;
 
@@ -766,7 +771,7 @@ export default function App() {
     };
 
     checkPendingAction();
-  }, [currentView]);
+  }, [settings, currentView]);
 
   const handleStopStreaming = useCallback(() => {
     abortControllerRef.current?.abort();
