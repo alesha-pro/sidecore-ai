@@ -9,6 +9,12 @@ import { listModels } from '../lib/llm/client';
 import { LLMError } from '../lib/llm/errors';
 import { applyTheme } from '../hooks/useTheme';
 import { ThemeToggle } from './ThemeToggle';
+import { cn } from '../lib/utils';
+import { Input } from './ui/Input';
+import { Toggle } from './ui/Toggle';
+import { Select } from './ui/Select';
+import { Button } from './ui/Button';
+import { Divider } from './ui/Divider';
 
 interface McpServerDraft {
   name: string;
@@ -276,9 +282,15 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
 
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 bg-gray-50 dark:bg-gray-900">
+    <div className={cn(
+      'flex-1 overflow-y-auto p-6',
+      'bg-background dark:bg-background-dark'
+    )}>
       <form onSubmit={handleSubmit} className="max-w-md mx-auto space-y-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Settings</h2>
+        <h2 className={cn(
+          'text-xl font-semibold',
+          'text-text-primary dark:text-text-primary-dark'
+        )}>Settings</h2>
 
         {header && (
           <div>
@@ -286,170 +298,171 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
           </div>
         )}
 
-        <div className="mb-6">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+        <details open className={cn(
+          'rounded-lg border border-border bg-surface',
+          'dark:bg-surface-dark dark:border-border-dark'
+        )}>
+          <summary className={cn(
+            'px-4 py-3 cursor-pointer select-none',
+            'text-base font-semibold text-text-primary',
+            'hover:bg-surface-hover',
+            'dark:text-text-primary-dark dark:hover:bg-surface-hover-dark'
+          )}>
             Appearance
-          </h3>
-          <ThemeToggle value={formData.theme} onChange={handleThemeChange} />
-        </div>
+          </summary>
+          <Divider className="my-0" />
+          <div className="px-4 pb-4 pt-3">
+            <ThemeToggle value={formData.theme} onChange={handleThemeChange} />
+          </div>
+        </details>
 
         {saveError && (
-          <div className="p-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg">
+          <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg dark:text-red-400 dark:bg-red-950 dark:border-red-900">
             {saveError}
           </div>
         )}
 
         {/* Section 1: LLM Provider */}
-        <details open className="border border-gray-200 rounded-lg bg-white dark:border-gray-800 dark:bg-gray-900">
-          <summary className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg select-none">
+        <details open className={cn(
+          'rounded-lg border border-border bg-surface',
+          'dark:bg-surface-dark dark:border-border-dark'
+        )}>
+          <summary className={cn(
+            'px-4 py-3 cursor-pointer select-none',
+            'text-base font-semibold text-text-primary',
+            'hover:bg-surface-hover',
+            'dark:text-text-primary-dark dark:hover:bg-surface-hover-dark'
+          )}>
             LLM Provider
           </summary>
-          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 dark:border-gray-800 mt-2 pt-4">
+          <Divider className="my-0" />
+          <div className="px-4 pb-4 pt-3 space-y-4">
             {/* Base URL */}
-            <div>
-              <label htmlFor="baseUrl" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Base URL
-              </label>
-              <input
-                id="baseUrl"
-                type="text"
-                value={formData.baseUrl}
-                onInput={handleChange('baseUrl')}
-                placeholder="api.openai.com"
-                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white ${
-                  errors.baseUrl ? 'border-red-500' : 'border-gray-300'
-                }`}
-                aria-describedby={errors.baseUrl ? 'baseUrl-error' : 'baseUrl-hint'}
-              />
-              {errors.baseUrl ? (
-                <p id="baseUrl-error" className="mt-1 text-sm text-red-600">
-                  {errors.baseUrl}
-                </p>
-              ) : (
-                <p id="baseUrl-hint" className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Will be normalized to https://...../v1
-                </p>
-              )}
-            </div>
+            <Input
+              id="baseUrl"
+              label="Base URL"
+              type="text"
+              value={formData.baseUrl}
+              onInput={handleChange('baseUrl')}
+              placeholder="api.openai.com"
+              error={errors.baseUrl}
+            />
+            {!errors.baseUrl && (
+              <p className={cn(
+                'mt-1 text-xs',
+                'text-text-secondary dark:text-text-secondary-dark'
+              )}>
+                Will be normalized to https://...../v1
+              </p>
+            )}
 
             {/* API Key */}
-            <div>
-              <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                API Key
-              </label>
-              <input
-                id="apiKey"
-                type="password"
-                value={formData.apiKey}
-                onInput={handleChange('apiKey')}
-                placeholder="sk-..."
-                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white ${
-                  errors.apiKey ? 'border-red-500' : 'border-gray-300'
-                }`}
-                aria-describedby={errors.apiKey ? 'apiKey-error' : undefined}
-              />
-              {errors.apiKey && (
-                <p id="apiKey-error" className="mt-1 text-sm text-red-600">
-                  {errors.apiKey}
-                </p>
-              )}
-            </div>
+            <Input
+              id="apiKey"
+              label="API Key"
+              type="password"
+              value={formData.apiKey}
+              onInput={handleChange('apiKey')}
+              placeholder="sk-..."
+              error={errors.apiKey}
+            />
 
             {/* Test Connection */}
             <div>
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={handleTestConnection}
                 disabled={connectionStatus === 'testing' || !formData.baseUrl.trim() || !formData.apiKey.trim()}
-                className="w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full"
               >
                 {connectionStatus === 'testing' && 'Testing...'}
                 {connectionStatus === 'success' && '✓ Connected'}
                 {(connectionStatus === 'idle' || connectionStatus === 'error') && 'Test Connection'}
-              </button>
+              </Button>
               {connectionError && (
-                <p className="mt-2 text-sm text-red-600">{connectionError}</p>
+                <p className="mt-2 text-sm text-red-600 dark:text-red-400">{connectionError}</p>
               )}
             </div>
 
             {/* Default Model */}
-            <div>
-              <label htmlFor="defaultModel" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Default Model
-              </label>
-              {formData.savedModels.length > 0 ? (
-                <select
-                  id="defaultModel"
-                  value={formData.defaultModel}
-                  onChange={handleChange('defaultModel')}
-                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white ${
-                    errors.defaultModel ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  aria-describedby={errors.defaultModel ? 'defaultModel-error' : 'defaultModel-hint'}
-                >
-                  <option value="">Select a model...</option>
-                  {formData.savedModels.map((modelId) => (
-                    <option key={modelId} value={modelId}>
-                      {modelId}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  id="defaultModel"
-                  type="text"
-                  value={formData.defaultModel}
-                  onInput={handleChange('defaultModel')}
-                  placeholder="gpt-4o"
-                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white ${
-                    errors.defaultModel ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                  aria-describedby={errors.defaultModel ? 'defaultModel-error' : 'defaultModel-hint'}
-                />
-              )}
-              {errors.defaultModel ? (
-                <p id="defaultModel-error" className="mt-1 text-sm text-red-600">
-                  {errors.defaultModel}
-                </p>
-              ) : (
-                <p id="defaultModel-hint" className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Click 'Test Connection' to load available models
-                </p>
-              )}
-            </div>
+            {formData.savedModels.length > 0 ? (
+              <Select
+                id="defaultModel"
+                label="Default Model"
+                value={formData.defaultModel}
+                onChange={handleChange('defaultModel')}
+                error={errors.defaultModel}
+              >
+                <option value="">Select a model...</option>
+                {formData.savedModels.map((modelId) => (
+                  <option key={modelId} value={modelId}>
+                    {modelId}
+                  </option>
+                ))}
+              </Select>
+            ) : (
+              <Input
+                id="defaultModel"
+                label="Default Model"
+                type="text"
+                value={formData.defaultModel}
+                onInput={handleChange('defaultModel')}
+                placeholder="gpt-4o"
+                error={errors.defaultModel}
+              />
+            )}
+            {!errors.defaultModel && (
+              <p className={cn(
+                'mt-1 text-xs',
+                'text-text-secondary dark:text-text-secondary-dark'
+              )}>
+                Click 'Test Connection' to load available models
+              </p>
+            )}
           </div>
         </details>
 
         {/* Section 2: System Prompt */}
-        <details open className="border border-gray-200 rounded-lg bg-white dark:border-gray-800 dark:bg-gray-900">
-          <summary className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg select-none">
+        <details open className={cn(
+          'rounded-lg border border-border bg-surface',
+          'dark:bg-surface-dark dark:border-border-dark'
+        )}>
+          <summary className={cn(
+            'px-4 py-3 cursor-pointer select-none',
+            'text-base font-semibold text-text-primary',
+            'hover:bg-surface-hover',
+            'dark:text-text-primary-dark dark:hover:bg-surface-hover-dark'
+          )}>
             System Prompt
           </summary>
-          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 dark:border-gray-800 mt-2 pt-4">
+          <Divider className="my-0" />
+          <div className="px-4 pb-4 pt-3 space-y-4">
             {/* Response Language */}
-            <div>
-              <label htmlFor="responseLanguage" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Response Language
-              </label>
-              <select
-                id="responseLanguage"
-                value={formData.responseLanguage}
-                onChange={handleChange('responseLanguage')}
-                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                {SUPPORTED_LANGUAGES.map((lang) => (
-                  <option key={lang.code} value={lang.code}>
-                    {lang.label}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Language for AI responses
-              </p>
-            </div>
+            <Select
+              id="responseLanguage"
+              label="Response Language"
+              value={formData.responseLanguage}
+              onChange={handleChange('responseLanguage')}
+            >
+              {SUPPORTED_LANGUAGES.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.label}
+                </option>
+              ))}
+            </Select>
+            <p className={cn(
+              'mt-1 text-xs',
+              'text-text-secondary dark:text-text-secondary-dark'
+            )}>
+              Language for AI responses
+            </p>
 
             <div>
-              <label htmlFor="systemPrompt" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="systemPrompt" className={cn(
+                'block text-sm font-medium mb-1',
+                'text-text-primary dark:text-text-primary-dark'
+              )}>
                 System Prompt
               </label>
               <textarea
@@ -457,17 +470,29 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                 value={formData.systemPrompt}
                 onInput={handleChange('systemPrompt')}
                 rows={8}
-                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                className={cn(
+                  'w-full px-3 py-2 text-sm rounded-md border font-mono',
+                  'bg-background border-border text-text-primary',
+                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1',
+                  'dark:bg-background-dark dark:border-border-dark dark:text-text-primary-dark'
+                )}
                 placeholder="Define the AI assistant's role and behavior..."
               />
               <div className="flex justify-between mt-1">
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className={cn(
+                  'text-xs',
+                  'text-text-secondary dark:text-text-secondary-dark'
+                )}>
                   {formData.systemPrompt.length.toLocaleString()} characters
                 </p>
                 <button
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, systemPrompt: DEFAULT_SYSTEM_PROMPT }))}
-                  className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                  className={cn(
+                    'text-xs',
+                    'text-accent hover:opacity-80',
+                    'dark:text-accent-dark'
+                  )}
                 >
                   Reset to default
                 </button>
@@ -477,164 +502,171 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
         </details>
 
         {/* Section 3: Advanced */}
-        <details className="border border-gray-200 rounded-lg bg-white dark:border-gray-800 dark:bg-gray-900">
-          <summary className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg select-none">
+        <details className={cn(
+          'rounded-lg border border-border bg-surface',
+          'dark:bg-surface-dark dark:border-border-dark'
+        )}>
+          <summary className={cn(
+            'px-4 py-3 cursor-pointer select-none',
+            'text-base font-semibold text-text-primary',
+            'hover:bg-surface-hover',
+            'dark:text-text-primary-dark dark:hover:bg-surface-hover-dark'
+          )}>
             Advanced
           </summary>
-          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 dark:border-gray-800 mt-2 pt-4">
+          <Divider className="my-0" />
+          <div className="px-4 pb-4 pt-3 space-y-4">
             {/* Context Budget */}
-            <div>
-              <label htmlFor="contextBudget" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Context Budget (characters)
-              </label>
-              <input
-                id="contextBudget"
-                type="number"
-                value={formData.contextBudget}
-                onInput={handleChange('contextBudget')}
-                min="1000"
-                max="1000000"
-                step="1000"
-                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white ${
-                  errors.contextBudget ? 'border-red-500' : 'border-gray-300'
-                }`}
-                aria-describedby={errors.contextBudget ? 'contextBudget-error' : 'contextBudget-hint'}
-              />
-              {errors.contextBudget ? (
-                <p id="contextBudget-error" className="mt-1 text-sm text-red-600">
-                  {errors.contextBudget}
-                </p>
-              ) : (
-                <p id="contextBudget-hint" className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Maximum extracted content per request. Default: 50,000
-                </p>
-              )}
-            </div>
+            <Input
+              id="contextBudget"
+              label="Context Budget (characters)"
+              type="number"
+              value={formData.contextBudget}
+              onInput={handleChange('contextBudget')}
+              min="1000"
+              max="1000000"
+              step="1000"
+              error={errors.contextBudget}
+            />
+            {!errors.contextBudget && (
+              <p className={cn(
+                'mt-1 text-xs',
+                'text-text-secondary dark:text-text-secondary-dark'
+              )}>
+                Maximum extracted content per request. Default: 50,000
+              </p>
+            )}
 
             {/* Show Extraction Status */}
-            <div>
-              <label className="flex items-start gap-2 cursor-pointer">
-                <input
-                  id="showExtractionStatus"
-                  type="checkbox"
-                  checked={formData.showExtractionStatus}
-                  onChange={handleChange('showExtractionStatus')}
-                  className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                />
-                <div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Show Extraction Status</span>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Shows extraction results after each message
-                  </p>
-                </div>
-              </label>
+            <div className="flex flex-col gap-1">
+              <Toggle
+                checked={formData.showExtractionStatus}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, showExtractionStatus: checked }))}
+                label="Show Extraction Status"
+              />
+              <p className={cn(
+                'text-xs ml-11',
+                'text-text-secondary dark:text-text-secondary-dark'
+              )}>
+                Shows extraction results after each message
+              </p>
             </div>
 
             {/* Show Debug Prompt */}
-            <div>
-              <label className="flex items-start gap-2 cursor-pointer">
-                <input
-                  id="showDebugPrompt"
-                  type="checkbox"
-                  checked={formData.showDebugPrompt}
-                  onChange={handleChange('showDebugPrompt')}
-                  className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                />
-                <div>
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Show Debug Prompt</span>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Shows the full prompt being sent to the LLM
-                  </p>
-                </div>
-              </label>
+            <div className="flex flex-col gap-1">
+              <Toggle
+                checked={formData.showDebugPrompt}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, showDebugPrompt: checked }))}
+                label="Show Debug Prompt"
+              />
+              <p className={cn(
+                'text-xs ml-11',
+                'text-text-secondary dark:text-text-secondary-dark'
+              )}>
+                Shows the full prompt being sent to the LLM
+              </p>
             </div>
           </div>
         </details>
 
         {/* Section 4: Agent Settings */}
-        <details className="border border-gray-200 rounded-lg bg-white dark:border-gray-800 dark:bg-gray-900">
-          <summary className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg select-none">
+        <details className={cn(
+          'rounded-lg border border-border bg-surface',
+          'dark:bg-surface-dark dark:border-border-dark'
+        )}>
+          <summary className={cn(
+            'px-4 py-3 cursor-pointer select-none',
+            'text-base font-semibold text-text-primary',
+            'hover:bg-surface-hover',
+            'dark:text-text-primary-dark dark:hover:bg-surface-hover-dark'
+          )}>
             Agent Settings
           </summary>
-          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 dark:border-gray-800 mt-2 pt-4">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+          <Divider className="my-0" />
+          <div className="px-4 pb-4 pt-3 space-y-4">
+            <p className={cn(
+              'text-xs',
+              'text-text-secondary dark:text-text-secondary-dark'
+            )}>
               Configure limits for the AI agent's tool execution behavior.
             </p>
 
             {/* Max Iterations */}
-            <div>
-              <label htmlFor="agentMaxIterations" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Max Iterations
-              </label>
-              <input
-                id="agentMaxIterations"
-                type="number"
-                value={formData.agentMaxIterations}
-                onInput={handleChange('agentMaxIterations')}
-                min="1"
-                max="25"
-                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white ${
-                  errors.agentMaxIterations ? 'border-red-500' : 'border-gray-300'
-                }`}
-                aria-describedby={errors.agentMaxIterations ? 'agentMaxIterations-error' : 'agentMaxIterations-hint'}
-              />
-              {errors.agentMaxIterations ? (
-                <p id="agentMaxIterations-error" className="mt-1 text-sm text-red-600">
-                  {errors.agentMaxIterations}
-                </p>
-              ) : (
-                <p id="agentMaxIterations-hint" className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Maximum tool call cycles (1-25). Default: 15
-                </p>
-              )}
-            </div>
+            <Input
+              id="agentMaxIterations"
+              label="Max Iterations"
+              type="number"
+              value={formData.agentMaxIterations}
+              onInput={handleChange('agentMaxIterations')}
+              min="1"
+              max="25"
+              error={errors.agentMaxIterations}
+            />
+            {!errors.agentMaxIterations && (
+              <p className={cn(
+                'mt-1 text-xs',
+                'text-text-secondary dark:text-text-secondary-dark'
+              )}>
+                Maximum tool call cycles (1-25). Default: 15
+              </p>
+            )}
 
             {/* Timeout */}
-            <div>
-              <label htmlFor="agentTimeoutMs" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Timeout (ms)
-              </label>
-              <input
-                id="agentTimeoutMs"
-                type="number"
-                value={formData.agentTimeoutMs}
-                onInput={handleChange('agentTimeoutMs')}
-                min="60000"
-                max="900000"
-                step="1000"
-                className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white ${
-                  errors.agentTimeoutMs ? 'border-red-500' : 'border-gray-300'
-                }`}
-                aria-describedby={errors.agentTimeoutMs ? 'agentTimeoutMs-error' : 'agentTimeoutMs-hint'}
-              />
-              {errors.agentTimeoutMs ? (
-                <p id="agentTimeoutMs-error" className="mt-1 text-sm text-red-600">
-                  {errors.agentTimeoutMs}
-                </p>
-              ) : (
-                <p id="agentTimeoutMs-hint" className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  Maximum agent run time (60,000-900,000 ms). Default: 300,000 (5 min)
-                </p>
-              )}
-            </div>
+            <Input
+              id="agentTimeoutMs"
+              label="Timeout (ms)"
+              type="number"
+              value={formData.agentTimeoutMs}
+              onInput={handleChange('agentTimeoutMs')}
+              min="60000"
+              max="900000"
+              step="1000"
+              error={errors.agentTimeoutMs}
+            />
+            {!errors.agentTimeoutMs && (
+              <p className={cn(
+                'mt-1 text-xs',
+                'text-text-secondary dark:text-text-secondary-dark'
+              )}>
+                Maximum agent run time (60,000-900,000 ms). Default: 300,000 (5 min)
+              </p>
+            )}
           </div>
         </details>
 
         {/* Section 5: Tools & Capabilities */}
-        <details className="border border-gray-200 rounded-lg bg-white dark:border-gray-800 dark:bg-gray-900">
-          <summary className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg select-none">
+        <details className={cn(
+          'rounded-lg border border-border bg-surface',
+          'dark:bg-surface-dark dark:border-border-dark'
+        )}>
+          <summary className={cn(
+            'px-4 py-3 cursor-pointer select-none',
+            'text-base font-semibold text-text-primary',
+            'hover:bg-surface-hover',
+            'dark:text-text-primary-dark dark:hover:bg-surface-hover-dark'
+          )}>
             Tools &amp; Capabilities
           </summary>
-          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 dark:border-gray-800 mt-2 pt-4">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+          <Divider className="my-0" />
+          <div className="px-4 pb-4 pt-3 space-y-4">
+            <p className={cn(
+              'text-xs',
+              'text-text-secondary dark:text-text-secondary-dark'
+            )}>
               Enable or disable specific tools and MCP servers available to Agent Mode.
             </p>
 
             <div>
-              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Built-in Tools</div>
+              <div className={cn(
+                'text-sm font-medium',
+                'text-text-primary dark:text-text-primary-dark'
+              )}>Built-in Tools</div>
               <div className="mt-2 space-y-2">
                 {availableTools.filter((tool) => tool.source === 'built-in').length === 0 ? (
-                  <p className="text-xs text-gray-500 dark:text-gray-400">No built-in tools registered yet.</p>
+                  <p className={cn(
+                    'text-xs',
+                    'text-text-secondary dark:text-text-secondary-dark'
+                  )}>No built-in tools registered yet.</p>
                 ) : (
                   availableTools
                     .filter((tool) => tool.source === 'built-in')
@@ -643,19 +675,29 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                       return (
                         <label
                           key={tool.name}
-                          className={`flex items-start gap-2 p-2 rounded-lg border ${
-                            isDisabled ? 'bg-gray-50 border-gray-200 text-gray-400' : 'bg-white border-gray-200'
-                          }`}
+                          className={cn(
+                            'flex items-start gap-2 p-2 rounded-lg border',
+                            isDisabled
+                              ? 'bg-surface-hover border-border opacity-60'
+                              : 'bg-background border-border',
+                            'dark:bg-background-dark dark:border-border-dark'
+                          )}
                         >
                           <input
                             type="checkbox"
                             checked={!isDisabled}
                             onChange={() => handleToolToggle(tool.name)}
-                            className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            className="mt-1 h-4 w-4 rounded focus:ring-2 focus:ring-accent"
                           />
                           <div className="min-w-0">
-                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{tool.name}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">{tool.description}</div>
+                            <div className={cn(
+                              'text-sm font-medium',
+                              'text-text-primary dark:text-text-primary-dark'
+                            )}>{tool.name}</div>
+                            <div className={cn(
+                              'text-xs',
+                              'text-text-secondary dark:text-text-secondary-dark'
+                            )}>{tool.description}</div>
                           </div>
                         </label>
                       );
@@ -665,55 +707,84 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
             </div>
 
             <div>
-              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">MCP Servers</div>
+              <div className={cn(
+                'text-sm font-medium',
+                'text-text-primary dark:text-text-primary-dark'
+              )}>MCP Servers</div>
               <div className="mt-2 space-y-3">
                 {availableServers.length === 0 ? (
-                  <p className="text-xs text-gray-500 dark:text-gray-400">No MCP servers connected.</p>
+                  <p className={cn(
+                    'text-xs',
+                    'text-text-secondary dark:text-text-secondary-dark'
+                  )}>No MCP servers connected.</p>
                 ) : (
                   availableServers.map((server) => {
                     const serverDisabled = formData.disabledServers.includes(server.id);
                     return (
-                      <div key={server.id} className="border border-gray-200 dark:border-gray-800 rounded-lg p-3">
+                      <div key={server.id} className={cn(
+                        'border border-border rounded-lg p-3',
+                        'dark:border-border-dark'
+                      )}>
                         <label className="flex items-start gap-2">
                           <input
                             type="checkbox"
                             checked={!serverDisabled}
                             onChange={() => handleServerToggle(server.id)}
-                            className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            className="mt-1 h-4 w-4 rounded focus:ring-2 focus:ring-accent"
                           />
                           <div className="min-w-0">
-                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            <div className={cn(
+                              'text-sm font-medium',
+                              'text-text-primary dark:text-text-primary-dark'
+                            )}>
                               {server.name || server.id}
                             </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">Status: {server.status}</div>
+                            <div className={cn(
+                              'text-xs',
+                              'text-text-secondary dark:text-text-secondary-dark'
+                            )}>Status: {server.status}</div>
                           </div>
                         </label>
 
-                        <div className={`mt-3 space-y-2 pl-6 ${serverDisabled ? 'opacity-50' : ''}`}>
+                        <div className={cn(
+                          'mt-3 space-y-2 pl-6',
+                          serverDisabled && 'opacity-50'
+                        )}>
                           {server.tools.length === 0 ? (
-                            <p className="text-xs text-gray-500 dark:text-gray-400">No tools registered for this server.</p>
+                            <p className={cn(
+                              'text-xs',
+                              'text-text-secondary dark:text-text-secondary-dark'
+                            )}>No tools registered for this server.</p>
                           ) : (
                             server.tools.map((tool) => {
                               const toolDisabled = formData.disabledTools.includes(tool.name);
                               return (
                                 <label
                                   key={tool.name}
-                                  className={`flex items-start gap-2 p-2 rounded-lg border ${
+                                  className={cn(
+                                    'flex items-start gap-2 p-2 rounded-lg border',
                                     serverDisabled || toolDisabled
-                                      ? 'bg-gray-50 border-gray-200 text-gray-400'
-                                      : 'bg-white border-gray-200'
-                                  }`}
+                                      ? 'bg-surface-hover border-border opacity-60'
+                                      : 'bg-background border-border',
+                                    'dark:bg-background-dark dark:border-border-dark'
+                                  )}
                                 >
                                   <input
                                     type="checkbox"
                                     checked={!toolDisabled}
                                     onChange={() => handleToolToggle(tool.name)}
                                     disabled={serverDisabled}
-                                    className="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                                    className="mt-1 h-4 w-4 rounded focus:ring-2 focus:ring-accent"
                                   />
                                   <div className="min-w-0">
-                                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{tool.name}</div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">{tool.description}</div>
+                                    <div className={cn(
+                                      'text-sm font-medium',
+                                      'text-text-primary dark:text-text-primary-dark'
+                                    )}>{tool.name}</div>
+                                    <div className={cn(
+                                      'text-xs',
+                                      'text-text-secondary dark:text-text-secondary-dark'
+                                    )}>{tool.description}</div>
                                   </div>
                                 </label>
                               );
@@ -730,12 +801,24 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
         </details>
 
         {/* Section 6: MCP Servers */}
-        <details className="border border-gray-200 rounded-lg bg-white dark:border-gray-800 dark:bg-gray-900">
-          <summary className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg select-none">
+        <details className={cn(
+          'rounded-lg border border-border bg-surface',
+          'dark:bg-surface-dark dark:border-border-dark'
+        )}>
+          <summary className={cn(
+            'px-4 py-3 cursor-pointer select-none',
+            'text-base font-semibold text-text-primary',
+            'hover:bg-surface-hover',
+            'dark:text-text-primary-dark dark:hover:bg-surface-hover-dark'
+          )}>
             MCP Servers
           </summary>
-          <div className="px-4 pb-4 space-y-4 border-t border-gray-200 dark:border-gray-800 mt-2 pt-4">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+          <Divider className="my-0" />
+          <div className="px-4 pb-4 pt-3 space-y-4">
+            <p className={cn(
+              'text-xs',
+              'text-text-secondary dark:text-text-secondary-dark'
+            )}>
               Add MCP (Model Context Protocol) servers to provide additional tools in Agent Mode.
             </p>
 
@@ -745,17 +828,30 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                 {formData.mcpServers.map((server) => (
                   <div
                     key={server.id}
-                    className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                    className={cn(
+                      'flex items-center justify-between p-2 rounded-lg',
+                      'bg-surface-hover',
+                      'dark:bg-surface-hover-dark'
+                    )}
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium text-gray-900 truncate">
+                      <div className={cn(
+                        'text-sm font-medium truncate',
+                        'text-text-primary dark:text-text-primary-dark'
+                      )}>
                         {server.name || 'Unnamed Server'}
                       </div>
-                      <div className="text-xs text-gray-500 truncate">
+                      <div className={cn(
+                        'text-xs truncate',
+                        'text-text-secondary dark:text-text-secondary-dark'
+                      )}>
                         {server.url}
                       </div>
                       {server.headers.length > 0 && (
-                        <div className="text-xs text-gray-400 mt-1">
+                        <div className={cn(
+                          'text-xs mt-1',
+                          'text-text-tertiary dark:text-text-tertiary-dark'
+                        )}>
                           {server.headers.length} header{server.headers.length === 1 ? '' : 's'}
                         </div>
                       )}
@@ -768,7 +864,11 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                           mcpServers: prev.mcpServers.filter((s) => s.id !== server.id),
                         }));
                       }}
-                      className="ml-2 p-1 text-gray-400 hover:text-red-600 transition-colors"
+                      className={cn(
+                        'ml-2 p-1 transition-colors',
+                        'text-text-tertiary hover:text-red-600',
+                        'dark:text-text-tertiary-dark dark:hover:text-red-400'
+                      )}
                       title="Remove server"
                     >
                       <svg
@@ -793,51 +893,46 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
             )}
 
             {/* Add new server form */}
-            <div className="space-y-3 pt-2 border-t border-gray-200">
-              <div className="text-sm font-medium text-gray-700">Add Server</div>
+            <div className={cn(
+              'space-y-3 pt-2 border-t',
+              'border-border dark:border-border-dark'
+            )}>
+              <div className={cn(
+                'text-sm font-medium',
+                'text-text-primary dark:text-text-primary-dark'
+              )}>Add Server</div>
 
               {/* Server Name */}
-              <div>
-                <label htmlFor="mcpServerName" className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-                  Name (optional)
-                </label>
-                <input
-                  id="mcpServerName"
-                  type="text"
-                  value={mcpDraft.name}
-                  onInput={(e) => setMcpDraft((prev) => ({ ...prev, name: (e.target as HTMLInputElement).value }))}
-                  placeholder="My MCP Server"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+              <Input
+                id="mcpServerName"
+                label="Name (optional)"
+                type="text"
+                value={mcpDraft.name}
+                onInput={(e) => setMcpDraft((prev) => ({ ...prev, name: (e.target as HTMLInputElement).value }))}
+                placeholder="My MCP Server"
+              />
 
               {/* Server URL */}
-              <div>
-                <label htmlFor="mcpServerUrl" className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-                  URL (required)
-                </label>
-                <input
-                  id="mcpServerUrl"
-                  type="text"
-                  value={mcpDraft.url}
-                  onInput={(e) => {
-                    setMcpDraft((prev) => ({ ...prev, url: (e.target as HTMLInputElement).value }));
-                    setMcpUrlError(null);
-                  }}
-                  placeholder="https://mcp-server.example.com/mcp"
-                  className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white ${
-                    mcpUrlError ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {mcpUrlError && (
-                  <p className="mt-1 text-xs text-red-600">{mcpUrlError}</p>
-                )}
-              </div>
+              <Input
+                id="mcpServerUrl"
+                label="URL (required)"
+                type="text"
+                value={mcpDraft.url}
+                onInput={(e) => {
+                  setMcpDraft((prev) => ({ ...prev, url: (e.target as HTMLInputElement).value }));
+                  setMcpUrlError(null);
+                }}
+                placeholder="https://mcp-server.example.com/mcp"
+                error={mcpUrlError || undefined}
+              />
 
               {/* Headers */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                <div className="block text-xs text-gray-600 dark:text-gray-400">Headers (optional)</div>
+                <div className={cn(
+                  'block text-xs',
+                  'text-text-secondary dark:text-text-secondary-dark'
+                )}>Headers (optional)</div>
                 <button
                     type="button"
                     onClick={() => {
@@ -846,7 +941,11 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                         headers: [...prev.headers, { key: '', value: '' }],
                       }));
                     }}
-                    className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                    className={cn(
+                      'text-xs',
+                      'text-accent hover:opacity-80',
+                      'dark:text-accent-dark'
+                    )}
                   >
                     + Add header
                   </button>
@@ -864,7 +963,12 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                             setMcpDraft((prev) => ({ ...prev, headers: newHeaders }));
                           }}
                           placeholder="Header name"
-                          className="flex-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className={cn(
+                            'flex-1 px-2 py-1.5 text-sm rounded border',
+                            'bg-background border-border text-text-primary',
+                            'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                            'dark:bg-background-dark dark:border-border-dark dark:text-text-primary-dark'
+                          )}
                         />
                         <input
                           type="text"
@@ -875,7 +979,12 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                             setMcpDraft((prev) => ({ ...prev, headers: newHeaders }));
                           }}
                           placeholder="Value"
-                          className="flex-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className={cn(
+                            'flex-1 px-2 py-1.5 text-sm rounded border',
+                            'bg-background border-border text-text-primary',
+                            'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                            'dark:bg-background-dark dark:border-border-dark dark:text-text-primary-dark'
+                          )}
                         />
                         <button
                           type="button"
@@ -883,7 +992,11 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                             const newHeaders = mcpDraft.headers.filter((_, i) => i !== idx);
                             setMcpDraft((prev) => ({ ...prev, headers: newHeaders }));
                           }}
-                          className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                          className={cn(
+                            'p-1.5 transition-colors',
+                            'text-text-tertiary hover:text-red-600',
+                            'dark:text-text-tertiary-dark dark:hover:text-red-400'
+                          )}
                           title="Remove header"
                         >
                           <svg
@@ -905,8 +1018,9 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
               </div>
 
               {/* Add Server Button */}
-              <button
+              <Button
                 type="button"
+                variant="secondary"
                 onClick={() => {
                   // Validate URL
                   const trimmedUrl = mcpDraft.url.trim();
@@ -940,31 +1054,31 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                   setMcpUrlError(null);
                 }}
                 disabled={!mcpDraft.url.trim()}
-                className="w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full"
               >
                 Add Server
-              </button>
+              </Button>
             </div>
           </div>
         </details>
 
         {/* Action Buttons */}
         <div className="flex gap-3 pt-4">
-          <button
+          <Button
             type="submit"
             disabled={isSaving}
-            className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-500 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-blue-300 disabled:cursor-not-allowed"
+            className="flex-1"
           >
             {isSaving ? 'Saving...' : 'Save Settings'}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
+            variant="secondary"
             onClick={handleCancel}
             disabled={isSaving}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-100 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
           >
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
     </div>
