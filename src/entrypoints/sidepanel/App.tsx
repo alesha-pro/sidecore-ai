@@ -7,7 +7,7 @@ import { ExtractionStatus } from '../../components/ExtractionStatus';
 import { SelectedTabsBar } from '../../components/SelectedTabsBar';
 import { PromptDebugView } from '../../components/PromptDebugView';
 import { ModelSelectorPopup } from '../../components/ModelSelectorPopup';
-import { ChevronLeft, MessageSquarePlus } from 'lucide-preact';
+import { ChevronLeft, MessageSquarePlus, Settings } from 'lucide-preact';
 import { cn } from '../../lib/utils';
 import { useTheme } from '@/hooks/useTheme';
 import { useTabs } from '../../hooks/useTabs';
@@ -798,19 +798,19 @@ export default function App() {
       // Switch to chat view
       setCurrentView('chat');
 
-      // Set active tab as context
+      // Set the specific tab from context menu as context (not activeTab which may be stale)
       setTabSelection({
-        includeActiveTab: true,
-        selectedTabIds: new Set(),
+        includeActiveTab: false,
+        selectedTabIds: new Set([pending.tab.id]),
       });
-      console.log('[App] Set tab selection, includeActiveTab: true');
+      console.log('[App] Set tab selection with explicit tab ID:', pending.tab.id);
 
       // Trigger action based on menu item
       if (action === 'summarize-page') {
-        console.log('[App] Sending summarize request...');
-        // Small delay to ensure state updates are applied
+        console.log('[App] Sending summarize request for tab:', pending.tab.id);
+        // Pass explicit tab ID to handleSendMessage to avoid relying on stale React state
         setTimeout(() => {
-          handleSendMessage('Please summarize this page concisely, highlighting the key points.');
+          handleSendMessage('Please summarize this page concisely, highlighting the key points.', [pending.tab.id]);
         }, 100);
       }
       // 'ask-about-page' just prepares context, user types question
@@ -1022,6 +1022,37 @@ export default function App() {
 
         {/* Actions */}
         {currentView === 'chat-list' && (
+          <>
+            <button
+              type="button"
+              onClick={() => { handleNewChat(); navigateTo('chat'); }}
+              className={cn(
+                'p-1 rounded-lg flex-shrink-0',
+                'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark'
+              )}
+              aria-label="New chat"
+            >
+              <MessageSquarePlus size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => navigateTo('settings')}
+              className={cn(
+                'p-1 rounded-lg flex-shrink-0',
+                'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark'
+              )}
+              aria-label="Settings"
+            >
+              <Settings size={16} />
+            </button>
+          </>
+        )}
+
+        {currentView === 'settings' && (
           <button
             type="button"
             onClick={() => { handleNewChat(); navigateTo('chat'); }}
@@ -1038,19 +1069,34 @@ export default function App() {
         )}
 
         {currentView === 'chat' && (
-          <button
-            type="button"
-            onClick={() => handleNewChat()}
-            className={cn(
-              'p-1 rounded-lg flex-shrink-0',
-              'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
-              'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
-              'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark'
-            )}
-            aria-label="New chat"
-          >
-            <MessageSquarePlus size={16} />
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => handleNewChat()}
+              className={cn(
+                'p-1 rounded-lg flex-shrink-0',
+                'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark'
+              )}
+              aria-label="New chat"
+            >
+              <MessageSquarePlus size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => navigateTo('settings')}
+              className={cn(
+                'p-1 rounded-lg flex-shrink-0',
+                'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark'
+              )}
+              aria-label="Settings"
+            >
+              <Settings size={16} />
+            </button>
+          </>
         )}
       </header>
 
