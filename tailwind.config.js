@@ -26,6 +26,7 @@ export default {
           DEFAULT: 'var(--color-accent)',
           hover: 'var(--color-accent-hover)',
           text: 'var(--color-accent-text)',
+          subtle: 'var(--color-accent-subtle)',
         },
       },
       spacing: {

@@ -172,7 +172,7 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
           <div
             className={cn(
               // MSG-01: User message - soft subtle bubble (not bright blue)
-              isUser && 'px-4 py-2.5 rounded-2xl bg-accent-subtle text-text-primary dark:bg-accent-subtle-dark dark:text-text-primary-dark',
+              isUser && 'px-4 py-2.5 rounded-2xl bg-accent-subtle text-text-primary dark:bg-accent-subtle dark:text-text-primary',
               // MSG-02: Assistant message - no bubble, generous whitespace
               !isUser && 'py-3'
             )}
