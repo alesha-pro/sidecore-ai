@@ -7,7 +7,7 @@ import { ExtractionStatus } from '../../components/ExtractionStatus';
 import { SelectedTabsBar } from '../../components/SelectedTabsBar';
 import { PromptDebugView } from '../../components/PromptDebugView';
 import { ModelSelectorPopup } from '../../components/ModelSelectorPopup';
-import { ChevronLeft, Settings, MessageSquarePlus } from 'lucide-preact';
+import { ChevronLeft, MessageSquarePlus } from 'lucide-preact';
 import { cn } from '../../lib/utils';
 import { useTheme } from '@/hooks/useTheme';
 import { useTabs } from '../../hooks/useTabs';
@@ -867,7 +867,7 @@ export default function App() {
     )}>
       {/* NAV-02: Header with back button */}
       <header className={cn(
-        'flex items-center gap-3 px-4 py-3 shrink-0 min-w-0',
+        'flex items-center gap-3 px-4 py-2 shrink-0 min-w-0',
         'bg-surface border-b border-border',
         'dark:bg-surface-dark dark:border-border-dark'
       )}>
@@ -919,16 +919,16 @@ export default function App() {
         {currentView === 'chat' && (
           <button
             type="button"
-            onClick={() => navigateTo('settings')}
+            onClick={() => handleNewChat()}
             className={cn(
               'p-1.5 rounded-lg flex-shrink-0',
               'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
               'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
               'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark'
             )}
-            aria-label="Open settings"
+            aria-label="New chat"
           >
-            <Settings size={20} />
+            <MessageSquarePlus size={20} />
           </button>
         )}
       </header>
