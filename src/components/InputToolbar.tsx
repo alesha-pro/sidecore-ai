@@ -1,3 +1,6 @@
+import { AtSign, Slash, ChevronDown, Settings, Sparkles } from 'lucide-preact';
+import { cn } from '../lib/utils';
+
 interface InputToolbarProps {
   currentModel: string;
   onModelClick: () => void;
@@ -38,70 +41,6 @@ function getShortModelName(model: string): string {
   return name.length > 12 ? name.slice(0, 12) + '…' : name;
 }
 
-// Simple model icon (sparkle/brain icon)
-function ModelIcon() {
-  return (
-    <svg
-      className="w-4 h-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"
-      />
-    </svg>
-  );
-}
-
-// Simple gear/cog icon for settings
-function GearIcon() {
-  return (
-    <svg
-      className="w-4 h-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"
-      />
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-      />
-    </svg>
-  );
-}
-
-// Robot icon for Agent Mode
-function RobotIcon() {
-  return (
-    <svg
-      className="w-4 h-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-      />
-      <circle cx="9" cy="9" r="1" fill="currentColor" />
-      <circle cx="15" cy="9" r="1" fill="currentColor" />
-    </svg>
-  );
-}
-
 export function InputToolbar({
   currentModel,
   onModelClick,
@@ -115,7 +54,11 @@ export function InputToolbar({
   const shortName = getShortModelName(currentModel);
 
   return (
-    <div className="flex items-center justify-between px-3 py-1.5 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 text-xs">
+    <div className={cn(
+      'flex items-center justify-between px-3 py-1.5 text-xs',
+      'bg-surface border-t border-border',
+      'dark:bg-surface-dark dark:border-border-dark'
+    )}>
       {/* Left side: Model, @, /, Current Tab */}
       <div className="flex items-center gap-1">
         {/* Model button */}
@@ -123,11 +66,18 @@ export function InputToolbar({
           type="button"
           onClick={onModelClick}
           disabled={disabled}
-          className="flex items-center gap-1 px-2 py-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-800 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className={cn(
+            'flex items-center gap-1 px-2 py-1 rounded transition-colors',
+            'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1',
+            'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark dark:focus-visible:ring-accent-dark',
+            'disabled:opacity-50 disabled:cursor-not-allowed'
+          )}
           title={`Current model: ${currentModel}`}
         >
-          <ModelIcon />
+          <Sparkles size={16} />
           <span className="font-medium">{shortName}</span>
+          <ChevronDown size={14} />
         </button>
 
         {/* @ button */}
@@ -135,10 +85,16 @@ export function InputToolbar({
           type="button"
           onClick={onAtClick}
           disabled={disabled}
-          className="px-2 py-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className={cn(
+            'p-1.5 rounded transition-colors',
+            'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1',
+            'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark dark:focus-visible:ring-accent-dark',
+            'disabled:opacity-50 disabled:cursor-not-allowed'
+          )}
           title="Add tab context (@)"
         >
-          <span className="font-medium">@</span>
+          <AtSign size={16} />
         </button>
 
         {/* / button */}
@@ -146,23 +102,39 @@ export function InputToolbar({
           type="button"
           onClick={onSlashClick}
           disabled={disabled}
-          className="px-2 py-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className={cn(
+            'p-1.5 rounded transition-colors',
+            'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1',
+            'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark dark:focus-visible:ring-accent-dark',
+            'disabled:opacity-50 disabled:cursor-not-allowed'
+          )}
           title="Commands (/)"
         >
-          <span className="font-medium">/</span>
+          <Slash size={16} />
         </button>
 
         {/* Current Tab checkbox */}
         {onActiveTabChange && (
-          <label className="flex items-center gap-1 cursor-pointer select-none">
+          <label className={cn(
+            'flex items-center gap-1.5 px-2 py-1 cursor-pointer select-none',
+            'text-text-secondary hover:text-text-primary',
+            'dark:text-text-secondary-dark dark:hover:text-text-primary-dark'
+          )}>
             <input
               type="checkbox"
               checked={includeActiveTab}
               disabled={disabled}
               onChange={(e) => onActiveTabChange((e.target as HTMLInputElement).checked)}
-              className="h-3.5 w-3.5 text-blue-600 dark:text-blue-500 border-gray-300 dark:border-gray-600 rounded-full focus:ring-1 focus:ring-blue-500 disabled:opacity-50 dark:bg-gray-800"
+              className={cn(
+                'h-3.5 w-3.5 rounded-full border',
+                'text-accent border-border',
+                'focus:ring-2 focus:ring-accent focus:ring-offset-1',
+                'dark:text-accent-dark dark:border-border-dark dark:bg-surface-dark dark:focus:ring-accent-dark',
+                'disabled:opacity-50'
+              )}
             />
-            <span className="text-gray-500 dark:text-gray-400">Current Tab</span>
+            <span className="text-xs">Current Tab</span>
           </label>
         )}
       </div>
@@ -172,10 +144,16 @@ export function InputToolbar({
         type="button"
         onClick={onSettingsClick}
         disabled={disabled}
-        className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className={cn(
+          'p-1.5 rounded transition-colors',
+          'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
+          'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1',
+          'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark dark:focus-visible:ring-accent-dark',
+          'disabled:opacity-50 disabled:cursor-not-allowed'
+        )}
         title="Settings"
       >
-        <GearIcon />
+        <Settings size={16} />
       </button>
     </div>
   );
