@@ -438,14 +438,14 @@ export function MentionInput({
   };
 
   return (
-    <div className="bg-white border-t border-gray-200">
+    <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
       <div className="p-3 pb-2">
         <div className="relative">
           {/* Inline Tab Picker - appears above input */}
           {isPickerOpen && pickerTabs.length > 0 && (
             <div
               ref={pickerRef}
-              className="absolute bottom-full left-0 right-0 mb-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-auto z-10"
+              className="absolute bottom-full left-0 right-0 mb-1 bg-white dark:bg-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-auto z-10"
             >
               <ul role="listbox" aria-label="Select a tab">
                 {pickerTabs.map((tab, index) => (
@@ -456,8 +456,8 @@ export function MentionInput({
                     onClick={() => handlePickerSelect(tab)}
                     className={`flex items-center gap-2 px-3 py-2 cursor-pointer ${
                       index === activeIndex
-                        ? 'bg-blue-50 text-blue-900'
-                        : 'hover:bg-gray-50'
+                        ? 'bg-blue-50 dark:bg-blue-900 text-blue-900 dark:text-white'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-700'
                     }`}
                   >
                     {tab.favIconUrl ? (
@@ -499,7 +499,7 @@ export function MentionInput({
               contentEditable={!disabled}
               onKeyDown={handleKeyDown}
               onInput={handleInput}
-              className="w-full px-3 py-2 pr-10 text-sm border border-gray-300 rounded-lg min-h-[38px] max-h-[150px] overflow-y-auto focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400"
+              className="w-full px-3 py-2 pr-10 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg min-h-[38px] max-h-[150px] overflow-y-auto focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed empty:before:content-[attr(data-placeholder)] empty:before:text-gray-400 dark:empty:before:text-gray-500 dark:text-white"
               data-placeholder="Type a message, @ for tabs, / for commands"
               role="textbox"
               aria-label="Message input"

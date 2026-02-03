@@ -36,14 +36,14 @@ export default function ChatList({
   };
 
   return (
-    <div className="w-[200px] bg-gray-100 border-r border-gray-200 flex flex-col h-full">
+    <div className="w-[200px] bg-gray-100 dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 flex flex-col h-full">
       {/* Header */}
-      <div className="p-3 border-b border-gray-200 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-gray-900">Chats</h2>
+      <div className="p-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Chats</h2>
         <button
           type="button"
           onClick={onNewChat}
-          className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+          className="p-1 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-gray-800 rounded transition-colors"
           title="New Chat"
           aria-label="New Chat"
         >
@@ -63,7 +63,7 @@ export default function ChatList({
       {/* Chat list */}
       <div className="flex-1 overflow-y-auto">
         {chats.length === 0 ? (
-          <div className="p-4 text-center text-gray-400 text-xs">
+          <div className="p-4 text-center text-gray-400 dark:text-gray-500 text-xs">
             No chats yet
           </div>
         ) : (
@@ -73,17 +73,25 @@ export default function ChatList({
                 key={chat.id}
                 className={`group relative px-2 py-2 rounded cursor-pointer transition-colors ${
                   currentChatId === chat.id
-                    ? 'bg-blue-100 border border-blue-300'
-                    : 'hover:bg-gray-200'
+                    ? 'bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-800'
+                    : 'hover:bg-gray-200 dark:hover:bg-gray-800 border border-transparent'
                 }`}
                 onClick={() => onSelectChat(chat.id)}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium text-gray-900 truncate">
+                    <div className={`text-xs font-medium truncate ${
+                      currentChatId === chat.id
+                        ? 'text-blue-900 dark:text-blue-100'
+                        : 'text-gray-900 dark:text-gray-100'
+                    }`}>
                       {chat.title}
                     </div>
-                    <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-500">
+                    <div className={`flex items-center gap-2 mt-1 text-[10px] ${
+                      currentChatId === chat.id
+                        ? 'text-blue-700 dark:text-blue-300'
+                        : 'text-gray-500 dark:text-gray-400'
+                    }`}>
                       <span>{chat.messageCount} msg</span>
                       <span>•</span>
                       <span>{formatRelativeTime(chat.updatedAt)}</span>
@@ -95,7 +103,7 @@ export default function ChatList({
                       e.stopPropagation();
                       handleDelete(chat.id, chat.title);
                     }}
-                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-all"
+                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-all"
                     title="Delete chat"
                     aria-label={`Delete chat: ${chat.title}`}
                   >
