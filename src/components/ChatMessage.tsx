@@ -59,9 +59,10 @@ interface ChatMessageProps {
   onEdit?: (id: string, newContent: string) => void;
   onDelete?: (id: string) => void;
   toolOutputs?: Message[];
+  isNew?: boolean;
 }
 
-export default function ChatMessage({ message, isLastUserMessage, onEdit, onDelete, toolOutputs }: ChatMessageProps) {
+export default function ChatMessage({ message, isLastUserMessage, onEdit, onDelete, toolOutputs, isNew }: ChatMessageProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [isHovered, setIsHovered] = useState(false);
@@ -106,7 +107,13 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
 
   return (
     <div
-      className={`flex items-end gap-1 ${isUser ? 'justify-end' : 'justify-start'}`}
+      className={cn(
+        'flex items-end gap-1',
+        isUser ? 'justify-end' : 'justify-start',
+        // Only animate non-streaming messages
+        isNew && !message.isStreaming && 'animate-in fade-in slide-in-from-bottom-2 duration-200',
+        'motion-reduce:animate-none'
+      )}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

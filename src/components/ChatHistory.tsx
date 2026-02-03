@@ -1,3 +1,4 @@
+import { useState, useEffect, useRef } from 'preact/hooks';
 import type { Message } from '../lib/types';
 import ChatMessage from './ChatMessage';
 import { cn } from '../lib/utils';
@@ -21,6 +22,34 @@ export default function ChatHistory({
   onEditMessage,
   onDeleteMessage,
 }: ChatHistoryProps) {
+  // Track new messages for animation
+  const [animatedIds, setAnimatedIds] = useState<Set<string>>(new Set());
+  const prevMessagesRef = useRef<Message[]>([]);
+
+  useEffect(() => {
+    const prevIds = new Set(prevMessagesRef.current.map(m => m.id));
+    const newIds = messages
+      .filter(m => !prevIds.has(m.id))
+      .map(m => m.id);
+
+    if (newIds.length > 0) {
+      setAnimatedIds(prev => new Set([...prev, ...newIds]));
+
+      // Remove from animated set after animation completes
+      const timer = setTimeout(() => {
+        setAnimatedIds(prev => {
+          const next = new Set(prev);
+          newIds.forEach(id => next.delete(id));
+          return next;
+        });
+      }, 300); // slightly longer than animation duration
+
+      return () => clearTimeout(timer);
+    }
+
+    prevMessagesRef.current = messages;
+  }, [messages]);
+
   // Find the last user message
   const lastUserMessageIndex = messages.map((m, i) => ({ ...m, index: i }))
     .reverse()
@@ -61,6 +90,7 @@ export default function ChatHistory({
         onEdit={onEditMessage}
         onDelete={onDeleteMessage}
         toolOutputs={toolOutputs.length > 0 ? toolOutputs : undefined}
+        isNew={animatedIds.has(message.id)}
       />
     );
   }
