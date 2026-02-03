@@ -22,20 +22,20 @@ export default defineBackground(() => {
   });
 
   // Handle context menu clicks
-  chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (!tab?.id || !tab.windowId) return;
 
-    // Store pending action in session storage (survives panel open)
-    await chrome.storage.session.set({
+    // Open side panel FIRST (must be synchronous response to user gesture)
+    chrome.sidePanel.open({ windowId: tab.windowId });
+
+    // Then store pending action in session storage
+    chrome.storage.session.set({
       pendingContextMenuAction: {
         action: info.menuItemId,
         tab: { id: tab.id, title: tab.title, url: tab.url },
         timestamp: Date.now(),
       },
     });
-
-    // Open side panel - App.tsx will check for pending action on mount
-    await chrome.sidePanel.open({ windowId: tab.windowId });
   });
 
   // Handle messages from sidepanel
