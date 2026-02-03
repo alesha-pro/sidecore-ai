@@ -57,7 +57,7 @@ export function SelectedTabsBar({
 
   return (
     <div className={cn(
-      'px-3 py-1 border-t',
+      'px-2 @sm:px-3 py-1 border-t min-w-0',
       'bg-surface border-border',
       'dark:bg-surface-dark dark:border-border-dark'
     )}>
@@ -66,7 +66,7 @@ export function SelectedTabsBar({
         type="button"
         onClick={() => setIsExpanded(!isExpanded)}
         className={cn(
-          'flex items-center gap-1.5 w-full text-left text-xs',
+          'flex items-center gap-1.5 w-full text-left text-xs min-w-0',
           'text-text-secondary hover:text-text-primary',
           'dark:text-text-secondary-dark dark:hover:text-text-primary-dark'
         )}
@@ -75,19 +75,19 @@ export function SelectedTabsBar({
         <ChevronRight
           size={12}
           className={cn(
-            'transition-transform',
+            'transition-transform flex-shrink-0',
             isExpanded && 'rotate-90'
           )}
         />
         <span className={cn(
-          'text-text-tertiary',
+          'text-text-tertiary flex-shrink-0',
           'dark:text-text-tertiary-dark'
         )}>
           {displayTabs.length} {displayTabs.length === 1 ? 'tab' : 'tabs'} selected
         </span>
         {!isExpanded && (
           <span className={cn(
-            'truncate flex-1',
+            'truncate flex-1 min-w-0',
             'text-text-tertiary',
             'dark:text-text-tertiary-dark'
           )}>
@@ -98,11 +98,11 @@ export function SelectedTabsBar({
 
       {/* Expanded view */}
       {isExpanded && (
-        <div className="mt-1.5 space-y-0.5 pl-4">
+        <div className="mt-1.5 space-y-0.5 pl-4 min-w-0">
           {displayTabs.map((tab) => (
             <div
               key={tab.id}
-              className="flex items-center gap-1.5 py-0.5 group"
+              className="flex items-center gap-1.5 py-0.5 group min-w-0"
             >
               {/* Favicon or generic icon */}
               {tab.favIconUrl ? (

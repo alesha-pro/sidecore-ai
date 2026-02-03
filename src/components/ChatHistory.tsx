@@ -101,7 +101,7 @@ export default function ChatHistory({
       aria-live="polite"
       aria-label="Chat history"
       className={cn(
-        'flex-1 overflow-y-auto p-4 space-y-4 min-w-0',
+        'flex-1 overflow-y-auto overflow-x-hidden p-3 @sm:p-4 space-y-4 min-w-0',
         'bg-background',
         'dark:bg-background-dark'
       )}

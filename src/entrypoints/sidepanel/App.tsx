@@ -861,13 +861,13 @@ export default function App() {
 
   return (
     <div className={cn(
-      'flex flex-col h-screen',
+      'flex flex-col h-screen overflow-x-hidden',
       'bg-background',
       'dark:bg-background-dark'
     )}>
       {/* NAV-02: Header with back button */}
       <header className={cn(
-        'flex items-center gap-3 px-4 py-3 shrink-0',
+        'flex items-center gap-3 px-4 py-3 shrink-0 min-w-0',
         'bg-surface border-b border-border',
         'dark:bg-surface-dark dark:border-border-dark'
       )}>
@@ -877,7 +877,7 @@ export default function App() {
             type="button"
             onClick={handleBack}
             className={cn(
-              'p-1.5 -ml-1.5 rounded-lg',
+              'p-1.5 -ml-1.5 rounded-lg flex-shrink-0',
               'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
               'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
               'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark'
@@ -890,7 +890,7 @@ export default function App() {
 
         {/* Title */}
         <h1 className={cn(
-          'flex-1 text-lg font-semibold truncate',
+          'flex-1 text-lg font-semibold truncate min-w-0',
           'text-text-primary',
           'dark:text-text-primary-dark'
         )}>
@@ -905,7 +905,7 @@ export default function App() {
             type="button"
             onClick={() => { handleNewChat(); navigateTo('chat'); }}
             className={cn(
-              'p-1.5 rounded-lg',
+              'p-1.5 rounded-lg flex-shrink-0',
               'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
               'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
               'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark'
@@ -921,7 +921,7 @@ export default function App() {
             type="button"
             onClick={() => navigateTo('settings')}
             className={cn(
-              'p-1.5 rounded-lg',
+              'p-1.5 rounded-lg flex-shrink-0',
               'text-text-secondary hover:text-text-primary hover:bg-surface-hover',
               'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
               'dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark'
@@ -954,7 +954,7 @@ export default function App() {
 
       {/* Chat view - contains all streaming logic */}
       {currentView === 'chat' && (
-        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden @container">
           {settings?.showExtractionStatus && (
             <ExtractionStatus results={extractionResults} />
           )}

@@ -447,17 +447,17 @@ export function MentionInput({
 
   return (
     <div className={cn(
-      'bg-surface border-t border-border',
+      'bg-surface border-t border-border min-w-0',
       'dark:bg-surface-dark dark:border-border-dark'
     )}>
-      <div className="p-3 pb-2">
-        <div className="relative">
+      <div className="p-2 @sm:p-3 pb-2 min-w-0">
+        <div className="relative min-w-0">
           {/* Inline Tab Picker - appears above input */}
           {isPickerOpen && pickerTabs.length > 0 && (
             <div
               ref={pickerRef}
               className={cn(
-                'absolute bottom-full left-0 right-0 mb-1 max-h-48 overflow-auto z-10',
+                'absolute bottom-full left-0 right-0 mb-1 max-h-48 overflow-auto z-10 min-w-0',
                 'rounded-lg border border-border bg-surface shadow-lg',
                 'dark:bg-surface-dark dark:border-border-dark'
               )}
@@ -515,14 +515,14 @@ export function MentionInput({
           />
 
           {/* Input area with inline Send button */}
-          <div className="relative">
+          <div className="relative min-w-0">
             <div
               ref={inputRef}
               contentEditable={!disabled}
               onKeyDown={handleKeyDown}
               onInput={handleInput}
               className={cn(
-                'w-full min-h-[40px] max-h-[200px] overflow-y-auto',
+                'w-full min-h-[40px] max-h-[200px] overflow-y-auto min-w-0',
                 'px-3 py-2 pr-10 rounded-lg',
                 'border border-border bg-background',
                 'text-sm text-text-primary',
@@ -530,7 +530,8 @@ export function MentionInput({
                 'disabled:opacity-50 disabled:cursor-not-allowed',
                 'empty:before:content-[attr(data-placeholder)] empty:before:text-text-tertiary',
                 'dark:bg-background-dark dark:border-border-dark dark:text-text-primary-dark',
-                'dark:empty:before:text-text-tertiary-dark'
+                'dark:empty:before:text-text-tertiary-dark',
+                'break-words'
               )}
               data-placeholder="Type a message, @ for tabs, / for commands"
               role="textbox"

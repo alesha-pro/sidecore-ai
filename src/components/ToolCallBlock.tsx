@@ -37,12 +37,12 @@ export default function ToolCallBlock({ toolCall, output, isStreaming }: ToolCal
   return (
     <details
       className={cn(
-        'mt-2 rounded-lg border border-border bg-surface',
+        'mt-2 rounded-lg border border-border bg-surface min-w-0',
         'dark:bg-surface-dark dark:border-border-dark'
       )}
     >
       <summary className={cn(
-        'px-3 py-2 cursor-pointer rounded-t-lg flex items-center gap-2',
+        'px-3 py-2 cursor-pointer rounded-t-lg flex items-center gap-2 min-w-0',
         'font-medium text-sm hover:bg-surface-hover',
         'dark:hover:bg-surface-hover-dark'
       )}>
@@ -61,21 +61,21 @@ export default function ToolCallBlock({ toolCall, output, isStreaming }: ToolCal
         )}
 
         {/* Tool icon */}
-        <Wrench size={16} className={cn('text-text-secondary', 'dark:text-text-secondary-dark')} aria-hidden="true" />
+        <Wrench size={16} className={cn('text-text-secondary flex-shrink-0', 'dark:text-text-secondary-dark')} aria-hidden="true" />
 
         {/* Tool name - human readable */}
-        <span className={cn('capitalize text-text-primary', 'dark:text-text-primary-dark')}>{displayName}</span>
+        <span className={cn('capitalize text-text-primary truncate', 'dark:text-text-primary-dark')}>{displayName}</span>
 
         {/* Status text */}
-        {isAccumulating && <span className="text-yellow-600 text-xs ml-auto">Preparing...</span>}
-        {isRunning && <span className="text-blue-600 text-xs ml-auto">Running...</span>}
-        {isSuccess && <span className="text-green-600 text-xs ml-auto">Done</span>}
-        {isError && <span className="text-red-600 text-xs ml-auto">Error</span>}
+        {isAccumulating && <span className="text-yellow-600 text-xs ml-auto flex-shrink-0">Preparing...</span>}
+        {isRunning && <span className="text-blue-600 text-xs ml-auto flex-shrink-0">Running...</span>}
+        {isSuccess && <span className="text-green-600 text-xs ml-auto flex-shrink-0">Done</span>}
+        {isError && <span className="text-red-600 text-xs ml-auto flex-shrink-0">Error</span>}
       </summary>
 
-      <div className="px-3 py-2 space-y-3 text-xs">
+      <div className="px-3 py-2 space-y-3 text-xs min-w-0">
         {/* Input arguments */}
-        <div>
+        <div className="min-w-0">
           <div className={cn(
             'font-medium mb-1 flex items-center gap-2',
             'text-text-secondary',
@@ -87,7 +87,7 @@ export default function ToolCallBlock({ toolCall, output, isStreaming }: ToolCal
             )}
           </div>
           <pre className={cn(
-            'border rounded p-2 overflow-x-auto font-mono',
+            'border rounded p-2 overflow-x-auto font-mono text-xs break-words',
             isArgsIncomplete
               ? 'bg-yellow-50 border-yellow-200 text-text-primary dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-text-primary-dark'
               : 'bg-background border-border text-text-primary dark:bg-background-dark dark:border-border-dark dark:text-text-primary-dark'
@@ -98,14 +98,14 @@ export default function ToolCallBlock({ toolCall, output, isStreaming }: ToolCal
 
         {/* Output content */}
         {output && (
-          <div>
+          <div className="min-w-0">
             <div className={cn(
               'font-medium mb-1',
               'text-text-secondary',
               'dark:text-text-secondary-dark'
             )}>Output:</div>
             <pre className={cn(
-              'border rounded p-2 overflow-x-auto font-mono',
+              'border rounded p-2 overflow-x-auto font-mono text-xs break-words',
               isError
                 ? 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200'
                 : 'bg-background border-border text-text-primary dark:bg-background-dark dark:border-border-dark dark:text-text-primary-dark'

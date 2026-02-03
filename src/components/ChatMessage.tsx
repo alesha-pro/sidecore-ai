@@ -108,7 +108,7 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
   return (
     <div
       className={cn(
-        'flex items-end gap-1',
+        'flex items-end gap-1 min-w-0',
         isUser ? 'justify-end' : 'justify-start',
         // Only animate non-streaming messages
         isNew && !message.isStreaming && 'animate-in fade-in slide-in-from-bottom-2 duration-200',
@@ -119,7 +119,7 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
     >
       {/* Action buttons for user messages (left of bubble) */}
       {isUser && isHovered && !isEditing && (
-        <div className="flex gap-1 mb-1">
+        <div className="flex gap-1 mb-1 flex-shrink-0">
           {onDelete && (
             <button
               type="button"
@@ -153,7 +153,7 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
         </div>
       )}
 
-      <div className="max-w-[85%] relative">
+      <div className="max-w-[85%] relative min-w-0">
         {/* Thinking block above main content (assistant only) */}
         {message.role === 'assistant' && message.thinking && (
           <ThinkingBlock thinking={message.thinking} />
@@ -227,13 +227,15 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
             <>
               {message.role === 'assistant' ? (
                 <div className={cn(
-                  'prose prose-sm max-w-none break-words overflow-hidden',
+                  'prose prose-sm max-w-none break-words overflow-hidden min-w-0',
                   'text-text-primary',
                   'dark:prose-invert dark:text-text-primary-dark',
                   // Generous whitespace between elements (MSG-02)
                   '[&>*+*]:mt-4',
-                  '[&>pre]:my-4',
-                  '[&>ul]:my-3 [&>ol]:my-3'
+                  '[&>pre]:my-4 [&>pre]:overflow-x-auto',
+                  '[&>ul]:my-3 [&>ol]:my-3',
+                  // Ensure code blocks can scroll
+                  '[&_pre]:overflow-x-auto [&_code]:break-words'
                 )}>
                   <div dangerouslySetInnerHTML={{ __html: renderedContent || '' }} />
                   {message.isStreaming && (
@@ -244,7 +246,7 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
                   )}
                 </div>
               ) : (
-                <p className="text-sm whitespace-pre-wrap break-words">
+                <p className="text-sm whitespace-pre-wrap break-words min-w-0">
                   {message.content}
                 </p>
               )}
@@ -274,7 +276,7 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
 
       {/* Action buttons for assistant messages (right of bubble) */}
       {!isUser && isHovered && !isEditing && onDelete && (
-        <div className="flex gap-1 mb-1">
+        <div className="flex gap-1 mb-1 flex-shrink-0">
           <button
             type="button"
             onClick={handleDelete}
