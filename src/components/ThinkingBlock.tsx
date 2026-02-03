@@ -1,21 +1,33 @@
+import { ChevronRight } from 'lucide-preact';
+import { cn } from '../lib/utils';
+
 interface ThinkingBlockProps {
   thinking: string;
 }
 
 export default function ThinkingBlock({ thinking }: ThinkingBlockProps) {
   return (
-    <details className="mb-2 border border-gray-300 rounded-lg bg-gray-50">
-      <summary className="px-3 py-2 cursor-pointer text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-t-lg select-none flex items-center gap-1">
-        <svg
-          className="w-4 h-4 transition-transform duration-200 [details[open]>&]:rotate-90"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-        >
-          <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-        </svg>
+    <details className={cn(
+      'mb-2 rounded-lg border border-border bg-surface',
+      'dark:bg-surface-dark dark:border-border-dark'
+    )}>
+      <summary className={cn(
+        'px-3 py-2 cursor-pointer rounded-t-lg select-none flex items-center gap-1',
+        'text-sm font-medium text-text-secondary hover:bg-surface-hover',
+        'dark:text-text-secondary-dark dark:hover:bg-surface-hover-dark'
+      )}>
+        <ChevronRight
+          size={16}
+          className="transition-transform duration-200 [details[open]>&]:rotate-90"
+          aria-hidden="true"
+        />
         Show thinking
       </summary>
-      <div className="px-3 py-2 text-sm text-gray-600 border-t border-gray-200 whitespace-pre-wrap">
+      <div className={cn(
+        'px-3 py-2 text-sm border-t whitespace-pre-wrap',
+        'text-text-secondary border-border',
+        'dark:text-text-secondary-dark dark:border-border-dark'
+      )}>
         {thinking}
       </div>
     </details>
