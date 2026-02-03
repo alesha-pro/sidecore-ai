@@ -139,7 +139,7 @@ html.dark {
   margin: 0.5em 0;
   padding: 0.75em;
   border-radius: 0.375rem;
-  background-color: #f3f4f6;
+  background-color: var(--color-surface);
   overflow-x: auto;
 }
 
@@ -147,7 +147,7 @@ html.dark {
   font-size: 0.8125rem;
   padding: 0.125em 0.25em;
   border-radius: 0.25rem;
-  background-color: #f3f4f6;
+  background-color: var(--color-surface);
 }
 
 .prose pre code {
@@ -192,10 +192,11 @@ html.dark {
 }
 
 .prose blockquote {
-  border-left: 3px solid #d1d5db;
+  border-left: 3px solid;
+  border-left-color: var(--color-border);
   padding-left: 0.75em;
   margin: 0.5em 0;
-  color: #6b7280;
+  color: var(--color-text-secondary);
 }
 
 .prose table {
@@ -205,37 +206,15 @@ html.dark {
 }
 
 .prose th, .prose td {
-  border: 1px solid #e5e7eb;
+  border: 1px solid;
+  border-color: var(--color-border);
   padding: 0.375em 0.5em;
   text-align: left;
 }
 
 .prose th {
-  background-color: #f9fafb;
+  background-color: var(--color-surface);
   font-weight: 600;
-}
-
-/* Dark mode prose overrides */
-.dark .prose pre {
-  background-color: #1f2937;
-}
-
-.dark .prose code {
-  background-color: #374151;
-}
-
-.dark .prose blockquote {
-  border-left-color: #4b5563;
-  color: #9ca3af;
-}
-
-.dark .prose th {
-  background-color: #1f2937;
-}
-
-.dark .prose th,
-.dark .prose td {
-  border-color: #374151;
 }
 
 /* highlight.js GitHub theme for code blocks */
