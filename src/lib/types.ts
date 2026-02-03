@@ -164,3 +164,16 @@ export const LLM_PROVIDERS = [
 ] as const;
 
 export type LLMProvider = typeof LLM_PROVIDERS[number];
+
+// ============================================================================
+// Context Menu Actions
+// ============================================================================
+
+/**
+ * Context menu action message from background script
+ */
+export interface ContextMenuAction {
+  type: 'context-menu-action';
+  action: 'summarize-page' | 'ask-about-page';
+  tab: { id: number; title?: string; url?: string };
+}
