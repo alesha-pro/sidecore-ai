@@ -37,6 +37,7 @@ interface FormErrors {
   systemPrompt?: string;
   agentMaxIterations?: string;
   agentTimeoutMs?: string;
+  modelContextLimit?: string;
 }
 
 const emptyMcpServerDraft = (): McpServerDraft => ({
@@ -160,6 +161,13 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
       newErrors.contextBudget = 'Maximum budget is 1,000,000 characters';
     }
 
+    // Model context limit: must be reasonable range
+    if (formData.modelContextLimit < 4000) {
+      newErrors.modelContextLimit = 'Minimum is 4,000 tokens';
+    } else if (formData.modelContextLimit > 2000000) {
+      newErrors.modelContextLimit = 'Maximum is 2,000,000 tokens';
+    }
+
     // Agent max iterations: 1-25
     if (formData.agentMaxIterations < 1) {
       newErrors.agentMaxIterations = 'Minimum is 1 iteration';
@@ -224,7 +232,7 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
     const target = e.target as HTMLInputElement | HTMLSelectElement;
     let value: string | number | boolean;
 
-    if (field === 'contextBudget' || field === 'agentMaxIterations' || field === 'agentTimeoutMs') {
+    if (field === 'contextBudget' || field === 'modelContextLimit' || field === 'agentMaxIterations' || field === 'agentTimeoutMs') {
       value = parseInt(target.value, 10) || 0;
     } else if (field === 'showDebugPrompt' || field === 'showExtractionStatus' || field === 'agentMode') {
       value = (target as HTMLInputElement).checked;
@@ -582,6 +590,27 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                 'text-text-secondary dark:text-text-secondary-dark'
               )}>
                 Maximum extracted content per request. Default: 50,000
+              </p>
+            )}
+
+            {/* Model Context Limit */}
+            <Input
+              id="modelContextLimit"
+              label="Model Context Limit (tokens)"
+              type="number"
+              value={formData.modelContextLimit}
+              onInput={handleChange('modelContextLimit')}
+              min="4000"
+              max="2000000"
+              step="1000"
+              error={errors.modelContextLimit}
+            />
+            {!errors.modelContextLimit && (
+              <p className={cn(
+                'mt-1 text-xs',
+                'text-text-secondary dark:text-text-secondary-dark'
+              )}>
+                Maximum tokens for conversation context. Default: 128,000
               </p>
             )}
 
