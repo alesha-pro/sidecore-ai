@@ -142,17 +142,17 @@ export const MOCK_BUILT_IN_TOOLS: Tool[] = [
     execute: async () => 'Mock: Web search not available',
   },
   {
-    name: 'calculator',
-    description: 'Perform mathematical calculations',
+    name: 'fetch',
+    description: 'Fetch content from a URL',
     source: 'built-in',
     parameters: {
       type: 'object',
       properties: {
-        expression: { type: 'string', description: 'Math expression to evaluate' },
+        url: { type: 'string', description: 'URL to fetch content from' },
       },
-      required: ['expression'],
+      required: ['url'],
     },
-    execute: async () => 'Mock: Calculator not available',
+    execute: async () => 'Mock: Fetch not available',
   },
 ];
 
