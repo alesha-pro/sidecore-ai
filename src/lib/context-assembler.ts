@@ -106,35 +106,46 @@ export function assembleContext(options: AssembleOptions): AssembleResult {
     return apiMsg;
   });
 
-  // 4. Compress old tool results
-  // Find the last assistant message index to determine which tool results are "consumed"
-  let lastAssistantIndex = -1;
+  // 4. Compress old tool results based on age (assistant turns since tool result)
+  // Count assistant messages after each position to determine tool result age
+  const TOOL_TRUNCATE_LIMIT = 5000;  // chars to keep for recent tool results
+  const TOOL_AGE_THRESHOLD = 5;      // assistant turns before full compression
+
+  // Build suffix count of assistant messages from each position to end
+  const assistantTurnsAfter: number[] = new Array(messages.length).fill(0);
+  let assistantCount = 0;
   for (let i = messages.length - 1; i >= 0; i--) {
+    assistantTurnsAfter[i] = assistantCount;
     if (messages[i].role === 'assistant') {
-      lastAssistantIndex = i;
-      break;
+      assistantCount++;
     }
   }
 
-  // Compress tool messages that appear before the last assistant message
   for (let i = 0; i < historyMessages.length; i++) {
     const msg = historyMessages[i];
     const originalMsg = messages[i];
 
-    if (msg.role === 'tool' && i < lastAssistantIndex) {
-      // This tool result has been consumed by a subsequent assistant message
-      const isError = originalMsg.content.includes('"error":');
-      const compressedContent = JSON.stringify({
-        tool: msg.name || 'unknown',
-        status: isError ? 'error' : 'ok',
-        chars: originalMsg.content.length,
-      });
+    if (msg.role !== 'tool') continue;
 
+    const turnsAfter = assistantTurnsAfter[i];
+    const originalLength = originalMsg.content.length;
+
+    if (turnsAfter >= TOOL_AGE_THRESHOLD) {
+      // Old tool result (5+ assistant turns ago): compress to descriptive marker
+      const isError = originalMsg.content.includes('"error"');
       historyMessages[i] = {
         ...msg,
-        content: compressedContent,
+        content: `[Tool result from ${msg.name || 'unknown'}: ${isError ? 'error' : 'success'}, ${originalLength.toLocaleString()} chars. Content compressed — the assistant already processed this result. Re-call the tool if you need the original data.]`,
+      };
+    } else if (turnsAfter > 0 && originalLength > TOOL_TRUNCATE_LIMIT) {
+      // Recent but large tool result: truncate to 5000 chars
+      historyMessages[i] = {
+        ...msg,
+        content: originalMsg.content.slice(0, TOOL_TRUNCATE_LIMIT) +
+          `\n\n... [truncated, originally ${originalLength.toLocaleString()} chars. Call the tool again if you need the full result.]`,
       };
     }
+    // turnsAfter === 0 (no assistant response yet): keep verbatim
   }
 
   // 5. Token-aware trimming
