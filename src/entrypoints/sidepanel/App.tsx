@@ -359,70 +359,32 @@ export default function App() {
     }
   }, [settings, getSelectedTabs]);
 
-  // Build preview messages for debug view (uses real extracted content)
+  // Build preview messages for debug view (uses assembleContext for accurate representation)
   const buildPreviewMessages = useCallback((content: string): LLMChatMessage[] => {
     if (!settings) return [];
 
-    const preview: LLMChatMessage[] = [];
+    // Build system prompt (same as handleSendMessage)
+    const languageInstruction = getLanguageInstruction(settings.responseLanguage);
+    const systemPromptContent = `Current date and time: ${getCurrentDateTime()}\n\n` + languageInstruction + (settings.systemPrompt || '');
 
-    // 1. System prompt with optional language instruction
-    if (settings.systemPrompt?.trim() || settings.responseLanguage !== 'auto') {
-      const languageInstruction = getLanguageInstruction(settings.responseLanguage);
-      const systemPromptContent = `Current date and time: ${getCurrentDateTime()}\n\n` + languageInstruction + (settings.systemPrompt || '');
-      if (systemPromptContent.trim()) {
-        preview.push({
-          role: 'system',
-          content: systemPromptContent,
-        });
-      }
-    }
-
-    // 2. Context from extracted content (real extraction, not placeholder)
+    // Build tab content from preview extraction (if any)
     const successfulExtractions = previewExtraction.filter((r) => !r.error && r.markdown);
-    if (successfulExtractions.length > 0) {
-      const systemMessage = 'Context sources:\n\n' + successfulExtractions
+    const tabContentSystemMessage = successfulExtractions.length > 0
+      ? 'Context sources:\n\n' + successfulExtractions
         .map((r) => `## ${r.title}\nSource: ${r.url}\n\n${r.markdown}`)
-        .join('\n\n');
-      preview.push({
-        role: 'system',
-        content: systemMessage,
-      });
-    }
+        .join('\n\n')
+      : null;
 
-    // 3. Conversation history (include tool_calls and tool metadata)
-    preview.push(...messages.map((msg) => {
-      const apiMsg: LLMChatMessage = {
-        role: msg.role,
-        content: msg.content,
-      };
+    // Use the same assembleContext as the real send flow
+    const { apiMessages } = assembleContext({
+      messages,
+      userContent: content.trim() || '(empty)',
+      systemPrompt: systemPromptContent.trim() ? systemPromptContent : '',
+      tabContentSystemMessage,
+      modelContextLimit: settings.modelContextLimit,
+    });
 
-      // Include tool_calls for assistant messages
-      if (msg.role === 'assistant' && msg.tool_calls) {
-        apiMsg.tool_calls = msg.tool_calls;
-      }
-
-      // Include tool_call_id and name for tool messages
-      if (msg.role === 'tool') {
-        if (msg.tool_call_id) {
-          apiMsg.tool_call_id = msg.tool_call_id;
-        }
-        if (msg.name) {
-          apiMsg.name = msg.name;
-        }
-      }
-
-      return apiMsg;
-    }));
-
-    // 4. Current user message
-    if (content.trim()) {
-      preview.push({
-        role: 'user',
-        content,
-      });
-    }
-
-    return preview;
+    return apiMessages;
   }, [settings, previewExtraction, messages]);
 
   // Preview messages for debug view
