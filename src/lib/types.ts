@@ -30,6 +30,8 @@ export interface Message {
   tool_call_id?: string;
   /** Name of the tool (for role: 'tool') */
   name?: string;
+  /** Marks this as an extracted-content system message (for content-as-history) */
+  contentMessageId?: string;
 }
 
 export interface Settings {
@@ -51,6 +53,8 @@ export interface Settings {
   /** MCP server IDs to disable (tools won't be registered) */
   disabledServers: string[];
   theme: ThemeMode;
+  /** Model context limit in tokens (used by ContextAssembler) */
+  modelContextLimit: number;
 }
 
 export const SUPPORTED_LANGUAGES = [
@@ -121,6 +125,7 @@ export const DEFAULT_SETTINGS: Settings = {
   disabledTools: [],
   disabledServers: [],
   theme: 'auto',
+  modelContextLimit: 128000,
 };
 
 export interface TabSelection {
