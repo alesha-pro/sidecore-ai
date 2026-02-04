@@ -66,6 +66,11 @@ export default function ChatHistory({
       continue;
     }
 
+    // Skip content injection messages (they're in history for LLM, not for UI)
+    if (message.contentMessageId) {
+      continue;
+    }
+
     // For assistant messages with tool_calls, look ahead for tool outputs
     let toolOutputs: Message[] = [];
     if (message.role === 'assistant' && message.tool_calls) {

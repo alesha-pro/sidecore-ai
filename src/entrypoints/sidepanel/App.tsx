@@ -32,6 +32,7 @@ import type { ToolCall } from '../../lib/types';
 import { toolRegistry, toToolDefinition } from '../../lib/tools';
 import { registerBuiltInTools } from '../../lib/tools/builtins';
 import { McpToolManager } from '../../lib/mcp';
+import { assembleContext } from '../../lib/context-assembler';
 
 // Helper function to get language instruction
 function getLanguageInstruction(languageCode: string): string {
@@ -490,65 +491,39 @@ export default function App() {
       }
 
       const successfulExtractions = extractionResults.filter((r) => !r.error && r.markdown);
-      let systemMessage = '';
+
+      // Content-as-history: inject extracted content into message history
       if (successfulExtractions.length > 0) {
-        systemMessage = 'Context sources:\n\n' + successfulExtractions
-          .map((r) => `## ${r.title}\nSource: ${r.url}\n\n${r.markdown}`)
-          .join('\n\n');
-      }
-
-      // Build API messages
-      const apiMessages: LLMChatMessage[] = [];
-
-      // 1. Add system prompt first with optional language instruction
-      if (settings.systemPrompt?.trim() || settings.responseLanguage !== 'auto') {
-        const languageInstruction = getLanguageInstruction(settings.responseLanguage);
-        const systemPromptContent = `Current date and time: ${getCurrentDateTime()}\n\n` + languageInstruction + (settings.systemPrompt || '');
-        if (systemPromptContent.trim()) {
-          apiMessages.push({
-            role: 'system' as const,
-            content: systemPromptContent,
-          });
-        }
-      }
-
-      // 2. Add system message with context if available
-      if (systemMessage) {
-        apiMessages.push({
-          role: 'system' as const,
-          content: systemMessage,
-        });
-      }
-
-      // 3. Add conversation history (include tool_calls for assistant, tool_call_id/name for tool messages)
-      apiMessages.push(...messages.map((msg) => {
-        const apiMsg: LLMChatMessage = {
-          role: msg.role,
-          content: msg.content,
+        const contentMsg: Message = {
+          id: crypto.randomUUID(),
+          role: 'user',
+          content: 'Context sources:\n\n' + successfulExtractions
+            .map((r) => `## ${r.title}\nSource: ${r.url}\n\n${r.markdown}`)
+            .join('\n\n'),
+          timestamp: Date.now(),
+          contentMessageId: crypto.randomUUID(), // marks as content injection
         };
+        setMessages((prev) => [...prev, contentMsg]);
+      }
 
-        // Include tool_calls for assistant messages
-        if (msg.role === 'assistant' && msg.tool_calls) {
-          apiMsg.tool_calls = msg.tool_calls;
-        }
+      // Build system prompt
+      const languageInstruction = getLanguageInstruction(settings.responseLanguage);
+      const systemPromptContent = `Current date and time: ${getCurrentDateTime()}\n\n` + languageInstruction + (settings.systemPrompt || '');
 
-        // Include tool_call_id and name for tool messages
-        if (msg.role === 'tool') {
-          if (msg.tool_call_id) {
-            apiMsg.tool_call_id = msg.tool_call_id;
-          }
-          if (msg.name) {
-            apiMsg.name = msg.name;
-          }
-        }
+      // Build tab content string (only if we just extracted, otherwise null)
+      const tabContentSystemMessage = successfulExtractions.length > 0
+        ? 'Context sources:\n\n' + successfulExtractions
+          .map((r) => `## ${r.title}\nSource: ${r.url}\n\n${r.markdown}`)
+          .join('\n\n')
+        : null;
 
-        return apiMsg;
-      }));
-
-      // 4. Add current user message
-      apiMessages.push({
-        role: 'user' as const,
-        content,
+      // Assemble context with smart management (compression, trimming, etc.)
+      const { apiMessages } = assembleContext({
+        messages, // Current history (before userMessage due to React batching)
+        userContent: content,
+        systemPrompt: systemPromptContent.trim() ? systemPromptContent : '',
+        tabContentSystemMessage,
+        modelContextLimit: settings.modelContextLimit,
       });
 
       // Always use agentic loop with automatic tool execution
