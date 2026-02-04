@@ -3,7 +3,7 @@
  *
  * Handles on-demand tab extraction via chrome.scripting.executeScript with:
  * - Restricted URL guards (chrome://, edge://, webstore)
- * - Deterministic budget enforcement (active tab first, then by index)
+ * - Fair-share budget enforcement with surplus redistribution
  * - Per-tab error tracking
  * - Attribution headers (title + URL) per tab
  */
@@ -146,37 +146,85 @@ export async function extractTabs(
 
   const orderedExtractions = activeTab ? [activeTab, ...otherTabs] : otherTabs;
 
-  let remaining = budget;
-  const budgetedResults: ExtractedTabContent[] = [];
+  // Fair-share budget enforcement with surplus redistribution
+  // Separate error tabs (pass through) from content tabs (budgeted)
+  const contentTabs = orderedExtractions.filter((e) => !e.error);
+  const errorTabs = orderedExtractions.filter((e) => e.error);
 
-  for (const extraction of orderedExtractions) {
-    // Skip tabs with errors (include in results but don't count against budget)
-    if (extraction.error) {
-      budgetedResults.push(extraction);
+  // If no content tabs, return all as-is
+  if (contentTabs.length === 0) {
+    return orderedExtractions;
+  }
+
+  // Calculate per-tab fair share
+  const perTabBudget = Math.floor(budget / contentTabs.length);
+
+  // First pass: allocate up to perTabBudget per tab, track surplus and tabs needing more
+  let surplus = 0;
+  const allocations: Array<{
+    extraction: ExtractedTabContent;
+    originalLength: number;
+    allocated: number;
+    needsMore: boolean;
+  }> = [];
+
+  for (const extraction of contentTabs) {
+    const originalLength = extraction.markdown.length;
+
+    if (originalLength <= perTabBudget) {
+      // Fits within fair share - use full markdown, donate surplus
+      allocations.push({
+        extraction,
+        originalLength,
+        allocated: originalLength,
+        needsMore: false,
+      });
+      surplus += perTabBudget - originalLength;
+    } else {
+      // Needs more than fair share - allocate perTabBudget for now
+      allocations.push({
+        extraction,
+        originalLength,
+        allocated: perTabBudget,
+        needsMore: true,
+      });
+    }
+  }
+
+  // Second pass: redistribute surplus to tabs needing more (in order)
+  for (const allocation of allocations) {
+    if (!allocation.needsMore || surplus === 0) {
       continue;
     }
 
-    const markdownLength = extraction.markdown.length;
+    const extraNeeded = allocation.originalLength - allocation.allocated;
+    const extraGiven = Math.min(extraNeeded, surplus);
 
-    if (markdownLength <= remaining) {
-      // Fits within budget
-      budgetedResults.push(extraction);
-      remaining -= markdownLength;
-    } else if (remaining > 0) {
-      // Partial fit - truncate
-      budgetedResults.push({
-        ...extraction,
-        markdown: extraction.markdown.slice(0, remaining),
-        truncated: true,
-      });
-      remaining = 0;
+    allocation.allocated += extraGiven;
+    surplus -= extraGiven;
+  }
+
+  // Build final budgeted results with truncation flags
+  const budgetedContentTabs = allocations.map((allocation) => {
+    const isTruncated = allocation.allocated < allocation.originalLength;
+
+    return {
+      ...allocation.extraction,
+      markdown: allocation.extraction.markdown.slice(0, allocation.allocated),
+      truncated: isTruncated,
+    };
+  });
+
+  // Reconstruct original ordering by interleaving error tabs back
+  const budgetedResults: ExtractedTabContent[] = [];
+  let contentIndex = 0;
+  let errorIndex = 0;
+
+  for (const extraction of orderedExtractions) {
+    if (extraction.error) {
+      budgetedResults.push(errorTabs[errorIndex++]);
     } else {
-      // No budget left - include as truncated with empty content
-      budgetedResults.push({
-        ...extraction,
-        markdown: '',
-        truncated: true,
-      });
+      budgetedResults.push(budgetedContentTabs[contentIndex++]);
     }
   }
 
