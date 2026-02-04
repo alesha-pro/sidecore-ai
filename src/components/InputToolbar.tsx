@@ -2,6 +2,7 @@ import { AtSign, Slash, ChevronDown, Sparkles, MonitorSmartphone, Wrench } from 
 import { useState } from 'preact/hooks';
 import { cn } from '../lib/utils';
 import { ToolsQuickToggle } from './ToolsQuickToggle';
+import type { McpServerConfig } from '../lib/types';
 
 interface InputToolbarProps {
   currentModel: string;
@@ -13,6 +14,7 @@ interface InputToolbarProps {
   onActiveTabChange?: (included: boolean) => void;
   disabledTools?: string[];
   disabledServers?: string[];
+  mcpServers?: McpServerConfig[];
   onToolToggle?: (toolName: string) => void;
   onServerToggle?: (serverId: string) => void;
 }
@@ -56,6 +58,7 @@ export function InputToolbar({
   onActiveTabChange,
   disabledTools = [],
   disabledServers = [],
+  mcpServers = [],
   onToolToggle,
   onServerToggle,
 }: InputToolbarProps) {
@@ -148,6 +151,7 @@ export function InputToolbar({
             onClose={() => setShowToolsPopup(false)}
             disabledTools={disabledTools}
             disabledServers={disabledServers}
+            mcpServers={mcpServers}
             onToolToggle={onToolToggle}
             onServerToggle={onServerToggle}
           />

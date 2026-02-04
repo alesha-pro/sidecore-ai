@@ -1196,6 +1196,7 @@ export default function App() {
             onActiveTabChange={handleToggleActiveTab}
             disabledTools={settings?.disabledTools ?? []}
             disabledServers={settings?.disabledServers ?? []}
+            mcpServers={settings?.mcpServers ?? []}
             onToolToggle={handleToolToggle}
             onServerToggle={handleServerToggle}
           />
