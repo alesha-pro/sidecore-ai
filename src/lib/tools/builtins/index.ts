@@ -6,11 +6,13 @@
 import type { ToolRegistry } from '../registry';
 import { fetchTool } from './fetch';
 import { searchTool } from './search';
+import { listTabsTool } from './list_tabs';
+import { readTabsTool } from './read_tabs';
 
 /**
  * Array of all built-in tools
  */
-export const builtInTools = [fetchTool, searchTool];
+export const builtInTools = [fetchTool, searchTool, listTabsTool, readTabsTool];
 
 /**
  * Register all built-in tools with the given registry.
@@ -25,3 +27,5 @@ export function registerBuiltInTools(registry: ToolRegistry): void {
 // Re-export individual tools for direct access
 export { fetchTool } from './fetch';
 export { searchTool } from './search';
+export { listTabsTool } from './list_tabs';
+export { readTabsTool } from './read_tabs';
