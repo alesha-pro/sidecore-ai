@@ -128,8 +128,8 @@ export class ToolRegistry {
  */
 export const MOCK_BUILT_IN_TOOLS: Tool[] = [
   {
-    name: 'web_search',
-    description: 'Search the web via Exa',
+    name: 'search',
+    description: 'Search the web using Exa',
     source: 'built-in',
     parameters: {
       type: 'object',
@@ -139,7 +139,7 @@ export const MOCK_BUILT_IN_TOOLS: Tool[] = [
       },
       required: ['query'],
     },
-    execute: async () => 'Mock: Web search not available',
+    execute: async () => 'Mock: Search not available',
   },
   {
     name: 'fetch',
