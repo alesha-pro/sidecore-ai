@@ -197,6 +197,8 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
         defaultModel: formData.defaultModel.trim(),
       };
 
+      console.log('[SettingsForm] Saving settings, mcpServers:', normalizedSettings.mcpServers);
+
       await onSave(normalizedSettings);
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : 'Failed to save settings');

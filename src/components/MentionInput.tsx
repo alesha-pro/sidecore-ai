@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback, useState } from 'preact/hooks';
 import type { TabInfo } from '../lib/tabs';
+import type { McpServerConfig } from '../lib/types';
 import { CommandPicker, COMMANDS, type Command } from './CommandPicker';
 import { InputToolbar } from './InputToolbar';
 import { cn } from '../lib/utils';
@@ -21,6 +22,7 @@ interface MentionInputProps {
   onActiveTabChange?: (included: boolean) => void;
   disabledTools?: string[];
   disabledServers?: string[];
+  mcpServers?: McpServerConfig[];
   onToolToggle?: (toolName: string) => void;
   onServerToggle?: (serverId: string) => void;
 }
@@ -47,6 +49,7 @@ export function MentionInput({
   onActiveTabChange,
   disabledTools,
   disabledServers,
+  mcpServers,
   onToolToggle,
   onServerToggle,
 }: MentionInputProps) {
@@ -579,6 +582,7 @@ export function MentionInput({
         onActiveTabChange={onActiveTabChange}
         disabledTools={disabledTools}
         disabledServers={disabledServers}
+        mcpServers={mcpServers}
         onToolToggle={onToolToggle}
         onServerToggle={onServerToggle}
       />

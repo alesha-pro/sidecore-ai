@@ -107,6 +107,7 @@ export default function App() {
     const loadSettingsAndChats = async () => {
       try {
         const loadedSettings = await getSettings();
+        console.log('[App] Loaded settings, mcpServers:', loadedSettings.mcpServers);
         setSettings(loadedSettings);
 
         if (!loadedSettings.baseUrl || !loadedSettings.apiKey) {

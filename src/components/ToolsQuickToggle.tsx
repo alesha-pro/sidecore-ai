@@ -49,6 +49,8 @@ export function ToolsQuickToggle({
 
   if (!isOpen) return null;
 
+  console.log('[ToolsQuickToggle] mcpServers:', mcpServers);
+
   return (
     <div
       ref={popupRef}
