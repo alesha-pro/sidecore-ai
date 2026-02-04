@@ -19,6 +19,10 @@ interface MentionInputProps {
   onSettingsClick?: () => void;
   includeActiveTab?: boolean;
   onActiveTabChange?: (included: boolean) => void;
+  disabledTools?: string[];
+  disabledServers?: string[];
+  onToolToggle?: (toolName: string) => void;
+  onServerToggle?: (serverId: string) => void;
 }
 
 interface ExtractedContent {
@@ -41,6 +45,10 @@ export function MentionInput({
   onSettingsClick,
   includeActiveTab = false,
   onActiveTabChange,
+  disabledTools,
+  disabledServers,
+  onToolToggle,
+  onServerToggle,
 }: MentionInputProps) {
   const inputRef = useRef<HTMLDivElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -566,10 +574,13 @@ export function MentionInput({
         onModelClick={onModelClick}
         onAtClick={handleAtClick}
         onSlashClick={handleSlashClick}
-        onSettingsClick={onSettingsClick || (() => {})}
         disabled={disabled}
         includeActiveTab={includeActiveTab}
         onActiveTabChange={onActiveTabChange}
+        disabledTools={disabledTools}
+        disabledServers={disabledServers}
+        onToolToggle={onToolToggle}
+        onServerToggle={onServerToggle}
       />
     </div>
   );

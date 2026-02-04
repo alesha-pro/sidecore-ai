@@ -303,6 +303,28 @@ export default function App() {
     }));
   }, []);
 
+  const handleToolToggle = useCallback((toolName: string) => {
+    if (!settings) return;
+    const isDisabled = settings.disabledTools.includes(toolName);
+    const disabledTools = isDisabled
+      ? settings.disabledTools.filter((name) => name !== toolName)
+      : [...settings.disabledTools, toolName];
+    const newSettings = { ...settings, disabledTools };
+    setSettings(newSettings);
+    saveSettings(newSettings);
+  }, [settings]);
+
+  const handleServerToggle = useCallback((serverId: string) => {
+    if (!settings) return;
+    const isDisabled = settings.disabledServers.includes(serverId);
+    const disabledServers = isDisabled
+      ? settings.disabledServers.filter((id) => id !== serverId)
+      : [...settings.disabledServers, serverId];
+    const newSettings = { ...settings, disabledServers };
+    setSettings(newSettings);
+    saveSettings(newSettings);
+  }, [settings]);
+
   // Extract content for preview (called when debug view opens)
   const extractForPreview = useCallback(async () => {
     if (!settings) return;
@@ -1172,6 +1194,10 @@ export default function App() {
             onSettingsClick={() => navigateTo('settings')}
             includeActiveTab={tabSelection.includeActiveTab}
             onActiveTabChange={handleToggleActiveTab}
+            disabledTools={settings?.disabledTools ?? []}
+            disabledServers={settings?.disabledServers ?? []}
+            onToolToggle={handleToolToggle}
+            onServerToggle={handleServerToggle}
           />
         </div>
       )}

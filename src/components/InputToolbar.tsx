@@ -1,5 +1,7 @@
-import { AtSign, Slash, ChevronDown, Sparkles, MonitorSmartphone } from 'lucide-preact';
+import { AtSign, Slash, ChevronDown, Sparkles, MonitorSmartphone, Wrench } from 'lucide-preact';
+import { useState } from 'preact/hooks';
 import { cn } from '../lib/utils';
+import { ToolsQuickToggle } from './ToolsQuickToggle';
 
 interface InputToolbarProps {
   currentModel: string;
@@ -9,6 +11,10 @@ interface InputToolbarProps {
   disabled?: boolean;
   includeActiveTab?: boolean;
   onActiveTabChange?: (included: boolean) => void;
+  disabledTools?: string[];
+  disabledServers?: string[];
+  onToolToggle?: (toolName: string) => void;
+  onServerToggle?: (serverId: string) => void;
 }
 
 // Extract short model name for display
@@ -48,8 +54,16 @@ export function InputToolbar({
   disabled = false,
   includeActiveTab = false,
   onActiveTabChange,
+  disabledTools = [],
+  disabledServers = [],
+  onToolToggle,
+  onServerToggle,
 }: InputToolbarProps) {
   const shortName = getShortModelName(currentModel);
+  const [showToolsPopup, setShowToolsPopup] = useState(false);
+
+  // Check if any tools are disabled for visual indicator
+  const hasDisabledTools = disabledTools.length > 0 || disabledServers.length > 0;
 
   return (
     <div className={cn(
@@ -109,6 +123,36 @@ export function InputToolbar({
       >
         <Slash size={16} />
       </button>
+
+      {/* Tools button */}
+      {onToolToggle && onServerToggle && (
+        <div className="relative flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => setShowToolsPopup(!showToolsPopup)}
+            disabled={disabled}
+            className={cn(
+              'p-1.5 rounded transition-colors',
+              'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              hasDisabledTools
+                ? 'text-amber-600 dark:text-amber-400'
+                : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover dark:text-text-secondary-dark dark:hover:text-text-primary-dark dark:hover:bg-surface-hover-dark'
+            )}
+            title={hasDisabledTools ? `Tools (${disabledTools.length + disabledServers.length} disabled)` : "Tools"}
+          >
+            <Wrench size={16} />
+          </button>
+          <ToolsQuickToggle
+            isOpen={showToolsPopup}
+            onClose={() => setShowToolsPopup(false)}
+            disabledTools={disabledTools}
+            disabledServers={disabledServers}
+            onToolToggle={onToolToggle}
+            onServerToggle={onServerToggle}
+          />
+        </div>
+      )}
 
       {/* Current Tab toggle button */}
       {onActiveTabChange && (
