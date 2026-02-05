@@ -240,13 +240,20 @@ export default function App() {
     navigateTo('chat');
   };
 
-  const getSelectedTabs = useCallback((overrideTabIds?: number[]) => {
+  const getSelectedTabs = useCallback((overrideTabIds?: number[], overrideTabs?: TabInfo[]) => {
     const selected: TabInfo[] = [];
 
     // If explicit tab IDs are provided (e.g., from context menu), use ONLY those
     // This bypasses tabSelection state entirely to avoid race conditions
     if (overrideTabIds && overrideTabIds.length > 0) {
       for (const tabId of overrideTabIds) {
+        // First check override tabs (passed directly, no state dependency)
+        const overrideTab = overrideTabs?.find((t) => t.id === tabId);
+        if (overrideTab) {
+          selected.push(overrideTab);
+          continue;
+        }
+        // Fall back to tabs state
         const tab = tabs.find((t) => t.id === tabId);
         if (tab) {
           selected.push(tab);
@@ -406,16 +413,17 @@ export default function App() {
     }
   }, [isDebugViewOpen, extractForPreview]);
 
-  const handleSendMessage = async (content: string, tabIds: number[] = []) => {
+  const handleSendMessage = async (content: string, tabIds: number[] = [], overrideChatId?: string, overrideTabs?: TabInfo[]) => {
     if (!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel) {
       return;
     }
 
     // Capture chatId at start to handle chat switching during streaming
-    const chatId = currentChatId;
+    // overrideChatId bypasses stale closure (used by context menu actions)
+    const chatId = overrideChatId || currentChatId;
     if (!chatId) return;
 
-    const selectedTabs = getSelectedTabs(tabIds);
+    const selectedTabs = getSelectedTabs(tabIds, overrideTabs);
     console.log('Selected tabs for context:', selectedTabs.map(t => ({ id: t.id, title: t.title })));
 
     const userMessage: Message = {
@@ -780,10 +788,22 @@ export default function App() {
       // Trigger action based on menu item
       if (action === 'summarize-page') {
         console.log('[App] Sending summarize request for tab:', pending.tab.id);
-        // Pass explicit tab ID to handleSendMessage to avoid relying on stale React state
-        setTimeout(() => {
-          handleSendMessage('Please summarize this page concisely, highlighting the key points.', [pending.tab.id]);
-        }, 100);
+        // Pass explicit chatId and TabInfo to bypass all stale closure/state issues
+        const tabInfo: TabInfo = {
+          id: pending.tab.id,
+          title: pending.tab.title || 'Untitled',
+          url: pending.tab.url || '',
+          favIconUrl: pending.tab.favIconUrl,
+          active: true,
+          windowId: 0,
+          index: 0,
+        };
+        await handleSendMessage(
+          'Please summarize this page concisely, highlighting the key points.',
+          [pending.tab.id],
+          newChat.id,
+          [tabInfo]
+        );
       }
       // 'ask-about-page' just prepares context, user types question
     };

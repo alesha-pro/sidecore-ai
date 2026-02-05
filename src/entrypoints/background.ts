@@ -35,7 +35,7 @@ export default defineBackground(() => {
     chrome.storage.session.set({
       pendingContextMenuAction: {
         action: info.menuItemId,
-        tab: { id: tab.id, title: tab.title, url: tab.url },
+        tab: { id: tab.id, title: tab.title, url: tab.url, favIconUrl: tab.favIconUrl },
         timestamp: Date.now(),
       },
     }).then(() => {
