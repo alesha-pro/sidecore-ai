@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'preact/hooks';
-import { Check } from 'lucide-preact';
+import { Check, Search } from 'lucide-preact';
 import { cn } from '../lib/utils';
 
 interface ModelSelectorPopupProps {
@@ -19,6 +19,7 @@ export function ModelSelectorPopup({
 }: ModelSelectorPopupProps) {
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [customInput, setCustomInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const popupRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -26,6 +27,20 @@ export function ModelSelectorPopup({
   const allModels = Array.from(
     new Set([currentModel, ...savedModels].filter((m) => m.trim()))
   );
+
+  // Filter models by search query
+  const filteredModels = searchQuery.trim()
+    ? allModels.filter(m => m.toLowerCase().includes(searchQuery.toLowerCase()))
+    : allModels;
+
+  // Reset state when popup opens
+  useEffect(() => {
+    if (isOpen) {
+      setSearchQuery('');
+      setIsCustomMode(false);
+      setCustomInput('');
+    }
+  }, [isOpen]);
 
   // Close on click outside
   useEffect(() => {
@@ -56,7 +71,6 @@ export function ModelSelectorPopup({
       if (e.key === 'Escape') {
         if (isCustomMode) {
           setIsCustomMode(false);
-          setCustomInput('');
         } else {
           onClose();
         }
@@ -76,8 +90,6 @@ export function ModelSelectorPopup({
     const trimmed = customInput.trim();
     if (trimmed) {
       onModelChange(trimmed);
-      setIsCustomMode(false);
-      setCustomInput('');
       onClose();
     }
   };
@@ -88,7 +100,6 @@ export function ModelSelectorPopup({
       handleCustomSave();
     } else if (e.key === 'Escape') {
       setIsCustomMode(false);
-      setCustomInput('');
     }
   };
 
@@ -126,6 +137,35 @@ export function ModelSelectorPopup({
           </button>
         </div>
 
+        {/* Search input - only in model list view */}
+        {!isCustomMode && (
+          <div className={cn(
+            'px-3 py-2 border-b border-border',
+            'dark:border-border-dark'
+          )}>
+            <div className="relative">
+              <Search size={14} className={cn(
+                'absolute left-2.5 top-1/2 -translate-y-1/2',
+                'text-text-tertiary dark:text-text-tertiary-dark'
+              )} />
+              <input
+                type="text"
+                value={searchQuery}
+                onInput={(e) => setSearchQuery((e.target as HTMLInputElement).value)}
+                placeholder="Search models..."
+                className={cn(
+                  'w-full pl-8 pr-3 py-1.5 text-sm rounded-md',
+                  'border border-border bg-background text-text-primary',
+                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                  'dark:bg-background-dark dark:border-border-dark dark:text-text-primary-dark',
+                  'placeholder:text-text-tertiary dark:placeholder:text-text-tertiary-dark'
+                )}
+                autoFocus
+              />
+            </div>
+          </div>
+        )}
+
         <div className="max-h-64 overflow-y-auto">
           {isCustomMode ? (
             <div className="p-3">
@@ -160,10 +200,7 @@ export function ModelSelectorPopup({
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  setIsCustomMode(false);
-                  setCustomInput('');
-                }}
+                onClick={() => setIsCustomMode(false)}
                 className={cn(
                   'mt-2 text-xs',
                   'text-text-secondary hover:text-text-primary',
@@ -175,7 +212,7 @@ export function ModelSelectorPopup({
             </div>
           ) : (
             <ul className="py-1">
-              {allModels.map((model) => {
+              {filteredModels.map((model) => {
                 const isSelected = model === currentModel;
                 return (
                   <li key={model}>
@@ -202,6 +239,14 @@ export function ModelSelectorPopup({
                   </li>
                 );
               })}
+              {filteredModels.length === 0 && searchQuery.trim() && (
+                <li className={cn(
+                  'px-4 py-3 text-sm text-center',
+                  'text-text-secondary dark:text-text-secondary-dark'
+                )}>
+                  No models matching "{searchQuery}"
+                </li>
+              )}
               <li>
                 <button
                   type="button"
