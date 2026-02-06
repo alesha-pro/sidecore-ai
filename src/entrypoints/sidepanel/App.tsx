@@ -732,41 +732,37 @@ export default function App() {
         console.error('[App] Suggestion generation failed:', err);
       });
     } catch (error) {
+      // Clean up any streaming assistant message on all error types
+      setMessages((prev) => {
+        const streamingIdx = prev.findIndex(
+          (m) => m.role === 'assistant' && m.isStreaming
+        );
+        if (streamingIdx === -1) return prev;
+        const streamingMessage = prev[streamingIdx];
+        // Remove empty streaming placeholders, finalize non-empty ones
+        if (!streamingMessage.content && !streamingMessage.tool_calls?.length) {
+          return [...prev.slice(0, streamingIdx), ...prev.slice(streamingIdx + 1)];
+        }
+        return [
+          ...prev.slice(0, streamingIdx),
+          { ...streamingMessage, isStreaming: false },
+          ...prev.slice(streamingIdx + 1),
+        ];
+      });
+
       if (error instanceof LLMError) {
         setLLMError(error.userMessage);
         console.error(error.toLogString());
       } else if (error instanceof DOMException && error.name === 'AbortError') {
-        // Agent loop or request was aborted
         console.log('Request aborted successfully.');
         setLLMError('Generation stopped.');
-        setMessages((prev) => {
-          const lastMessage = prev[prev.length - 1];
-          if (lastMessage && lastMessage.isStreaming) {
-            return [
-              ...prev.slice(0, -1),
-              { ...lastMessage, isStreaming: false },
-            ];
-          }
-          return prev;
-        });
       } else if (abortController.signal.aborted) {
         console.log('LLM request aborted successfully.');
         setLLMError('Generation stopped.');
-        setMessages((prev) => {
-          const lastMessage = prev[prev.length - 1];
-          if (lastMessage && lastMessage.isStreaming) {
-            return [
-              ...prev.slice(0, -1),
-              { ...lastMessage, isStreaming: false },
-            ];
-          }
-          return prev;
-        });
       } else if (error instanceof Error && (
         error.message === 'Agent loop timed out' ||
         error.message === 'Agent loop exceeded max iterations'
       )) {
-        // Agent loop specific errors - show user-friendly message
         setLLMError(error.message);
         console.error('Agent loop error:', error.message);
       } else {
