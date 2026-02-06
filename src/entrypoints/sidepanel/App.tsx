@@ -1313,6 +1313,7 @@ export default function App() {
             promptProfiles={settings?.promptProfiles ?? []}
             activePromptProfileId={settings?.activePromptProfileId ?? null}
             onProfileChange={handleProfileChange}
+            customSlashCommands={settings?.customSlashCommands ?? []}
           />
         </div>
       )}

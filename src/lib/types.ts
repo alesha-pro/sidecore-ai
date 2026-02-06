@@ -73,6 +73,8 @@ export interface Settings {
   promptProfiles: PromptProfile[];
   /** Currently active prompt profile ID (null = no profile) */
   activePromptProfileId: string | null;
+  /** User-defined slash commands */
+  customSlashCommands: SlashCommand[];
 }
 
 export const SUPPORTED_LANGUAGES = [
@@ -132,6 +134,13 @@ export interface PromptProfile {
   prompt: string;
 }
 
+export interface SlashCommand {
+  id: string;
+  name: string;       // command name without "/" (e.g., "review")
+  description: string; // short description shown in picker
+  prompt: string;      // template text inserted into input
+}
+
 export const DEFAULT_PROMPT_PROFILES: PromptProfile[] = [
   {
     id: 'summarization',
@@ -176,6 +185,7 @@ export const DEFAULT_SETTINGS: Settings = {
   titleGenSavedModels: [],
   promptProfiles: [...DEFAULT_PROMPT_PROFILES],
   activePromptProfileId: null,
+  customSlashCommands: [],
 };
 
 export interface TabSelection {

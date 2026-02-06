@@ -1,6 +1,6 @@
 import { useRef, useEffect, useCallback, useState, useMemo } from 'preact/hooks';
 import type { TabInfo } from '../lib/tabs';
-import type { McpServerConfig, PromptProfile } from '../lib/types';
+import type { McpServerConfig, PromptProfile, SlashCommand } from '../lib/types';
 import { CommandPicker, type Command } from './CommandPicker';
 import { InputToolbar } from './InputToolbar';
 import { cn } from '../lib/utils';
@@ -28,6 +28,7 @@ interface MentionInputProps {
   promptProfiles?: PromptProfile[];
   activePromptProfileId?: string | null;
   onProfileChange?: (profileId: string | null) => void;
+  customSlashCommands?: SlashCommand[];
 }
 
 interface ExtractedContent {
@@ -58,6 +59,7 @@ export function MentionInput({
   promptProfiles = [],
   activePromptProfileId,
   onProfileChange,
+  customSlashCommands = [],
 }: MentionInputProps) {
   const inputRef = useRef<HTMLDivElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -377,6 +379,16 @@ export function MentionInput({
     return commands;
   }, [promptProfiles, activePromptProfileId]);
 
+  // Generate custom commands from user settings
+  const customCommands: Command[] = useMemo(() => {
+    return (customSlashCommands ?? []).map(cmd => ({
+      name: `custom-${cmd.id}`,
+      label: `/${cmd.name}`,
+      description: cmd.description || cmd.prompt.slice(0, 60) + (cmd.prompt.length > 60 ? '...' : ''),
+      text: cmd.prompt,
+    }));
+  }, [customSlashCommands]);
+
   // Handle command selection from picker
   const handleCommandSelect = (command: Command) => {
     const container = inputRef.current;
@@ -566,7 +578,7 @@ export function MentionInput({
             }}
             onSelect={handleCommandSelect}
             filter={commandFilter}
-            extraCommands={profileCommands}
+            extraCommands={[...profileCommands, ...customCommands]}
           />
 
           {/* Input area with inline Send button */}

@@ -4,7 +4,7 @@ import type { MCPServer, Tool } from '../lib/tools';
 import { getMockServers, getMockTools, getServers, getTools } from '../lib/tools';
 import type { Settings, McpHeader } from '../lib/types';
 import { DEFAULT_SYSTEM_PROMPT, SUPPORTED_LANGUAGES, LLM_PROVIDERS, DEFAULT_PROMPT_PROFILES } from '../lib/types';
-import type { PromptProfile } from '../lib/types';
+import type { PromptProfile, SlashCommand } from '../lib/types';
 import { normalizeBaseUrl, validateBaseUrl } from '../lib/urlNormalization';
 import { listModels } from '../lib/llm/client';
 import { LLMError } from '../lib/llm/errors';
@@ -97,6 +97,11 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
   const [profileDraft, setProfileDraft] = useState({ name: '', prompt: '' });
   const [profileError, setProfileError] = useState<string | null>(null);
 
+  // Slash command editing state
+  const [editingCommand, setEditingCommand] = useState<SlashCommand | null>(null);
+  const [commandDraft, setCommandDraft] = useState({ name: '', description: '', prompt: '' });
+  const [commandError, setCommandError] = useState<string | null>(null);
+
   // Reset form when settings prop changes
   useEffect(() => {
     setFormData(settings);
@@ -112,6 +117,9 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
     setEditingProfile(null);
     setProfileDraft({ name: '', prompt: '' });
     setProfileError(null);
+    setEditingCommand(null);
+    setCommandDraft({ name: '', description: '', prompt: '' });
+    setCommandError(null);
   }, [settings]);
 
   useEffect(() => {
@@ -874,6 +882,302 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                         ...prev,
                         promptProfiles: [...DEFAULT_PROMPT_PROFILES],
                         activePromptProfileId: null,
+                      }));
+                    }}
+                  >
+                    Reset Defaults
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </details>
+
+        {/* Section: Slash Commands */}
+        <details className={cn(
+          'rounded-lg border border-border bg-surface',
+          'dark:bg-surface-dark dark:border-border-dark'
+        )}>
+          <summary className={cn(
+            'px-4 py-3 cursor-pointer select-none',
+            'text-base font-semibold text-text-primary',
+            'hover:bg-surface-hover',
+            'dark:text-text-primary-dark dark:hover:bg-surface-hover-dark'
+          )}>
+            Slash Commands
+          </summary>
+          <Divider className="my-0" />
+          <div className="px-4 pb-4 pt-3 space-y-4">
+            <p className={cn(
+              'text-xs',
+              'text-text-secondary dark:text-text-secondary-dark'
+            )}>
+              Create custom slash commands (e.g., /review, /fix) with prompt templates that appear when you type "/" in chat.
+            </p>
+
+            {/* Command list */}
+            <div className="space-y-2">
+              {formData.customSlashCommands.map((command) => (
+                <div
+                  key={command.id}
+                  className={cn(
+                    'flex items-start justify-between p-2 rounded-lg',
+                    'bg-surface-hover dark:bg-surface-hover-dark'
+                  )}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className={cn(
+                      'text-sm font-medium truncate',
+                      'text-text-primary dark:text-text-primary-dark'
+                    )}>
+                      /{command.name}
+                    </div>
+                    <div className={cn(
+                      'text-xs truncate',
+                      'text-text-secondary dark:text-text-secondary-dark'
+                    )}>
+                      {command.description || command.prompt.slice(0, 60) + (command.prompt.length > 60 ? '...' : '')}
+                    </div>
+                  </div>
+                  <div className="flex gap-1 ml-2 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingCommand(command);
+                        setCommandDraft({ name: command.name, description: command.description, prompt: command.prompt });
+                        setCommandError(null);
+                      }}
+                      className={cn(
+                        'p-1 transition-colors',
+                        'text-text-tertiary hover:text-text-primary',
+                        'dark:text-text-tertiary-dark dark:hover:text-text-primary-dark'
+                      )}
+                      title="Edit command"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                        <title>Edit</title>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newCommands = formData.customSlashCommands.filter(c => c.id !== command.id);
+                        setFormData(prev => ({ ...prev, customSlashCommands: newCommands }));
+                      }}
+                      className={cn(
+                        'p-1 transition-colors',
+                        'text-text-tertiary hover:text-red-600',
+                        'dark:text-text-tertiary-dark dark:hover:text-red-400'
+                      )}
+                      title="Delete command"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                        <title>Delete</title>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Edit/Create command form */}
+            {editingCommand ? (
+              <div className={cn(
+                'space-y-3 pt-2 border-t',
+                'border-border dark:border-border-dark'
+              )}>
+                <div className={cn(
+                  'text-sm font-medium',
+                  'text-text-primary dark:text-text-primary-dark'
+                )}>Edit Command</div>
+                <div>
+                  <Input
+                    id="commandName"
+                    label="Name"
+                    type="text"
+                    value={commandDraft.name}
+                    onInput={(e) => {
+                      setCommandDraft(prev => ({ ...prev, name: (e.target as HTMLInputElement).value }));
+                      setCommandError(null);
+                    }}
+                    placeholder="review"
+                  />
+                  <p className={cn(
+                    'mt-1 text-xs',
+                    'text-text-secondary dark:text-text-secondary-dark'
+                  )}>
+                    Command name (letters, numbers, hyphens, underscores)
+                  </p>
+                </div>
+                <Input
+                  id="commandDescription"
+                  label="Description"
+                  type="text"
+                  value={commandDraft.description}
+                  onInput={(e) => {
+                    setCommandDraft(prev => ({ ...prev, description: (e.target as HTMLInputElement).value }));
+                    setCommandError(null);
+                  }}
+                  placeholder="Review code for issues"
+                />
+                <div>
+                  <label htmlFor="commandPrompt" className={cn(
+                    'block text-sm font-medium mb-1',
+                    'text-text-primary dark:text-text-primary-dark'
+                  )}>Prompt</label>
+                  <textarea
+                    id="commandPrompt"
+                    value={commandDraft.prompt}
+                    onInput={(e) => {
+                      setCommandDraft(prev => ({ ...prev, prompt: (e.target as HTMLTextAreaElement).value }));
+                      setCommandError(null);
+                    }}
+                    rows={4}
+                    className={cn(
+                      'w-full px-3 py-2 text-sm rounded-md border font-mono',
+                      'bg-background border-border text-text-primary',
+                      'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1',
+                      'dark:bg-background-dark dark:border-border-dark dark:text-text-primary-dark'
+                    )}
+                    placeholder="Review the following code for bugs, security issues..."
+                  />
+                </div>
+                {commandError && (
+                  <p className="text-sm text-red-600 dark:text-red-400">{commandError}</p>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      const trimmedName = commandDraft.name.trim();
+                      const trimmedPrompt = commandDraft.prompt.trim();
+                      if (!trimmedName) { setCommandError('Name is required'); return; }
+                      if (!/^[a-zA-Z0-9_-]+$/.test(trimmedName)) { setCommandError('Name can only contain letters, numbers, hyphens, and underscores'); return; }
+                      if (!trimmedPrompt) { setCommandError('Prompt is required'); return; }
+                      setFormData(prev => ({
+                        ...prev,
+                        customSlashCommands: prev.customSlashCommands.map(c =>
+                          c.id === editingCommand.id
+                            ? { ...c, name: trimmedName, description: commandDraft.description.trim(), prompt: trimmedPrompt }
+                            : c
+                        ),
+                      }));
+                      setEditingCommand(null);
+                      setCommandDraft({ name: '', description: '', prompt: '' });
+                    }}
+                    className="flex-1"
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => { setEditingCommand(null); setCommandDraft({ name: '', description: '', prompt: '' }); setCommandError(null); }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className={cn(
+                'space-y-3 pt-2 border-t',
+                'border-border dark:border-border-dark'
+              )}>
+                <div className={cn(
+                  'text-sm font-medium',
+                  'text-text-primary dark:text-text-primary-dark'
+                )}>Add Command</div>
+                <div>
+                  <Input
+                    id="newCommandName"
+                    label="Name"
+                    type="text"
+                    value={commandDraft.name}
+                    onInput={(e) => {
+                      setCommandDraft(prev => ({ ...prev, name: (e.target as HTMLInputElement).value }));
+                      setCommandError(null);
+                    }}
+                    placeholder="review"
+                  />
+                  <p className={cn(
+                    'mt-1 text-xs',
+                    'text-text-secondary dark:text-text-secondary-dark'
+                  )}>
+                    Command name (letters, numbers, hyphens, underscores)
+                  </p>
+                </div>
+                <Input
+                  id="newCommandDescription"
+                  label="Description"
+                  type="text"
+                  value={commandDraft.description}
+                  onInput={(e) => {
+                    setCommandDraft(prev => ({ ...prev, description: (e.target as HTMLInputElement).value }));
+                    setCommandError(null);
+                  }}
+                  placeholder="Review code for issues"
+                />
+                <div>
+                  <label htmlFor="newCommandPrompt" className={cn(
+                    'block text-sm font-medium mb-1',
+                    'text-text-primary dark:text-text-primary-dark'
+                  )}>Prompt</label>
+                  <textarea
+                    id="newCommandPrompt"
+                    value={commandDraft.prompt}
+                    onInput={(e) => {
+                      setCommandDraft(prev => ({ ...prev, prompt: (e.target as HTMLTextAreaElement).value }));
+                      setCommandError(null);
+                    }}
+                    rows={4}
+                    className={cn(
+                      'w-full px-3 py-2 text-sm rounded-md border font-mono',
+                      'bg-background border-border text-text-primary',
+                      'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1',
+                      'dark:bg-background-dark dark:border-border-dark dark:text-text-primary-dark'
+                    )}
+                    placeholder="Review the following code for bugs, security issues..."
+                  />
+                </div>
+                {commandError && (
+                  <p className="text-sm text-red-600 dark:text-red-400">{commandError}</p>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      const trimmedName = commandDraft.name.trim();
+                      const trimmedPrompt = commandDraft.prompt.trim();
+                      if (!trimmedName) { setCommandError('Name is required'); return; }
+                      if (!/^[a-zA-Z0-9_-]+$/.test(trimmedName)) { setCommandError('Name can only contain letters, numbers, hyphens, and underscores'); return; }
+                      if (!trimmedPrompt) { setCommandError('Prompt is required'); return; }
+                      const newCommand: SlashCommand = {
+                        id: crypto.randomUUID(),
+                        name: trimmedName,
+                        description: commandDraft.description.trim(),
+                        prompt: trimmedPrompt,
+                      };
+                      setFormData(prev => ({
+                        ...prev,
+                        customSlashCommands: [...prev.customSlashCommands, newCommand],
+                      }));
+                      setCommandDraft({ name: '', description: '', prompt: '' });
+                      setCommandError(null);
+                    }}
+                    className="flex-1"
+                    disabled={!commandDraft.name.trim() || !commandDraft.prompt.trim()}
+                  >
+                    Add Command
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        customSlashCommands: [],
                       }));
                     }}
                   >
