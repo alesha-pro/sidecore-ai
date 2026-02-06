@@ -300,8 +300,8 @@ export function MentionInput({
       return;
     }
 
-    // Submit on Enter (without Shift) when picker is closed
-    if (e.key === 'Enter' && !e.shiftKey && !isPickerOpen) {
+    // Submit on Enter (without Shift) when no picker is open
+    if (e.key === 'Enter' && !e.shiftKey && !isPickerOpen && !isCommandPickerOpen) {
       e.preventDefault();
       handleSend();
       return;
