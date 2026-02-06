@@ -138,7 +138,8 @@ export default function App() {
           const chat = await loadChat(mostRecent.id);
           if (chat) {
             setCurrentChatId(chat.id);
-            setMessages(chat.messages);
+            // Strip stale isStreaming from loaded messages
+            setMessages(chat.messages.map(m => m.isStreaming ? { ...m, isStreaming: false } : m));
           }
         } else {
           // Create initial chat
@@ -212,10 +213,19 @@ export default function App() {
           }
         }
 
+        // Strip isStreaming from messages before persisting (it is transient UI state)
+        const messagesToSave = messages.map(m => {
+          if (m.isStreaming) {
+            const { isStreaming, ...rest } = m;
+            return rest;
+          }
+          return m;
+        });
+
         const updatedChat: Chat = {
           ...currentChat,
           title,
-          messages,
+          messages: messagesToSave,
           updatedAt: Date.now(),
         };
 
@@ -231,6 +241,23 @@ export default function App() {
 
     saveChatAsync();
   }, [messages, currentChatId]);
+
+  // Reconcile streaming state when returning to chat view or switching chats
+  useEffect(() => {
+    if (currentView !== 'chat') return;
+
+    // Check if any message claims to be streaming but no active stream exists for this chat
+    const hasStreamingMessage = messages.some(m => m.isStreaming);
+    const hasActiveStream = currentChatId ? streamingChats.has(currentChatId) : false;
+
+    if (hasStreamingMessage && !hasActiveStream) {
+      console.log('[App] Reconciling stale streaming state: no active stream but messages have isStreaming=true');
+      setMessages(prev => prev.map(m =>
+        m.isStreaming ? { ...m, isStreaming: false } : m
+      ));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentView, currentChatId, streamingChats]);
 
   // Debounced chat search
   useEffect(() => {
@@ -957,7 +984,9 @@ export default function App() {
       const chat = await loadChat(id);
       if (chat) {
         setCurrentChatId(chat.id);
-        setMessages(chat.messages);
+        // Strip stale isStreaming from loaded messages (should already be stripped in storage,
+        // but defend against older saved data)
+        setMessages(chat.messages.map(m => m.isStreaming ? { ...m, isStreaming: false } : m));
         setExtractionResults([]); // Reset extraction status when switching chats
         setPreviewExtraction([]); // Reset preview extraction when switching chats
         setAnimatingTitle(null);
