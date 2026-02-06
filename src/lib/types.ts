@@ -69,10 +69,6 @@ export interface Settings {
   titleGenModel: string;
   /** Title generation: saved models for dropdown */
   titleGenSavedModels: string[];
-  /** User-managed prompt profiles */
-  promptProfiles: PromptProfile[];
-  /** Currently active prompt profile ID (null = no profile) */
-  activePromptProfileId: string | null;
   /** User-defined slash commands */
   customSlashCommands: SlashCommand[];
 }
@@ -128,36 +124,12 @@ For complex tasks, think step-by-step:
 - Cite sources when referencing context
 - Acknowledge limitations honestly`;
 
-export interface PromptProfile {
-  id: string;
-  name: string;
-  prompt: string;
-}
-
 export interface SlashCommand {
   id: string;
   name: string;       // command name without "/" (e.g., "review")
   description: string; // short description shown in picker
   prompt: string;      // template text inserted into input
 }
-
-export const DEFAULT_PROMPT_PROFILES: PromptProfile[] = [
-  {
-    id: 'summarization',
-    name: 'Summarization',
-    prompt: 'You are a summarization specialist. Focus on extracting and presenting the most important information concisely. Use bullet points for key takeaways. Highlight critical data, conclusions, and action items.',
-  },
-  {
-    id: 'code-review',
-    name: 'Code Review',
-    prompt: 'You are a code review expert. Analyze code for bugs, security issues, performance problems, and best practice violations. Suggest improvements with code examples. Be specific about line-level issues.',
-  },
-  {
-    id: 'research',
-    name: 'Research',
-    prompt: 'You are a research assistant. Provide thorough, well-structured analysis with evidence from the provided sources. Compare different viewpoints, identify gaps in information, and suggest areas for further investigation.',
-  },
-];
 
 export const DEFAULT_SETTINGS: Settings = {
   baseUrl: '',
@@ -183,8 +155,6 @@ export const DEFAULT_SETTINGS: Settings = {
   titleGenApiKey: '',
   titleGenModel: '',
   titleGenSavedModels: [],
-  promptProfiles: [...DEFAULT_PROMPT_PROFILES],
-  activePromptProfileId: null,
   customSlashCommands: [],
 };
 
