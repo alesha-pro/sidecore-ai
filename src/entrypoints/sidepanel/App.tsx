@@ -1258,7 +1258,6 @@ export default function App() {
             isLoading={isCurrentChatStreaming && !isStreaming}
             error={llmError}
             isStreaming={isStreaming}
-            onStop={handleStopStreaming}
             onEditMessage={handleEditMessage}
             onDeleteMessage={handleDeleteMessage}
             onRegenerate={handleRegenerate}

@@ -9,7 +9,6 @@ interface ChatHistoryProps {
   isLoading?: boolean;
   error?: string | null;
   isStreaming?: boolean;
-  onStop?: () => void;
   onEditMessage?: (id: string, newContent: string) => void;
   onDeleteMessage?: (id: string) => void;
   onRegenerate?: () => void;
@@ -22,7 +21,6 @@ export default function ChatHistory({
   isLoading,
   error,
   isStreaming,
-  onStop,
   onEditMessage,
   onDeleteMessage,
   onRegenerate,
@@ -161,24 +159,6 @@ export default function ChatHistory({
             </div>
           )}
         </>
-      )}
-      {isStreaming && onStop && (
-        <div className="flex justify-center py-2">
-          <button
-            type="button"
-            onClick={onStop}
-            className={cn(
-              'px-4 py-2 text-sm font-medium rounded-lg transition-colors',
-              'text-red-600 bg-red-50 border border-red-200',
-              'hover:bg-red-100',
-              'focus:outline-none focus:ring-2 focus:ring-red-500',
-              'dark:text-red-400 dark:bg-red-900/20 dark:border-red-800',
-              'dark:hover:bg-red-900/30'
-            )}
-          >
-            Stop generating
-          </button>
-        </div>
       )}
       {error && (
         <div className="flex flex-col items-center gap-2">
