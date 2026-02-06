@@ -30,7 +30,6 @@ import { runAgentLoop, AgentLoopCallbacks } from '../../lib/agent/agent-loop';
 import type { StreamingToolCallDelta } from '../../lib/streaming/streaming-types';
 import type { ToolCall } from '../../lib/types';
 import { toolRegistry, toToolDefinition } from '../../lib/tools';
-import { registerBuiltInTools } from '../../lib/tools/builtins';
 import { McpToolManager } from '../../lib/mcp';
 import { assembleContext } from '../../lib/context-assembler';
 
@@ -503,8 +502,7 @@ export default function App() {
       setCitationMap(newCitationMap);
 
       // Always use agentic loop with automatic tool execution
-      // Register built-in tools and get definitions
-      registerBuiltInTools(toolRegistry);
+      // Get tool definitions (built-in tools registered at module init)
       const disabledTools = new Set(settings.disabledTools ?? []);
       const disabledServers = new Set(settings.disabledServers ?? []);
       const tools = (await toolRegistry.getTools())

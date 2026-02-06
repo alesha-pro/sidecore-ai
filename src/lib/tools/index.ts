@@ -23,7 +23,11 @@ export {
 
 // Global registry instance for the application
 import { ToolRegistry } from './registry';
+import { registerBuiltInTools } from './builtins';
+
 export const toolRegistry = new ToolRegistry();
+// Register built-in tools once at module initialization
+registerBuiltInTools(toolRegistry);
 
 export const getTools = () => toolRegistry.getTools();
 export const getServers = () => toolRegistry.getServers();
