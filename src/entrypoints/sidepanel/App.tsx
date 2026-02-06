@@ -24,6 +24,7 @@ import {
   loadChat,
   saveChat,
   deleteChat,
+  clearAllChats,
   createChat,
   searchChats,
 } from '../../lib/chat-storage';
@@ -1016,9 +1017,28 @@ export default function App() {
     }
   }, [currentChatId, handleSelectChat, handleNewChat]);
 
-  const handleDeleteAllChats = useCallback(() => {
-    if (chats.length === 0) return;
-  }, [chats.length]);
+  const handleDeleteAllChats = useCallback(async () => {
+    const totalChats = chats.length;
+    if (totalChats === 0) return;
+
+    const label = totalChats === 1 ? 'chat' : 'chats';
+    if (!window.confirm(`Delete all ${totalChats} ${label}? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      streamingChats.forEach(({ abortController }) => {
+        abortController.abort();
+      });
+      setStreamingChats(new Map());
+
+      await clearAllChats();
+      await handleNewChat();
+      setSearchQuery('');
+    } catch (error) {
+      console.error('Failed to delete all chats:', error);
+    }
+  }, [chats.length, streamingChats, handleNewChat]);
 
   const handleEditMessage = useCallback(async (id: string, newContent: string) => {
     // Find the message being edited
