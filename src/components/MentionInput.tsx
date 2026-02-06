@@ -1,6 +1,6 @@
 import { useRef, useEffect, useCallback, useState, useMemo } from 'preact/hooks';
 import type { TabInfo } from '../lib/tabs';
-import type { McpServerConfig, PromptProfile, SlashCommand } from '../lib/types';
+import type { McpServerConfig, SlashCommand } from '../lib/types';
 import { CommandPicker, type Command } from './CommandPicker';
 import { InputToolbar } from './InputToolbar';
 import { cn } from '../lib/utils';
@@ -25,9 +25,6 @@ interface MentionInputProps {
   mcpServers?: McpServerConfig[];
   onToolToggle?: (toolName: string) => void;
   onServerToggle?: (serverId: string) => void;
-  promptProfiles?: PromptProfile[];
-  activePromptProfileId?: string | null;
-  onProfileChange?: (profileId: string | null) => void;
   customSlashCommands?: SlashCommand[];
 }
 
@@ -56,9 +53,6 @@ export function MentionInput({
   mcpServers,
   onToolToggle,
   onServerToggle,
-  promptProfiles = [],
-  activePromptProfileId,
-  onProfileChange,
   customSlashCommands = [],
 }: MentionInputProps) {
   const inputRef = useRef<HTMLDivElement>(null);
@@ -363,28 +357,6 @@ export function MentionInput({
     }
   };
 
-  // Generate profile commands for /profile slash command
-  const profileCommands: Command[] = useMemo(() => {
-    const commands: Command[] = [];
-    // "None" option to deactivate profile
-    commands.push({
-      name: 'profile-none',
-      label: '/profile none',
-      description: activePromptProfileId ? 'Deactivate current profile' : 'No profile (current)',
-      text: '',
-    });
-    for (const profile of promptProfiles) {
-      const isCurrent = profile.id === activePromptProfileId;
-      commands.push({
-        name: `profile-${profile.id}`,
-        label: `/profile ${profile.name.toLowerCase()}`,
-        description: isCurrent ? `${profile.name} (current)` : profile.name,
-        text: '',
-      });
-    }
-    return commands;
-  }, [promptProfiles, activePromptProfileId]);
-
   // Generate custom commands from user settings
   const customCommands: Command[] = useMemo(() => {
     return (customSlashCommands ?? []).map(cmd => ({
@@ -399,21 +371,6 @@ export function MentionInput({
   const handleCommandSelect = (command: Command) => {
     const container = inputRef.current;
     if (!container) return;
-
-    // Handle profile switching commands
-    if (command.name.startsWith('profile-')) {
-      const profileId = command.name === 'profile-none'
-        ? null
-        : command.name.replace('profile-', '');
-      onProfileChange?.(profileId);
-      // Clear input (don't send anything)
-      container.textContent = '';
-      setIsCommandPickerOpen(false);
-      setCommandFilter('');
-      onInputChange?.('');
-      container.focus();
-      return;
-    }
 
     // Clear existing content and set command text
     container.textContent = command.text;
@@ -436,12 +393,6 @@ export function MentionInput({
   const handleCommandSelectAndSend = (command: Command) => {
     const container = inputRef.current;
     if (!container) return;
-
-    // Profile commands: switch profile, clear input (don't send)
-    if (command.name.startsWith('profile-')) {
-      handleCommandSelect(command);
-      return;
-    }
 
     // Set command text in input
     container.textContent = command.text;
@@ -606,7 +557,7 @@ export function MentionInput({
             onSelect={handleCommandSelectAndSend}
             onComplete={handleCommandSelect}
             filter={commandFilter}
-            extraCommands={[...profileCommands, ...customCommands]}
+            extraCommands={customCommands}
           />
 
           {/* Input area with inline Send button */}
