@@ -294,6 +294,12 @@ export function MentionInput({
       }
     }
 
+    // Prevent Tab from moving focus when command picker is open
+    if (e.key === 'Tab' && isCommandPickerOpen) {
+      e.preventDefault();
+      return;
+    }
+
     // Submit on Enter (without Shift) when picker is closed
     if (e.key === 'Enter' && !e.shiftKey && !isPickerOpen) {
       e.preventDefault();
@@ -389,7 +395,7 @@ export function MentionInput({
     }));
   }, [customSlashCommands]);
 
-  // Handle command selection from picker
+  // Handle command selection from picker (Tab - autocomplete only, no send)
   const handleCommandSelect = (command: Command) => {
     const container = inputRef.current;
     if (!container) return;
@@ -424,6 +430,27 @@ export function MentionInput({
     setCommandFilter('');
     onInputChange?.(command.text);
     container.focus();
+  };
+
+  // Handle command selection and send (Enter - select AND send)
+  const handleCommandSelectAndSend = (command: Command) => {
+    const container = inputRef.current;
+    if (!container) return;
+
+    // Profile commands: switch profile, clear input (don't send)
+    if (command.name.startsWith('profile-')) {
+      handleCommandSelect(command);
+      return;
+    }
+
+    // Set command text in input
+    container.textContent = command.text;
+    setIsCommandPickerOpen(false);
+    setCommandFilter('');
+    onInputChange?.(command.text);
+
+    // Immediately send
+    handleSend();
   };
 
   // Handle input to detect @ and / triggers and notify parent of content changes
@@ -576,7 +603,8 @@ export function MentionInput({
               setIsCommandPickerOpen(false);
               setCommandFilter('');
             }}
-            onSelect={handleCommandSelect}
+            onSelect={handleCommandSelectAndSend}
+            onComplete={handleCommandSelect}
             filter={commandFilter}
             extraCommands={[...profileCommands, ...customCommands]}
           />
