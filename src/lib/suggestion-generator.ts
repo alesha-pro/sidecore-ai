@@ -1,4 +1,5 @@
 import type { Settings } from './types';
+import { SUPPORTED_LANGUAGES } from './types';
 import { createChatCompletion } from './llm/client';
 
 /**
@@ -9,7 +10,8 @@ import { createChatCompletion } from './llm/client';
 export async function generateSuggestions(
   settings: Settings,
   userMessage: string,
-  assistantMessage: string
+  assistantMessage: string,
+  languageCode: string = 'auto'
 ): Promise<string[]> {
   // Use title-gen provider (small model) or fall back to main provider
   const baseUrl = settings.titleGenUseSameProvider
@@ -30,7 +32,10 @@ export async function generateSuggestions(
       messages: [
         {
           role: 'system',
-          content: 'You suggest follow-up questions. Given a conversation snippet, output 1-3 short follow-up questions the user might ask next. Each question on its own line, no numbering, no bullets, no explanation. Questions should be specific, actionable, and under 60 characters.',
+          content: 'You suggest follow-up questions. Given a conversation snippet, output 1-3 short follow-up questions the user might ask next. Each question on its own line, no numbering, no bullets, no explanation. Questions should be specific, actionable, and under 60 characters.'
+            + (languageCode !== 'auto'
+              ? ` IMPORTANT: Write suggestions in ${SUPPORTED_LANGUAGES.find(l => l.code === languageCode)?.label || languageCode}.`
+              : ''),
         },
         {
           role: 'user',

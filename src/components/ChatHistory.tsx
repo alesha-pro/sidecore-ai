@@ -29,6 +29,13 @@ export default function ChatHistory({
   // Track new messages for animation
   const [animatedIds, setAnimatedIds] = useState<Set<string>>(new Set());
   const prevMessagesRef = useRef<Message[]>([]);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when new messages arrive or during streaming
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isStreaming, isLoading]);
 
   useEffect(() => {
     const prevIds = new Set(prevMessagesRef.current.map(m => m.id));
@@ -108,6 +115,7 @@ export default function ChatHistory({
 
   return (
     <div
+      ref={scrollRef}
       role="log"
       aria-live="polite"
       aria-label="Chat history"
@@ -172,6 +180,7 @@ export default function ChatHistory({
           </div>
         </div>
       )}
+      <div ref={bottomRef} />
     </div>
   );
 }

@@ -717,7 +717,7 @@ export default function App() {
 
       // Fire-and-forget: generate follow-up suggestions using small model
       const finalMessageId = currentStreamingId;
-      generateSuggestions(settings, content, mainContent).then((suggestions) => {
+      generateSuggestions(settings, content, mainContent, settings.responseLanguage).then((suggestions) => {
         if (suggestions.length === 0) return;
         setMessages((prev) => {
           const idx = prev.findIndex((m) => m.id === finalMessageId);
