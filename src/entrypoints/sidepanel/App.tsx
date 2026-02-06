@@ -1012,6 +1012,44 @@ export default function App() {
     setMessages((prev) => prev.filter((m) => m.id !== id));
   }, []);
 
+  const handleRegenerate = useCallback(() => {
+    if (!currentChatId || isCurrentChatStreaming) return;
+
+    // Find the latest assistant message (searching backwards)
+    let lastAssistantIdx = -1;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === 'assistant') {
+        lastAssistantIdx = i;
+        break;
+      }
+    }
+    if (lastAssistantIdx === -1) return;
+
+    // Find the preceding user message (skip tool messages between user and assistant)
+    let precedingUserIdx = -1;
+    for (let i = lastAssistantIdx - 1; i >= 0; i--) {
+      if (messages[i].role === 'user' && !messages[i].contentMessageId) {
+        precedingUserIdx = i;
+        break;
+      }
+    }
+    if (precedingUserIdx === -1) return;
+
+    const userContent = messages[precedingUserIdx].content;
+
+    // Remove everything from the assistant message onward (assistant + trailing tool messages)
+    const messagesToKeep = messages.slice(0, lastAssistantIdx);
+    // Also remove the preceding user message since handleSendMessage will add a new one
+    const messagesWithoutUser = messagesToKeep.slice(0, precedingUserIdx);
+    setMessages(messagesWithoutUser);
+
+    // Clear error state so regeneration starts clean
+    setLLMError(null);
+
+    // Re-send with the same user content
+    handleSendMessage(userContent);
+  }, [currentChatId, isCurrentChatStreaming, messages, handleSendMessage]);
+
   const handleSuggestionClick = useCallback((text: string) => {
     if (isCurrentChatStreaming) return;
     handleSendMessage(text);
@@ -1203,6 +1241,7 @@ export default function App() {
             onStop={handleStopStreaming}
             onEditMessage={handleEditMessage}
             onDeleteMessage={handleDeleteMessage}
+            onRegenerate={handleRegenerate}
             citationMap={citationMap}
             onSuggestionClick={handleSuggestionClick}
           />

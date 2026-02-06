@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
 import type { Message, CitationMap } from '../lib/types';
 import ChatMessage from './ChatMessage';
+import { RefreshCw } from 'lucide-preact';
 import { cn } from '../lib/utils';
 
 interface ChatHistoryProps {
@@ -11,6 +12,7 @@ interface ChatHistoryProps {
   onStop?: () => void;
   onEditMessage?: (id: string, newContent: string) => void;
   onDeleteMessage?: (id: string) => void;
+  onRegenerate?: () => void;
   citationMap?: CitationMap;
   onSuggestionClick?: (text: string) => void;
 }
@@ -23,6 +25,7 @@ export default function ChatHistory({
   onStop,
   onEditMessage,
   onDeleteMessage,
+  onRegenerate,
   citationMap,
   onSuggestionClick,
 }: ChatHistoryProps) {
@@ -65,6 +68,11 @@ export default function ChatHistory({
   const lastUserMessageIndex = messages.map((m, i) => ({ ...m, index: i }))
     .reverse()
     .find((m) => m.role === 'user')?.index;
+
+  // Find the last assistant message (for regenerate button)
+  const lastAssistantMessageIndex = messages.map((m, i) => ({ ...m, index: i }))
+    .reverse()
+    .find((m) => m.role === 'assistant')?.index;
   // Look-ahead rendering: collect tool outputs for assistant messages
   const renderedMessages: JSX.Element[] = [];
   const skippedIndices = new Set<number>();
@@ -103,12 +111,15 @@ export default function ChatHistory({
         key={message.id}
         message={message}
         isLastUserMessage={i === lastUserMessageIndex}
+        isLatestAssistantMessage={i === lastAssistantMessageIndex}
         onEdit={onEditMessage}
         onDelete={onDeleteMessage}
+        onRegenerate={onRegenerate}
         toolOutputs={toolOutputs.length > 0 ? toolOutputs : undefined}
         isNew={animatedIds.has(message.id)}
         citationMap={citationMap}
         onSuggestionClick={onSuggestionClick}
+        isStreaming={isStreaming}
       />
     );
   }
@@ -170,7 +181,7 @@ export default function ChatHistory({
         </div>
       )}
       {error && (
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-2">
           <div className={cn(
             'text-sm rounded-lg px-3 py-2',
             'text-red-600 bg-red-50 border border-red-200',
@@ -178,6 +189,23 @@ export default function ChatHistory({
           )}>
             {error}
           </div>
+          {onRegenerate && !isStreaming && lastAssistantMessageIndex !== undefined && (
+            <button
+              type="button"
+              onClick={onRegenerate}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors',
+                'text-text-secondary bg-surface border border-border',
+                'hover:bg-surface-hover hover:text-text-primary',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                'dark:text-text-secondary-dark dark:bg-surface-dark dark:border-border-dark',
+                'dark:hover:bg-surface-hover-dark dark:hover:text-text-primary-dark'
+              )}
+            >
+              <RefreshCw size={12} />
+              Regenerate
+            </button>
+          )}
         </div>
       )}
       <div ref={bottomRef} />

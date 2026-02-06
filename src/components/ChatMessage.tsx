@@ -2,7 +2,7 @@ import { useMemo, useState } from 'preact/hooks';
 import type { Message, CitationMap } from '../lib/types';
 import ThinkingBlock from './ThinkingBlock';
 import ToolCallBlock from './ToolCallBlock';
-import { Trash2, Pencil } from 'lucide-preact';
+import { Trash2, Pencil, RefreshCw } from 'lucide-preact';
 import { cn } from '../lib/utils';
 import { marked } from 'marked';
 import hljs from 'highlight.js/lib/core';
@@ -56,15 +56,18 @@ marked.use({
 interface ChatMessageProps {
   message: Message;
   isLastUserMessage?: boolean;
+  isLatestAssistantMessage?: boolean;
   onEdit?: (id: string, newContent: string) => void;
   onDelete?: (id: string) => void;
+  onRegenerate?: () => void;
   toolOutputs?: Message[];
   isNew?: boolean;
   citationMap?: CitationMap;
   onSuggestionClick?: (text: string) => void;
+  isStreaming?: boolean;
 }
 
-export default function ChatMessage({ message, isLastUserMessage, onEdit, onDelete, toolOutputs, isNew, citationMap, onSuggestionClick }: ChatMessageProps) {
+export default function ChatMessage({ message, isLastUserMessage, isLatestAssistantMessage, onEdit, onDelete, onRegenerate, toolOutputs, isNew, citationMap, onSuggestionClick, isStreaming }: ChatMessageProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [isHovered, setIsHovered] = useState(false);
@@ -334,21 +337,38 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
       </div>
 
       {/* Action buttons for assistant messages (right of bubble) */}
-      {!isUser && isHovered && !isEditing && onDelete && (
+      {!isUser && isHovered && !isEditing && (
         <div className="flex gap-1 mb-1 flex-shrink-0">
-          <button
-            type="button"
-            onClick={handleDelete}
-            className={cn(
-              'p-1.5 rounded-full transition-colors shadow-sm',
-              'bg-surface hover:bg-surface-hover text-text-secondary hover:text-red-500',
-              'dark:bg-surface-dark dark:hover:bg-surface-hover-dark dark:text-text-secondary-dark'
-            )}
-            title="Delete message"
-            aria-label="Delete message"
-          >
-            <Trash2 size={14} />
-          </button>
+          {isLatestAssistantMessage && onRegenerate && !isStreaming && (
+            <button
+              type="button"
+              onClick={onRegenerate}
+              className={cn(
+                'p-1.5 rounded-full transition-colors shadow-sm',
+                'bg-surface hover:bg-surface-hover text-text-secondary hover:text-accent',
+                'dark:bg-surface-dark dark:hover:bg-surface-hover-dark dark:text-text-secondary-dark'
+              )}
+              title="Regenerate response"
+              aria-label="Regenerate response"
+            >
+              <RefreshCw size={14} />
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              className={cn(
+                'p-1.5 rounded-full transition-colors shadow-sm',
+                'bg-surface hover:bg-surface-hover text-text-secondary hover:text-red-500',
+                'dark:bg-surface-dark dark:hover:bg-surface-hover-dark dark:text-text-secondary-dark'
+              )}
+              title="Delete message"
+              aria-label="Delete message"
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
         </div>
       )}
     </div>
