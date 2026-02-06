@@ -377,8 +377,8 @@ export default function App() {
     // Build tab content from preview extraction (if any)
     const successfulExtractions = previewExtraction.filter((r) => !r.error && r.markdown);
     const tabContentSystemMessage = successfulExtractions.length > 0
-      ? 'Context sources:\n\n' + successfulExtractions
-        .map((r) => `## ${r.title}\nSource: ${r.url}\n\n${r.markdown}`)
+      ? 'Context from the following sources. Cite sources using [1], [2], etc. when referencing information:\n\n' + successfulExtractions
+        .map((r, index) => `[${index + 1}] ${r.title}\nSource: ${r.url}\n\n${r.markdown}`)
         .join('\n\n')
       : null;
 
@@ -467,8 +467,8 @@ export default function App() {
         const contentMsg: Message = {
           id: crypto.randomUUID(),
           role: 'user',
-          content: 'Context sources:\n\n' + successfulExtractions
-            .map((r) => `## ${r.title}\nSource: ${r.url}\n\n${r.markdown}`)
+          content: 'Context from the following sources. Cite sources using [1], [2], etc. when referencing information:\n\n' + successfulExtractions
+            .map((r, index) => `[${index + 1}] ${r.title}\nSource: ${r.url}\n\n${r.markdown}`)
             .join('\n\n'),
           timestamp: Date.now(),
           contentMessageId: crypto.randomUUID(), // marks as content injection
@@ -482,8 +482,8 @@ export default function App() {
 
       // Build tab content string (only if we just extracted, otherwise null)
       const tabContentSystemMessage = successfulExtractions.length > 0
-        ? 'Context sources:\n\n' + successfulExtractions
-          .map((r) => `## ${r.title}\nSource: ${r.url}\n\n${r.markdown}`)
+        ? 'Context from the following sources. Cite sources using [1], [2], etc. when referencing information:\n\n' + successfulExtractions
+          .map((r, index) => `[${index + 1}] ${r.title}\nSource: ${r.url}\n\n${r.markdown}`)
           .join('\n\n')
         : null;
 
