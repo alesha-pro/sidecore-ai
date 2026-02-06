@@ -1301,6 +1301,8 @@ export default function App() {
             onToolToggle={handleToolToggle}
             onServerToggle={handleServerToggle}
             customSlashCommands={settings?.customSlashCommands ?? []}
+            isStreaming={isCurrentChatStreaming}
+            onStop={handleStopStreaming}
           />
         </div>
       )}
