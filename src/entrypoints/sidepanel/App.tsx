@@ -7,7 +7,7 @@ import { ExtractionStatus } from '../../components/ExtractionStatus';
 import { SelectedTabsBar } from '../../components/SelectedTabsBar';
 import { PromptDebugView } from '../../components/PromptDebugView';
 import { ModelSelectorPopup } from '../../components/ModelSelectorPopup';
-import { ChevronLeft, MessageSquarePlus, Settings } from 'lucide-preact';
+import { ChevronLeft, MessageSquarePlus, Settings, Sparkles } from 'lucide-preact';
 import { cn } from '../../lib/utils';
 import { useTheme } from '@/hooks/useTheme';
 import { useTabs } from '../../hooks/useTabs';
@@ -1005,16 +1005,26 @@ export default function App() {
           </button>
         )}
 
-        {/* Title */}
-        <h1 className={cn(
-          'flex-1 text-sm font-semibold truncate min-w-0',
-          'text-text-primary',
-          'dark:text-text-primary-dark'
-        )}>
-          {currentView === 'chat-list' && 'Chats'}
-          {currentView === 'chat' && (currentChat?.title || 'New Chat')}
-          {currentView === 'settings' && 'Settings'}
-        </h1>
+        {/* Logo and Title */}
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <Sparkles
+            size={20}
+            className={cn(
+              'flex-shrink-0',
+              'text-accent',
+              'dark:text-accent-dark'
+            )}
+          />
+          <h1 className={cn(
+            'text-sm font-semibold truncate',
+            'text-text-primary',
+            'dark:text-text-primary-dark'
+          )}>
+            {currentView === 'chat-list' && 'Chats'}
+            {currentView === 'chat' && (currentChat?.title || 'New Chat')}
+            {currentView === 'settings' && 'Settings'}
+          </h1>
+        </div>
 
         {/* Actions */}
         {currentView === 'chat-list' && (
