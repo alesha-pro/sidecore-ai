@@ -38,7 +38,8 @@ export const COMMANDS: Command[] = [
 interface CommandPickerProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (command: Command) => void;
+  onSelect: (command: Command) => void;   // Enter = select and send
+  onComplete?: (command: Command) => void; // Tab = autocomplete only
   filter?: string;
   extraCommands?: Command[];
 }
@@ -47,6 +48,7 @@ export function CommandPicker({
   isOpen,
   onClose,
   onSelect,
+  onComplete,
   filter = '',
   extraCommands = [],
 }: CommandPickerProps) {
@@ -82,6 +84,17 @@ export function CommandPicker({
           e.preventDefault();
           setActiveIndex((prev) => Math.max(prev - 1, 0));
           break;
+        case 'Tab':
+          if (activeIndex >= 0 && filteredCommands[activeIndex]) {
+            e.preventDefault();
+            if (onComplete) {
+              onComplete(filteredCommands[activeIndex]);
+            } else {
+              // Fallback: behave like Enter (select without send)
+              onSelect(filteredCommands[activeIndex]);
+            }
+          }
+          break;
         case 'Enter':
           if (activeIndex >= 0 && filteredCommands[activeIndex]) {
             e.preventDefault();
@@ -97,7 +110,7 @@ export function CommandPicker({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, activeIndex, filteredCommands, onSelect, onClose]);
+  }, [isOpen, activeIndex, filteredCommands, onSelect, onComplete, onClose]);
 
   // Close on click outside
   useEffect(() => {
