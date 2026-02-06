@@ -40,6 +40,7 @@ interface CommandPickerProps {
   onClose: () => void;
   onSelect: (command: Command) => void;
   filter?: string;
+  extraCommands?: Command[];
 }
 
 export function CommandPicker({
@@ -47,12 +48,14 @@ export function CommandPicker({
   onClose,
   onSelect,
   filter = '',
+  extraCommands = [],
 }: CommandPickerProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const pickerRef = useRef<HTMLDivElement>(null);
 
-  // Filter commands by name
-  const filteredCommands = COMMANDS.filter((cmd) =>
+  // Merge built-in and extra commands, then filter by name
+  const allCommands = [...COMMANDS, ...extraCommands];
+  const filteredCommands = allCommands.filter((cmd) =>
     cmd.name.toLowerCase().includes(filter.toLowerCase())
   );
 

@@ -1,7 +1,7 @@
-import { useRef, useEffect, useCallback, useState } from 'preact/hooks';
+import { useRef, useEffect, useCallback, useState, useMemo } from 'preact/hooks';
 import type { TabInfo } from '../lib/tabs';
-import type { McpServerConfig } from '../lib/types';
-import { CommandPicker, COMMANDS, type Command } from './CommandPicker';
+import type { McpServerConfig, PromptProfile } from '../lib/types';
+import { CommandPicker, type Command } from './CommandPicker';
 import { InputToolbar } from './InputToolbar';
 import { cn } from '../lib/utils';
 
@@ -25,6 +25,9 @@ interface MentionInputProps {
   mcpServers?: McpServerConfig[];
   onToolToggle?: (toolName: string) => void;
   onServerToggle?: (serverId: string) => void;
+  promptProfiles?: PromptProfile[];
+  activePromptProfileId?: string | null;
+  onProfileChange?: (profileId: string | null) => void;
 }
 
 interface ExtractedContent {
@@ -52,6 +55,9 @@ export function MentionInput({
   mcpServers,
   onToolToggle,
   onServerToggle,
+  promptProfiles = [],
+  activePromptProfileId,
+  onProfileChange,
 }: MentionInputProps) {
   const inputRef = useRef<HTMLDivElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -349,10 +355,47 @@ export function MentionInput({
     }
   };
 
+  // Generate profile commands for /profile slash command
+  const profileCommands: Command[] = useMemo(() => {
+    const commands: Command[] = [];
+    // "None" option to deactivate profile
+    commands.push({
+      name: 'profile-none',
+      label: '/profile none',
+      description: activePromptProfileId ? 'Deactivate current profile' : 'No profile (current)',
+      text: '',
+    });
+    for (const profile of promptProfiles) {
+      const isCurrent = profile.id === activePromptProfileId;
+      commands.push({
+        name: `profile-${profile.id}`,
+        label: `/profile ${profile.name.toLowerCase()}`,
+        description: isCurrent ? `${profile.name} (current)` : profile.name,
+        text: '',
+      });
+    }
+    return commands;
+  }, [promptProfiles, activePromptProfileId]);
+
   // Handle command selection from picker
   const handleCommandSelect = (command: Command) => {
     const container = inputRef.current;
     if (!container) return;
+
+    // Handle profile switching commands
+    if (command.name.startsWith('profile-')) {
+      const profileId = command.name === 'profile-none'
+        ? null
+        : command.name.replace('profile-', '');
+      onProfileChange?.(profileId);
+      // Clear input (don't send anything)
+      container.textContent = '';
+      setIsCommandPickerOpen(false);
+      setCommandFilter('');
+      onInputChange?.('');
+      container.focus();
+      return;
+    }
 
     // Clear existing content and set command text
     container.textContent = command.text;
@@ -523,6 +566,7 @@ export function MentionInput({
             }}
             onSelect={handleCommandSelect}
             filter={commandFilter}
+            extraCommands={profileCommands}
           />
 
           {/* Input area with inline Send button */}

@@ -334,6 +334,13 @@ export default function App() {
     saveSettings(newSettings);
   }, [settings]);
 
+  const handleProfileChange = useCallback((profileId: string | null) => {
+    if (!settings) return;
+    const newSettings = { ...settings, activePromptProfileId: profileId };
+    setSettings(newSettings);
+    saveSettings(newSettings);
+  }, [settings]);
+
   const handleServerToggle = useCallback((serverId: string) => {
     if (!settings) return;
     const isDisabled = settings.disabledServers.includes(serverId);
@@ -383,7 +390,11 @@ export default function App() {
 
     // Build system prompt (same as handleSendMessage)
     const languageInstruction = getLanguageInstruction(settings.responseLanguage);
-    const systemPromptContent = `Current date and time: ${getCurrentDateTime()}\n\n` + languageInstruction + (settings.systemPrompt || '');
+    const activeProfile = settings.activePromptProfileId
+      ? settings.promptProfiles.find(p => p.id === settings.activePromptProfileId)
+      : null;
+    const profileInstruction = activeProfile ? `## Active Profile: ${activeProfile.name}\n${activeProfile.prompt}\n\n` : '';
+    const systemPromptContent = `Current date and time: ${getCurrentDateTime()}\n\n` + languageInstruction + profileInstruction + (settings.systemPrompt || '');
 
     // Build tab content from preview extraction (if any)
     const successfulExtractions = previewExtraction.filter((r) => !r.error && r.markdown);
@@ -492,7 +503,11 @@ export default function App() {
 
       // Build system prompt
       const languageInstruction = getLanguageInstruction(settings.responseLanguage);
-      const systemPromptContent = `Current date and time: ${getCurrentDateTime()}\n\n` + languageInstruction + (settings.systemPrompt || '');
+      const activeProfile = settings.activePromptProfileId
+        ? settings.promptProfiles.find(p => p.id === settings.activePromptProfileId)
+        : null;
+      const profileInstruction = activeProfile ? `## Active Profile: ${activeProfile.name}\n${activeProfile.prompt}\n\n` : '';
+      const systemPromptContent = `Current date and time: ${getCurrentDateTime()}\n\n` + languageInstruction + profileInstruction + (settings.systemPrompt || '');
 
       // Build tab content string (only if we just extracted, otherwise null)
       const tabContentSystemMessage = successfulExtractions.length > 0
@@ -1276,6 +1291,9 @@ export default function App() {
             mcpServers={settings?.mcpServers ?? []}
             onToolToggle={handleToolToggle}
             onServerToggle={handleServerToggle}
+            promptProfiles={settings?.promptProfiles ?? []}
+            activePromptProfileId={settings?.activePromptProfileId ?? null}
+            onProfileChange={handleProfileChange}
           />
         </div>
       )}
