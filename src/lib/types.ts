@@ -55,6 +55,18 @@ export interface Settings {
   theme: ThemeMode;
   /** Model context limit in tokens (used by ContextAssembler) */
   modelContextLimit: number;
+  /** Title generation: enabled */
+  titleGenEnabled: boolean;
+  /** Title generation: use same provider as main model */
+  titleGenUseSameProvider: boolean;
+  /** Title generation: separate base URL */
+  titleGenBaseUrl: string;
+  /** Title generation: separate API key */
+  titleGenApiKey: string;
+  /** Title generation: model name */
+  titleGenModel: string;
+  /** Title generation: saved models for dropdown */
+  titleGenSavedModels: string[];
 }
 
 export const SUPPORTED_LANGUAGES = [
@@ -126,6 +138,12 @@ export const DEFAULT_SETTINGS: Settings = {
   disabledServers: [],
   theme: 'auto',
   modelContextLimit: 128000,
+  titleGenEnabled: true,
+  titleGenUseSameProvider: true,
+  titleGenBaseUrl: '',
+  titleGenApiKey: '',
+  titleGenModel: '',
+  titleGenSavedModels: [],
 };
 
 export interface TabSelection {

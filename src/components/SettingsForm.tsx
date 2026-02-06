@@ -84,6 +84,13 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
   const [mcpDraft, setMcpDraft] = useState<McpServerDraft>(emptyMcpServerDraft());
   const [mcpUrlError, setMcpUrlError] = useState<string | null>(null);
 
+  // Title generation provider state
+  const [titleGenSelectedProvider, setTitleGenSelectedProvider] = useState(() =>
+    getProviderFromUrl(settings.titleGenBaseUrl)
+  );
+  const [titleGenConnectionStatus, setTitleGenConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [titleGenConnectionError, setTitleGenConnectionError] = useState<string | null>(null);
+
   // Reset form when settings prop changes
   useEffect(() => {
     setFormData(settings);
@@ -93,6 +100,9 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
     setMcpUrlError(null);
     savedThemeRef.current = settings.theme;
     setSelectedProvider(getProviderFromUrl(settings.baseUrl));
+    setTitleGenSelectedProvider(getProviderFromUrl(settings.titleGenBaseUrl));
+    setTitleGenConnectionStatus('idle');
+    setTitleGenConnectionError(null);
   }, [settings]);
 
   useEffect(() => {
@@ -318,6 +328,38 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
     });
   };
 
+  const handleTitleGenProviderChange = (e: Event) => {
+    const providerId = (e.target as HTMLSelectElement).value;
+    setTitleGenSelectedProvider(providerId);
+    const provider = LLM_PROVIDERS.find(p => p.id === providerId);
+    if (provider && provider.id !== 'custom') {
+      setFormData(prev => ({ ...prev, titleGenBaseUrl: provider.baseUrl }));
+      setTitleGenConnectionStatus('idle');
+    }
+  };
+
+  const handleTitleGenTestConnection = async () => {
+    setTitleGenConnectionStatus('testing');
+    setTitleGenConnectionError(null);
+    try {
+      const normalizedBaseUrl = normalizeBaseUrl(formData.titleGenBaseUrl);
+      const models = await listModels(normalizedBaseUrl, formData.titleGenApiKey);
+      setTitleGenConnectionStatus('success');
+      const modelIds = models.map(m => m.id);
+      setFormData((prev) => ({
+        ...prev,
+        titleGenSavedModels: modelIds,
+        titleGenModel: prev.titleGenModel.trim() || (modelIds[0] ?? ''),
+      }));
+    } catch (error) {
+      setTitleGenConnectionStatus('error');
+      if (error instanceof LLMError) {
+        setTitleGenConnectionError(error.userMessage);
+      } else {
+        setTitleGenConnectionError('Failed to connect. Please check your settings.');
+      }
+    }
+  };
 
   return (
     <div className={cn(
@@ -554,6 +596,137 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                 </button>
               </div>
             </div>
+          </div>
+        </details>
+
+        {/* Section: Title Generation */}
+        <details className={cn(
+          'rounded-lg border border-border bg-surface',
+          'dark:bg-surface-dark dark:border-border-dark'
+        )}>
+          <summary className={cn(
+            'px-4 py-3 cursor-pointer select-none',
+            'text-base font-semibold text-text-primary',
+            'hover:bg-surface-hover',
+            'dark:text-text-primary-dark dark:hover:bg-surface-hover-dark'
+          )}>
+            Title Generation
+          </summary>
+          <Divider className="my-0" />
+          <div className="px-4 pb-4 pt-3 space-y-4">
+            <p className={cn(
+              'text-xs',
+              'text-text-secondary dark:text-text-secondary-dark'
+            )}>
+              Automatically generate chat titles using LLM after the first response.
+            </p>
+
+            <div className="flex flex-col gap-1">
+              <Toggle
+                checked={formData.titleGenEnabled}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, titleGenEnabled: checked }))}
+                label="Enable Title Generation"
+              />
+            </div>
+
+            {formData.titleGenEnabled && (
+              <>
+                <div className="flex flex-col gap-1">
+                  <Toggle
+                    checked={formData.titleGenUseSameProvider}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, titleGenUseSameProvider: checked }))}
+                    label="Use same provider as main model"
+                  />
+                </div>
+
+                {!formData.titleGenUseSameProvider && (
+                  <>
+                    <Select
+                      id="titleGenProvider"
+                      label="Provider"
+                      value={titleGenSelectedProvider}
+                      onChange={handleTitleGenProviderChange}
+                    >
+                      {LLM_PROVIDERS.map((provider) => (
+                        <option key={provider.id} value={provider.id}>
+                          {provider.name}
+                        </option>
+                      ))}
+                    </Select>
+
+                    <Input
+                      id="titleGenBaseUrl"
+                      label="Base URL"
+                      type="text"
+                      value={formData.titleGenBaseUrl}
+                      onInput={(e) => {
+                        setFormData(prev => ({ ...prev, titleGenBaseUrl: (e.target as HTMLInputElement).value }));
+                        setTitleGenSelectedProvider('custom');
+                        setTitleGenConnectionStatus('idle');
+                      }}
+                      placeholder="api.openai.com"
+                    />
+
+                    <Input
+                      id="titleGenApiKey"
+                      label="API Key"
+                      type="password"
+                      value={formData.titleGenApiKey}
+                      onInput={(e) => setFormData(prev => ({ ...prev, titleGenApiKey: (e.target as HTMLInputElement).value }))}
+                      placeholder="sk-..."
+                    />
+
+                    <div>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={handleTitleGenTestConnection}
+                        disabled={titleGenConnectionStatus === 'testing' || !formData.titleGenBaseUrl.trim() || !formData.titleGenApiKey.trim()}
+                        className="w-full"
+                      >
+                        {titleGenConnectionStatus === 'testing' && 'Testing...'}
+                        {titleGenConnectionStatus === 'success' && '\u2713 Connected'}
+                        {(titleGenConnectionStatus === 'idle' || titleGenConnectionStatus === 'error') && 'Test Connection'}
+                      </Button>
+                      {titleGenConnectionError && (
+                        <p className="mt-2 text-sm text-red-600 dark:text-red-400">{titleGenConnectionError}</p>
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* Model selector */}
+                {(() => {
+                  const modelsList = formData.titleGenUseSameProvider
+                    ? formData.savedModels
+                    : formData.titleGenSavedModels;
+                  return modelsList.length > 0 ? (
+                    <Select
+                      id="titleGenModel"
+                      label="Model"
+                      value={formData.titleGenModel}
+                      onChange={(e) => setFormData(prev => ({ ...prev, titleGenModel: (e.target as HTMLSelectElement).value }))}
+                    >
+                      <option value="">Use default model</option>
+                      {modelsList.map((modelId) => (
+                        <option key={modelId} value={modelId}>
+                          {modelId}
+                        </option>
+                      ))}
+                    </Select>
+                  ) : (
+                    <Input
+                      id="titleGenModel"
+                      label="Model"
+                      type="text"
+                      value={formData.titleGenModel}
+                      onInput={(e) => setFormData(prev => ({ ...prev, titleGenModel: (e.target as HTMLInputElement).value }))}
+                      placeholder="gpt-4o-mini (leave empty for default)"
+                    />
+                  );
+                })()}
+              </>
+            )}
           </div>
         </details>
 

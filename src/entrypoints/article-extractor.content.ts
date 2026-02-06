@@ -27,7 +27,7 @@ interface SiteExtractorResult {
  * Returns HTML content directly, bypassing Readability entirely
  * Return null to fall back to Readability
  */
-type SiteExtractor = (doc: Document) => SiteExtractorResult | null;
+type SiteExtractor = (doc: Document, url: string) => SiteExtractorResult | null;
 
 /**
  * Site extractors registry
@@ -40,7 +40,7 @@ const siteExtractors: Record<string, SiteExtractor> = {
    * 1. AI-generated "Related Answers" sidebar gets prioritized
    * 2. Comments in shreddit-comment web components get ignored
    */
-  'reddit.com': (doc: Document) => {
+  'reddit.com': (doc: Document, _url: string) => {
     // Get post title
     const titleEl = doc.querySelector('h1[id^="post-title"]');
     const title = titleEl?.textContent?.trim() || '';
@@ -113,6 +113,122 @@ const siteExtractors: Record<string, SiteExtractor> = {
 
     return { title, html };
   },
+
+  /**
+   * X.com/Twitter extractor - structured extraction of tweets and replies
+   * Handles both status pages (/status/) and timeline/feed pages (/home, profiles, etc.)
+   */
+  'x.com': (doc: Document, url: string) => {
+    const articles = doc.querySelectorAll('article[data-testid="tweet"]');
+    if (articles.length === 0) {
+      console.log('[article-extractor] X.com: no tweet articles found, falling back to Readability');
+      return null;
+    }
+
+    function extractTweet(article: Element) {
+      // Display name and handle from User-Name container
+      const userNameEl = article.querySelector('[data-testid="User-Name"]');
+      const userLinks = userNameEl?.querySelectorAll('a') || [];
+      const displayName = userLinks[0]?.textContent?.trim() || '';
+      // Handle: find link text starting with @
+      let handle = '';
+      for (const link of Array.from(userLinks)) {
+        const text = link.textContent?.trim() || '';
+        if (text.startsWith('@')) {
+          handle = text;
+          break;
+        }
+      }
+
+      // Verified badge
+      const verified = !!article.querySelector('[data-testid="icon-verified"]');
+
+      // Tweet text
+      const tweetTextEl = article.querySelector('[data-testid="tweetText"]');
+      const text = tweetTextEl?.textContent?.trim() || '';
+
+      // Timestamp
+      const timeEl = article.querySelector('time');
+      const datetime = timeEl?.getAttribute('datetime') || '';
+      let formattedTime = '';
+      if (datetime) {
+        const date = new Date(datetime);
+        formattedTime = date.toISOString().replace('T', ' ').replace(/:\d{2}\.\d{3}Z$/, ' UTC');
+      }
+
+      // Metrics from aria-label on the group role element
+      const metricsEl = article.querySelector('[role="group"][aria-label]');
+      const metrics = metricsEl?.getAttribute('aria-label') || '';
+
+      return { displayName, handle, verified, text, formattedTime, metrics };
+    }
+
+    const verifiedMark = (v: boolean) => v ? ' ✓' : '';
+    const isStatusPage = url.includes('/status/');
+
+    if (isStatusPage) {
+      // Status page: first article = main tweet, rest = replies
+      const mainTweet = extractTweet(articles[0]);
+      const replies = Array.from(articles).slice(1).map(extractTweet);
+
+      const title = `Tweet by ${mainTweet.displayName} (${mainTweet.handle})`;
+
+      let html = `<article>`;
+      html += `<h1>Tweet by ${mainTweet.displayName} (${mainTweet.handle})${verifiedMark(mainTweet.verified)}</h1>`;
+      html += `<p>${mainTweet.formattedTime}${mainTweet.metrics ? ' | ' + mainTweet.metrics : ''}</p>`;
+      html += `<p>${mainTweet.text}</p>`;
+
+      if (replies.length > 0) {
+        html += `<hr><h2>Replies</h2>`;
+        for (const reply of replies) {
+          html += `<h3>${reply.displayName} (${reply.handle})${verifiedMark(reply.verified)}</h3>`;
+          html += `<p>${reply.formattedTime}${reply.metrics ? ' | ' + reply.metrics : ''}</p>`;
+          html += `<p>${reply.text}</p>`;
+          html += `<hr>`;
+        }
+      }
+
+      html += `</article>`;
+
+      console.log('[article-extractor] X.com status extractor: extracted', {
+        title,
+        mainTweetLength: mainTweet.text.length,
+        repliesCount: replies.length
+      });
+
+      return { title, html };
+    } else {
+      // Timeline/feed page: all articles are independent tweets
+      const tweets = Array.from(articles).map(extractTweet).filter(t => t.text);
+
+      if (tweets.length === 0) {
+        console.log('[article-extractor] X.com: no tweets with text found, falling back to Readability');
+        return null;
+      }
+
+      const title = `X Timeline (${tweets.length} tweets)`;
+
+      let html = `<article>`;
+      html += `<h1>${title}</h1>`;
+      for (const tweet of tweets) {
+        html += `<h3>${tweet.displayName} (${tweet.handle})${verifiedMark(tweet.verified)}</h3>`;
+        html += `<p>${tweet.formattedTime}${tweet.metrics ? ' | ' + tweet.metrics : ''}</p>`;
+        html += `<p>${tweet.text}</p>`;
+        html += `<hr>`;
+      }
+      html += `</article>`;
+
+      console.log('[article-extractor] X.com timeline extractor: extracted', {
+        tweetsCount: tweets.length
+      });
+
+      return { title, html };
+    }
+  },
+
+  'twitter.com': function(doc: Document, url: string) {
+    return siteExtractors['x.com'](doc, url);
+  },
 };
 
 /**
@@ -125,25 +241,6 @@ type SiteHandler = (doc: Document) => void;
  * Site handlers registry (DOM preprocessing before Readability)
  */
 const siteHandlers: Record<string, SiteHandler> = {
-  /**
-   * Twitter/X handler - focuses on tweet content
-   */
-  'twitter.com': (doc: Document) => {
-    // Remove trending sidebar, who to follow, etc.
-    const sidebar = doc.querySelector('[data-testid="sidebarColumn"]');
-    sidebar?.remove();
-
-    // Remove bottom bar
-    const bottomBar = doc.querySelector('[data-testid="BottomBar"]');
-    bottomBar?.remove();
-  },
-
-  /**
-   * X.com handler (same as Twitter)
-   */
-  'x.com': (doc: Document) => {
-    siteHandlers['twitter.com'](doc);
-  },
 };
 
 /**
@@ -218,7 +315,7 @@ function extractArticle(): ArticleExtractionPayload {
     const siteExtractor = getSiteExtractor(hostname);
     if (siteExtractor) {
       console.log('[article-extractor] Trying site extractor for:', hostname);
-      const extractorResult = siteExtractor(documentClone);
+      const extractorResult = siteExtractor(documentClone, url);
 
       if (extractorResult) {
         // Convert HTML to Markdown

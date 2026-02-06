@@ -32,6 +32,8 @@ import type { ToolCall } from '../../lib/types';
 import { toolRegistry, toToolDefinition } from '../../lib/tools';
 import { McpToolManager } from '../../lib/mcp';
 import { assembleContext } from '../../lib/context-assembler';
+import { generateTitle } from '../../lib/title-generator';
+import { TypewriterTitle } from '../../components/TypewriterTitle';
 
 // Helper function to get language instruction
 function getLanguageInstruction(languageCode: string): string {
@@ -84,6 +86,10 @@ export default function App() {
 
   // Model selector popup state
   const [showModelSelector, setShowModelSelector] = useState(false);
+
+  // Title generation animation state
+  const [animatingTitle, setAnimatingTitle] = useState<string | null>(null);
+  const [isTitleAnimating, setIsTitleAnimating] = useState(false);
 
   // Chat management state
   const [chats, setChats] = useState<ChatSummary[]>([]);
@@ -192,7 +198,7 @@ export default function App() {
         if (!currentChat) return;
 
         let title = currentChat.title;
-        if (title === 'New Chat' && messages.length > 0) {
+        if (title === 'New Chat' && messages.length > 0 && !settings?.titleGenEnabled) {
           const firstUserMessage = messages.find((m) => m.role === 'user');
           if (firstUserMessage) {
             title = firstUserMessage.content.slice(0, 50);
@@ -225,6 +231,8 @@ export default function App() {
   const navigateTo = useCallback((view: View) => {
     setPreviousView(currentView);
     setCurrentView(view);
+    setAnimatingTitle(null);
+    setIsTitleAnimating(false);
   }, [currentView]);
 
   const handleBack = useCallback(() => {
@@ -475,7 +483,10 @@ export default function App() {
           timestamp: Date.now(),
           contentMessageId: crypto.randomUUID(), // marks as content injection
         };
-        setMessages((prev) => [...prev, contentMsg]);
+        setMessages((prev) => [
+          ...prev.filter(m => !m.contentMessageId),  // Remove old content messages
+          contentMsg,
+        ]);
       }
 
       // Build system prompt
@@ -681,6 +692,27 @@ export default function App() {
           ...prev.slice(streamingIdx + 1),
         ];
       });
+
+      // Fire-and-forget: generate title after first LLM response
+      if (settings.titleGenEnabled) {
+        loadChat(chatId).then((chat) => {
+          if (chat && chat.title === 'New Chat') {
+            generateTitle(settings, content, mainContent).then(async (title) => {
+              if (!title) return;
+              const freshChat = await loadChat(chatId);
+              if (!freshChat) return;
+              const updatedChat: Chat = { ...freshChat, title, updatedAt: Date.now() };
+              await saveChat(updatedChat);
+              const updatedChats = await listChats();
+              setChats(updatedChats);
+              setAnimatingTitle(title);
+              setIsTitleAnimating(true);
+            }).catch((err) => {
+              console.error('[App] Title generation failed:', err);
+            });
+          }
+        });
+      }
     } catch (error) {
       if (error instanceof LLMError) {
         setLLMError(error.userMessage);
@@ -875,6 +907,8 @@ export default function App() {
       setMessages([]);
       setExtractionResults([]); // Reset extraction status for new chat
       setPreviewExtraction([]); // Reset preview extraction for new chat
+      setAnimatingTitle(null);
+      setIsTitleAnimating(false);
       const updatedChats = await listChats();
       setChats(updatedChats);
     } catch (error) {
@@ -890,6 +924,8 @@ export default function App() {
         setMessages(chat.messages);
         setExtractionResults([]); // Reset extraction status when switching chats
         setPreviewExtraction([]); // Reset preview extraction when switching chats
+        setAnimatingTitle(null);
+        setIsTitleAnimating(false);
       }
     } catch (error) {
       console.error('Failed to load chat:', error);
@@ -1021,7 +1057,16 @@ export default function App() {
             'dark:text-text-primary-dark'
           )}>
             {currentView === 'chat-list' && 'Chats'}
-            {currentView === 'chat' && (currentChat?.title || 'New Chat')}
+            {currentView === 'chat' && (
+              <TypewriterTitle
+                text={animatingTitle || currentChat?.title || 'New Chat'}
+                animate={isTitleAnimating}
+                onAnimationComplete={() => {
+                  setIsTitleAnimating(false);
+                  setAnimatingTitle(null);
+                }}
+              />
+            )}
             {currentView === 'settings' && 'Settings'}
           </h1>
         </div>
