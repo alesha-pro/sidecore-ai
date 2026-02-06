@@ -207,3 +207,21 @@ export interface ContextMenuAction {
   action: 'summarize-page' | 'ask-about-page';
   tab: { id: number; title?: string; url?: string };
 }
+
+// ============================================================================
+// Citation Types
+// ============================================================================
+
+/**
+ * A cited source with its ID, title, and URL
+ */
+export interface CitedSource {
+  id: number;
+  title: string;
+  url: string;
+}
+
+/**
+ * Map of citation IDs (e.g., "[1]", "[2]") to source info
+ */
+export type CitationMap = Record<string, CitedSource>;

@@ -1,11 +1,51 @@
 import type { ChatMessage } from './llm/types';
-import type { Message, Settings } from './types';
+import type { Message, Settings, CitationMap, CitedSource } from './types';
 
 /**
  * Heuristic token estimation: ~1 token per 4 characters
  */
 function estimateTokens(text: string | null): number {
   return text ? Math.ceil(text.length / 4) : 0;
+}
+
+/**
+ * Build a citation map from tab content system message
+ * Parses format: "[N] Title\nSource: URL\nContent..."
+ */
+function buildCitationMap(tabContentSystemMessage: string | null): CitationMap {
+  if (!tabContentSystemMessage) return {};
+
+  const citationMap: CitationMap = {};
+  const lines = tabContentSystemMessage.split('\n');
+  let currentId: number | null = null;
+  let currentTitle: string | null = null;
+
+  for (const line of lines) {
+    // Match [N] Title pattern
+    const idMatch = line.match(/^\[(\d+)\]\s*(.+)$/);
+    if (idMatch) {
+      currentId = parseInt(idMatch[1], 10);
+      currentTitle = idMatch[2].trim();
+      continue;
+    }
+
+    // Match Source: URL pattern
+    const sourceMatch = line.match(/^Source:\s*(.+)$/i);
+    if (sourceMatch && currentId !== null && currentTitle !== null) {
+      const url = sourceMatch[1].trim();
+      const citationKey = `[${currentId}]`;
+      citationMap[citationKey] = {
+        id: currentId,
+        title: currentTitle,
+        url,
+      };
+      // Reset for next source
+      currentId = null;
+      currentTitle = null;
+    }
+  }
+
+  return citationMap;
 }
 
 /**
@@ -40,6 +80,7 @@ export interface AssembleResult {
   apiMessages: ChatMessage[];
   totalEstimatedTokens: number;
   historyTrimmed: boolean;
+  citationMap: CitationMap;
 }
 
 /**
@@ -208,10 +249,14 @@ export function assembleContext(options: AssembleOptions): AssembleResult {
 
   const totalEstimatedTokens = apiMessages.reduce((sum, msg) => sum + estimateMessageTokens(msg), 0);
 
+  // Build citation map from tab content
+  const citationMap = buildCitationMap(tabContentSystemMessage);
+
   return {
     apiMessages,
     totalEstimatedTokens,
     historyTrimmed,
+    citationMap,
   };
 }
 
