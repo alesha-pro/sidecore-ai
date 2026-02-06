@@ -7,7 +7,7 @@ import { ExtractionStatus } from '../../components/ExtractionStatus';
 import { SelectedTabsBar } from '../../components/SelectedTabsBar';
 import { PromptDebugView } from '../../components/PromptDebugView';
 import { ModelSelectorPopup } from '../../components/ModelSelectorPopup';
-import { ChevronLeft, MessageSquarePlus, Settings, Sparkles } from 'lucide-preact';
+import { ChevronLeft, MessageSquarePlus, Settings as SettingsIcon, Sparkles, Trash2 } from 'lucide-preact';
 import { cn } from '../../lib/utils';
 import { useTheme } from '@/hooks/useTheme';
 import { useTabs } from '../../hooks/useTabs';
@@ -1016,6 +1016,10 @@ export default function App() {
     }
   }, [currentChatId, handleSelectChat, handleNewChat]);
 
+  const handleDeleteAllChats = useCallback(() => {
+    if (chats.length === 0) return;
+  }, [chats.length]);
+
   const handleEditMessage = useCallback(async (id: string, newContent: string) => {
     // Find the message being edited
     const messageIndex = messages.findIndex((m) => m.id === id);
@@ -1184,6 +1188,22 @@ export default function App() {
           <>
             <button
               type="button"
+              onClick={handleDeleteAllChats}
+              className={cn(
+                'p-1 rounded-lg flex-shrink-0',
+                'text-text-secondary hover:text-red-600 hover:bg-red-50',
+                'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-text-secondary',
+                'dark:text-text-secondary-dark dark:hover:text-red-400 dark:hover:bg-red-900/30 dark:disabled:hover:text-text-secondary-dark'
+              )}
+              aria-label="Delete all chats"
+              title="Delete all chats"
+              disabled={chats.length === 0}
+            >
+              <Trash2 size={16} />
+            </button>
+            <button
+              type="button"
               onClick={() => { handleNewChat(); navigateTo('chat'); }}
               className={cn(
                 'p-1 rounded-lg flex-shrink-0',
@@ -1206,7 +1226,7 @@ export default function App() {
               )}
               aria-label="Settings"
             >
-              <Settings size={16} />
+              <SettingsIcon size={16} />
             </button>
           </>
         )}
@@ -1253,7 +1273,7 @@ export default function App() {
               )}
               aria-label="Settings"
             >
-              <Settings size={16} />
+              <SettingsIcon size={16} />
             </button>
           </>
         )}
