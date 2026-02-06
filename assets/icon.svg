@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="sparkleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#8B5CF6;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#6366F1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="sparkleGradientSmall" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#A78BFA;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#60A5FA;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Main sparkle (large star) -->
+  <path d="M64 12 
+           C64 12, 68 44, 68 44
+           C68 44, 100 48, 100 48
+           C100 48, 68 52, 68 52
+           C68 52, 64 84, 64 84
+           C64 84, 60 52, 60 52
+           C60 52, 28 48, 28 48
+           C28 48, 60 44, 60 44
+           C60 44, 64 12, 64 12Z" 
+        fill="url(#sparkleGradient)"/>
+  
+  <!-- Small sparkle -->
+  <path d="M92 68
+           C92 68, 94 86, 94 86
+           C94 86, 112 88, 112 88
+           C112 88, 94 90, 94 90
+           C94 90, 92 108, 92 108
+           C92 108, 90 90, 90 90
+           C90 90, 72 88, 72 88
+           C72 88, 90 86, 90 86
+           C90 86, 92 68, 92 68Z"
+        fill="url(#sparkleGradientSmall)"/>
+</svg>
