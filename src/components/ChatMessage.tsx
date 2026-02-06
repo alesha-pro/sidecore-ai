@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'preact/hooks';
-import type { Message } from '../lib/types';
+import type { Message, CitationMap } from '../lib/types';
 import ThinkingBlock from './ThinkingBlock';
 import ToolCallBlock from './ToolCallBlock';
 import { Trash2, Pencil } from 'lucide-preact';
@@ -60,9 +60,10 @@ interface ChatMessageProps {
   onDelete?: (id: string) => void;
   toolOutputs?: Message[];
   isNew?: boolean;
+  citationMap?: CitationMap;
 }
 
-export default function ChatMessage({ message, isLastUserMessage, onEdit, onDelete, toolOutputs, isNew }: ChatMessageProps) {
+export default function ChatMessage({ message, isLastUserMessage, onEdit, onDelete, toolOutputs, isNew, citationMap }: ChatMessageProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [isHovered, setIsHovered] = useState(false);
@@ -77,12 +78,45 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
   if (isEmptyAssistant) {
     return null;
   }
+
+  /**
+   * Process citations in text, replacing [N] with clickable links
+   */
+  const processCitations = (content: string, map: CitationMap | undefined): string => {
+    if (!map || Object.keys(map).length === 0) return content;
+
+    // Escape regex special characters in citation keys
+    const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    let processed = content;
+
+    // Sort keys by length (descending) to match longer citations first
+    const sortedKeys = Object.keys(map).sort((a, b) => b.length - a.length);
+
+    for (const key of sortedKeys) {
+      const source = map[key];
+      if (!source) continue;
+
+      // Create a regex that matches the citation key as a whole word
+      // Allow for optional punctuation after the citation
+      const pattern = new RegExp(`(${escapeRegex(key)})(?=[\\s.,;:!?]|$)`, 'g');
+
+      const linkHtml = `<a href="${source.url}" target="_blank" rel="noopener noreferrer" title="${source.title}" class="citation-link">${key}</a>`;
+
+      processed = processed.replace(pattern, linkHtml);
+    }
+
+    return processed;
+  };
+
   const renderedContent = useMemo(() => {
     if (message.role === 'assistant' && message.content) {
-      return marked.parse(message.content) as string;
+      // Process citations first, then parse markdown
+      const withCitations = processCitations(message.content, citationMap);
+      return marked.parse(withCitations) as string;
     }
     return null;
-  }, [message.role, message.content]);
+  }, [message.role, message.content, citationMap]);
 
   const handleSaveEdit = () => {
     if (onEdit && editContent.trim()) {

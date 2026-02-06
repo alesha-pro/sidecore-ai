@@ -12,7 +12,7 @@ import { cn } from '../../lib/utils';
 import { useTheme } from '@/hooks/useTheme';
 import { useTabs } from '../../hooks/useTabs';
 import { getSettings, saveSettings } from '../../lib/storage';
-import type { Message, Settings, TabSelection, Chat, ChatSummary } from '../../lib/types';
+import type { Message, Settings, TabSelection, Chat, ChatSummary, CitationMap } from '../../lib/types';
 import { DEFAULT_SETTINGS, DEFAULT_TAB_SELECTION, SUPPORTED_LANGUAGES } from '../../lib/types';
 import { LLMError } from '../../lib/llm/errors';
 import type { ChatMessage as LLMChatMessage } from '../../lib/llm/types';
@@ -73,6 +73,9 @@ export default function App() {
   const [isTabPickerOpen, setIsTabPickerOpen] = useState(false);
 
   const [extractionResults, setExtractionResults] = useState<ExtractedTabContent[]>([]);
+
+  // Citation map for current context (maps [1], [2] to source URLs)
+  const [citationMap, setCitationMap] = useState<CitationMap>({});
 
   // Debug view state
   const [isDebugViewOpen, setIsDebugViewOpen] = useState(false);
@@ -488,13 +491,16 @@ export default function App() {
         : null;
 
       // Assemble context with smart management (compression, trimming, etc.)
-      const { apiMessages } = assembleContext({
+      const { apiMessages, citationMap: newCitationMap } = assembleContext({
         messages, // Current history (before userMessage due to React batching)
         userContent: content,
         systemPrompt: systemPromptContent.trim() ? systemPromptContent : '',
         tabContentSystemMessage,
         modelContextLimit: settings.modelContextLimit,
       });
+
+      // Store citation map for rendering clickable citations
+      setCitationMap(newCitationMap);
 
       // Always use agentic loop with automatic tool execution
       // Register built-in tools and get definitions
@@ -1121,6 +1127,7 @@ export default function App() {
             onStop={handleStopStreaming}
             onEditMessage={handleEditMessage}
             onDeleteMessage={handleDeleteMessage}
+            citationMap={citationMap}
           />
           <SelectedTabsBar
             tabs={selectedTabsForInput}

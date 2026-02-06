@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
-import type { Message } from '../lib/types';
+import type { Message, CitationMap } from '../lib/types';
 import ChatMessage from './ChatMessage';
 import { cn } from '../lib/utils';
 
@@ -11,6 +11,7 @@ interface ChatHistoryProps {
   onStop?: () => void;
   onEditMessage?: (id: string, newContent: string) => void;
   onDeleteMessage?: (id: string) => void;
+  citationMap?: CitationMap;
 }
 
 export default function ChatHistory({
@@ -21,6 +22,7 @@ export default function ChatHistory({
   onStop,
   onEditMessage,
   onDeleteMessage,
+  citationMap,
 }: ChatHistoryProps) {
   // Track new messages for animation
   const [animatedIds, setAnimatedIds] = useState<Set<string>>(new Set());
@@ -96,6 +98,7 @@ export default function ChatHistory({
         onDelete={onDeleteMessage}
         toolOutputs={toolOutputs.length > 0 ? toolOutputs : undefined}
         isNew={animatedIds.has(message.id)}
+        citationMap={citationMap}
       />
     );
   }
