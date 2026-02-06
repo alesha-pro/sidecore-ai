@@ -55,10 +55,12 @@ export function CommandPicker({
   const [activeIndex, setActiveIndex] = useState(0);
   const pickerRef = useRef<HTMLDivElement>(null);
 
-  // Merge built-in and extra commands, then filter by name
+  // Merge built-in and extra commands, then filter by name or label
   const allCommands = [...COMMANDS, ...extraCommands];
+  const filterLower = filter.toLowerCase();
   const filteredCommands = allCommands.filter((cmd) =>
-    cmd.name.toLowerCase().includes(filter.toLowerCase())
+    cmd.name.toLowerCase().includes(filterLower) ||
+    cmd.label.toLowerCase().includes(filterLower)
   );
 
   // Reset active index when filter changes or picker opens
