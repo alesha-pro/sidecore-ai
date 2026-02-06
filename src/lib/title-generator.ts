@@ -44,7 +44,6 @@ export async function generateTitle(
           content: `Question: ${userMessage.slice(0, 300)}\nAnswer: ${assistantMessage.slice(0, 500)}`,
         },
       ],
-      max_tokens: 200,
       temperature: 0.7,
     });
 

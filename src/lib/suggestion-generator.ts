@@ -45,7 +45,6 @@ export async function generateSuggestions(
           content: `User asked: ${userMessage.slice(0, 300)}\nAssistant answered: ${assistantMessage.slice(0, 500)}`,
         },
       ],
-      max_tokens: 200,
       temperature: 0.7,
     });
 
