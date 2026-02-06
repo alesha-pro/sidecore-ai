@@ -146,6 +146,45 @@ export async function getStorageStats(): Promise<StorageStats> {
 }
 
 /**
+ * Search chats by title, message content, and source URLs.
+ * Returns matching ChatSummary[] sorted by updatedAt (most recent first).
+ * Case-insensitive. Empty/whitespace query returns all chats.
+ */
+export async function searchChats(query: string): Promise<ChatSummary[]> {
+  try {
+    const trimmed = query.trim().toLowerCase();
+    const result = await chrome.storage.local.get([CHATS_KEY]);
+    const chats: Record<string, Chat> = result[CHATS_KEY] || {};
+
+    const chatArray = Object.values(chats);
+
+    const matches = trimmed
+      ? chatArray.filter((chat) => {
+          // Search title
+          if (chat.title.toLowerCase().includes(trimmed)) return true;
+          // Search message content and source URLs
+          return chat.messages.some(
+            (msg) => msg.content.toLowerCase().includes(trimmed)
+          );
+        })
+      : chatArray;
+
+    const summaries: ChatSummary[] = matches.map((chat) => ({
+      id: chat.id,
+      title: chat.title,
+      messageCount: chat.messages.length,
+      updatedAt: chat.updatedAt,
+    }));
+
+    summaries.sort((a, b) => b.updatedAt - a.updatedAt);
+    return summaries;
+  } catch (error) {
+    console.error('Failed to search chats:', error);
+    return [];
+  }
+}
+
+/**
  * Prune old chats when storage exceeds threshold.
  * Keeps the most recent N chats, deletes the rest.
  *

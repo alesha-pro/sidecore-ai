@@ -25,6 +25,7 @@ import {
   saveChat,
   deleteChat,
   createChat,
+  searchChats,
 } from '../../lib/chat-storage';
 import { runAgentLoop, AgentLoopCallbacks } from '../../lib/agent/agent-loop';
 import type { StreamingToolCallDelta } from '../../lib/streaming/streaming-types';
@@ -95,6 +96,8 @@ export default function App() {
   // Chat management state
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredChats, setFilteredChats] = useState<ChatSummary[]>([]);
 
   // Derive current chat's streaming state
   const isCurrentChatStreaming = currentChatId ? streamingChats.has(currentChatId) : false;
@@ -228,6 +231,20 @@ export default function App() {
 
     saveChatAsync();
   }, [messages, currentChatId]);
+
+  // Debounced chat search
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) {
+      setFilteredChats(chats);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const results = await searchChats(trimmed);
+      setFilteredChats(results);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [searchQuery, chats]);
 
   const navigateTo = useCallback((view: View) => {
     setPreviousView(currentView);
@@ -1227,13 +1244,15 @@ export default function App() {
       {currentView === 'chat-list' && (
         <div className="animate-slide-in-from-left motion-reduce:animate-none">
           <ChatList
-            chats={chats}
+            chats={filteredChats}
             currentChatId={currentChatId}
             onSelectChat={(id) => {
               handleSelectChat(id);
               navigateTo('chat');
             }}
             onDeleteChat={handleDeleteChat}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
           />
         </div>
       )}

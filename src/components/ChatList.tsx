@@ -1,5 +1,5 @@
 import type { ChatSummary } from '../lib/types';
-import { Trash2 } from 'lucide-preact';
+import { Trash2, Search, X } from 'lucide-preact';
 import { cn } from '../lib/utils';
 
 interface ChatListProps {
@@ -7,6 +7,8 @@ interface ChatListProps {
   currentChatId: string | null;
   onSelectChat: (id: string) => void;
   onDeleteChat: (id: string) => void;
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
 }
 
 function formatRelativeTime(timestamp: number): string {
@@ -28,6 +30,8 @@ export default function ChatList({
   currentChatId,
   onSelectChat,
   onDeleteChat,
+  searchQuery,
+  onSearchChange,
 }: ChatListProps) {
   const handleDelete = (id: string, title: string) => {
     if (window.confirm(`Delete chat "${title}"?`)) {
@@ -35,12 +39,59 @@ export default function ChatList({
     }
   };
 
+  const hasQuery = searchQuery.trim().length > 0;
+
   return (
     <div className={cn(
       'flex flex-col h-full',
       'bg-background',
       'dark:bg-background-dark'
     )}>
+      {/* Search input */}
+      <div className="px-2 pt-2">
+        <div className={cn(
+          'relative flex items-center rounded-lg border',
+          'bg-surface border-border',
+          'dark:bg-surface-dark dark:border-border-dark',
+          'focus-within:border-accent dark:focus-within:border-accent-dark'
+        )}>
+          <Search
+            size={14}
+            className={cn(
+              'absolute left-2 pointer-events-none',
+              'text-text-secondary',
+              'dark:text-text-secondary-dark'
+            )}
+          />
+          <input
+            type="text"
+            value={searchQuery}
+            onInput={(e) => onSearchChange((e.target as HTMLInputElement).value)}
+            placeholder="Search chats..."
+            className={cn(
+              'w-full py-1.5 pl-7 pr-7 text-xs bg-transparent outline-none',
+              'text-text-primary placeholder:text-text-secondary',
+              'dark:text-text-primary-dark dark:placeholder:text-text-secondary-dark'
+            )}
+            aria-label="Search chats"
+          />
+          {hasQuery && (
+            <button
+              type="button"
+              onClick={() => onSearchChange('')}
+              className={cn(
+                'absolute right-1.5 p-0.5 rounded',
+                'text-text-secondary hover:text-text-primary',
+                'dark:text-text-secondary-dark dark:hover:text-text-primary-dark'
+              )}
+              aria-label="Clear search"
+            >
+              <X size={12} />
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Chat list */}
       <div className="flex-1 overflow-y-auto">
         {chats.length === 0 ? (
@@ -49,7 +100,7 @@ export default function ChatList({
             'text-text-secondary',
             'dark:text-text-secondary-dark'
           )}>
-            No chats yet
+            {hasQuery ? 'No chats found' : 'No chats yet'}
           </div>
         ) : (
           <div className="space-y-1 p-2">
