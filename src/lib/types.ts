@@ -32,6 +32,8 @@ export interface Message {
   name?: string;
   /** Marks this as an extracted-content system message (for content-as-history) */
   contentMessageId?: string;
+  /** Follow-up suggestion texts (max 3, assistant messages only) */
+  suggestions?: string[];
 }
 
 export interface Settings {

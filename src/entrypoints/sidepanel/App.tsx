@@ -33,6 +33,7 @@ import { toolRegistry, toToolDefinition } from '../../lib/tools';
 import { McpToolManager } from '../../lib/mcp';
 import { assembleContext } from '../../lib/context-assembler';
 import { generateTitle } from '../../lib/title-generator';
+import { generateSuggestions } from '../../lib/suggestion-generator';
 import { TypewriterTitle } from '../../components/TypewriterTitle';
 
 // Helper function to get language instruction
@@ -713,6 +714,23 @@ export default function App() {
           }
         });
       }
+
+      // Fire-and-forget: generate follow-up suggestions using small model
+      const finalMessageId = currentStreamingId;
+      generateSuggestions(settings, content, mainContent).then((suggestions) => {
+        if (suggestions.length === 0) return;
+        setMessages((prev) => {
+          const idx = prev.findIndex((m) => m.id === finalMessageId);
+          if (idx === -1) return prev;
+          return [
+            ...prev.slice(0, idx),
+            { ...prev[idx], suggestions },
+            ...prev.slice(idx + 1),
+          ];
+        });
+      }).catch((err) => {
+        console.error('[App] Suggestion generation failed:', err);
+      });
     } catch (error) {
       if (error instanceof LLMError) {
         setLLMError(error.userMessage);
@@ -994,6 +1012,11 @@ export default function App() {
     setMessages((prev) => prev.filter((m) => m.id !== id));
   }, []);
 
+  const handleSuggestionClick = useCallback((text: string) => {
+    if (isCurrentChatStreaming) return;
+    handleSendMessage(text);
+  }, [isCurrentChatStreaming, handleSendMessage]);
+
   if (isLoading) {
     return (
       <div className={cn(
@@ -1181,6 +1204,7 @@ export default function App() {
             onEditMessage={handleEditMessage}
             onDeleteMessage={handleDeleteMessage}
             citationMap={citationMap}
+            onSuggestionClick={handleSuggestionClick}
           />
           <SelectedTabsBar
             tabs={selectedTabsForInput}

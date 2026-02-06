@@ -61,9 +61,10 @@ interface ChatMessageProps {
   toolOutputs?: Message[];
   isNew?: boolean;
   citationMap?: CitationMap;
+  onSuggestionClick?: (text: string) => void;
 }
 
-export default function ChatMessage({ message, isLastUserMessage, onEdit, onDelete, toolOutputs, isNew, citationMap }: ChatMessageProps) {
+export default function ChatMessage({ message, isLastUserMessage, onEdit, onDelete, toolOutputs, isNew, citationMap, onSuggestionClick }: ChatMessageProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [isHovered, setIsHovered] = useState(false);
@@ -304,6 +305,30 @@ export default function ChatMessage({ message, isLastUserMessage, onEdit, onDele
                 />
               );
             })}
+          </div>
+        )}
+
+        {/* Follow-up suggestion chips */}
+        {message.role === 'assistant' && !message.isStreaming && message.suggestions && message.suggestions.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {message.suggestions.map((suggestion, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => onSuggestionClick?.(suggestion)}
+                className={cn(
+                  'px-3 py-1.5 text-xs rounded-full transition-colors',
+                  'border border-border bg-surface text-text-secondary',
+                  'hover:bg-surface-hover hover:text-text-primary hover:border-accent',
+                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                  'dark:border-border-dark dark:bg-surface-dark dark:text-text-secondary-dark',
+                  'dark:hover:bg-surface-hover-dark dark:hover:text-text-primary-dark dark:hover:border-accent-dark'
+                )}
+                aria-label={`Follow up: ${suggestion}`}
+              >
+                {suggestion}
+              </button>
+            ))}
           </div>
         )}
       </div>

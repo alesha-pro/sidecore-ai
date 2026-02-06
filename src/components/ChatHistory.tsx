@@ -12,6 +12,7 @@ interface ChatHistoryProps {
   onEditMessage?: (id: string, newContent: string) => void;
   onDeleteMessage?: (id: string) => void;
   citationMap?: CitationMap;
+  onSuggestionClick?: (text: string) => void;
 }
 
 export default function ChatHistory({
@@ -23,6 +24,7 @@ export default function ChatHistory({
   onEditMessage,
   onDeleteMessage,
   citationMap,
+  onSuggestionClick,
 }: ChatHistoryProps) {
   // Track new messages for animation
   const [animatedIds, setAnimatedIds] = useState<Set<string>>(new Set());
@@ -99,6 +101,7 @@ export default function ChatHistory({
         toolOutputs={toolOutputs.length > 0 ? toolOutputs : undefined}
         isNew={animatedIds.has(message.id)}
         citationMap={citationMap}
+        onSuggestionClick={onSuggestionClick}
       />
     );
   }
