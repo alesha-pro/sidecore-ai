@@ -79,6 +79,18 @@ export async function deleteChat(id: string): Promise<void> {
 }
 
 /**
+ * Delete all chats.
+ */
+export async function clearAllChats(): Promise<void> {
+  try {
+    await chrome.storage.local.set({ [CHATS_KEY]: {} });
+  } catch (error) {
+    console.error('Failed to clear chats:', error);
+    throw new Error('Failed to clear chats');
+  }
+}
+
+/**
  * Create a new empty chat with UUID id.
  */
 export async function createChat(): Promise<Chat> {
