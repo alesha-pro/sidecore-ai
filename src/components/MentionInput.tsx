@@ -3,6 +3,7 @@ import type { TabInfo } from '../lib/tabs';
 import type { McpServerConfig, SlashCommand } from '../lib/types';
 import { CommandPicker, type Command } from './CommandPicker';
 import { InputToolbar } from './InputToolbar';
+import { StopCircle } from 'lucide-preact';
 import { cn } from '../lib/utils';
 
 interface MentionInputProps {
@@ -26,6 +27,8 @@ interface MentionInputProps {
   onToolToggle?: (toolName: string) => void;
   onServerToggle?: (serverId: string) => void;
   customSlashCommands?: SlashCommand[];
+  isStreaming?: boolean;
+  onStop?: () => void;
 }
 
 interface ExtractedContent {
@@ -54,6 +57,8 @@ export function MentionInput({
   onToolToggle,
   onServerToggle,
   customSlashCommands = [],
+  isStreaming = false,
+  onStop,
 }: MentionInputProps) {
   const inputRef = useRef<HTMLDivElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -585,23 +590,39 @@ export function MentionInput({
               aria-multiline="true"
             />
 
-            {/* Send button - positioned inside input, on the right */}
-            <button
-              type="button"
-              onClick={handleSend}
-              disabled={disabled}
-              className={cn(
-                'absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-md transition-colors',
-                'text-accent hover:bg-accent-subtle',
-                'dark:text-accent-dark dark:hover:bg-accent-subtle-dark',
-                'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent'
-              )}
-              title="Send message (Enter)"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-              </svg>
-            </button>
+            {/* Send/Stop button - positioned inside input, on the right */}
+            {isStreaming && onStop ? (
+              <button
+                type="button"
+                onClick={onStop}
+                className={cn(
+                  'absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-md transition-colors',
+                  'text-red-500 hover:bg-red-50',
+                  'dark:text-red-400 dark:hover:bg-red-950'
+                )}
+                title="Stop generation"
+                aria-label="Stop generation"
+              >
+                <StopCircle size={18} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSend}
+                disabled={disabled}
+                className={cn(
+                  'absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-md transition-colors',
+                  'text-accent hover:bg-accent-subtle',
+                  'dark:text-accent-dark dark:hover:bg-accent-subtle-dark',
+                  'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent'
+                )}
+                title="Send message (Enter)"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                </svg>
+              </button>
+            )}
           </div>
         </div>
       </div>
