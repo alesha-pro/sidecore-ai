@@ -72,6 +72,7 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const savedThemeRef = useRef(settings.theme);
+  const isAutoSaving = useRef(false);
 
   const [availableTools, setAvailableTools] = useState<Tool[]>([]);
   const [availableServers, setAvailableServers] = useState<MCPServer[]>([]);
@@ -102,8 +103,9 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
   const [commandDraft, setCommandDraft] = useState({ name: '', description: '', prompt: '' });
   const [commandError, setCommandError] = useState<string | null>(null);
 
-  // Reset form when settings prop changes
+  // Reset form when settings prop changes (skip for auto-save to preserve editing states)
   useEffect(() => {
+    if (isAutoSaving.current) return;
     setFormData(settings);
     setErrors({});
     setSaveError(null);
@@ -378,6 +380,22 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
     }
   };
 
+  // Auto-save for CRUD operations (profiles, commands, MCP servers)
+  const persistSettings = (updatedData: Settings) => {
+    isAutoSaving.current = true;
+    const normalized: Settings = {
+      ...updatedData,
+      baseUrl: normalizeBaseUrl(updatedData.baseUrl),
+      apiKey: updatedData.apiKey.trim(),
+      defaultModel: updatedData.defaultModel.trim(),
+    };
+    onSave(normalized).catch(err => {
+      console.error('[SettingsForm] Auto-save failed:', err);
+    }).finally(() => {
+      setTimeout(() => { isAutoSaving.current = false; }, 50);
+    });
+  };
+
   return (
     <div className={cn(
       'flex-1 overflow-y-auto p-6',
@@ -645,7 +663,9 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
               value={formData.activePromptProfileId || ''}
               onChange={(e) => {
                 const val = (e.target as HTMLSelectElement).value;
-                setFormData(prev => ({ ...prev, activePromptProfileId: val || null }));
+                const updated = { ...formData, activePromptProfileId: val || null };
+                setFormData(updated);
+                persistSettings(updated);
               }}
             >
               <option value="">None (no profile)</option>
@@ -711,7 +731,9 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                       onClick={() => {
                         const newProfiles = formData.promptProfiles.filter(p => p.id !== profile.id);
                         const newActiveId = formData.activePromptProfileId === profile.id ? null : formData.activePromptProfileId;
-                        setFormData(prev => ({ ...prev, promptProfiles: newProfiles, activePromptProfileId: newActiveId }));
+                        const updated = { ...formData, promptProfiles: newProfiles, activePromptProfileId: newActiveId };
+                        setFormData(updated);
+                        persistSettings(updated);
                       }}
                       className={cn(
                         'p-1 transition-colors',
@@ -782,14 +804,16 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                     onClick={() => {
                       if (!profileDraft.name.trim()) { setProfileError('Name is required'); return; }
                       if (!profileDraft.prompt.trim()) { setProfileError('Prompt is required'); return; }
-                      setFormData(prev => ({
-                        ...prev,
-                        promptProfiles: prev.promptProfiles.map(p =>
+                      const updated = {
+                        ...formData,
+                        promptProfiles: formData.promptProfiles.map(p =>
                           p.id === editingProfile.id
                             ? { ...p, name: profileDraft.name.trim(), prompt: profileDraft.prompt.trim() }
                             : p
                         ),
-                      }));
+                      };
+                      setFormData(updated);
+                      persistSettings(updated);
                       setEditingProfile(null);
                       setProfileDraft({ name: '', prompt: '' });
                     }}
@@ -862,10 +886,12 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                         name: profileDraft.name.trim(),
                         prompt: profileDraft.prompt.trim(),
                       };
-                      setFormData(prev => ({
-                        ...prev,
-                        promptProfiles: [...prev.promptProfiles, newProfile],
-                      }));
+                      const updated = {
+                        ...formData,
+                        promptProfiles: [...formData.promptProfiles, newProfile],
+                      };
+                      setFormData(updated);
+                      persistSettings(updated);
                       setProfileDraft({ name: '', prompt: '' });
                       setProfileError(null);
                     }}
@@ -878,11 +904,13 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                     type="button"
                     variant="secondary"
                     onClick={() => {
-                      setFormData(prev => ({
-                        ...prev,
+                      const updated = {
+                        ...formData,
                         promptProfiles: [...DEFAULT_PROMPT_PROFILES],
                         activePromptProfileId: null,
-                      }));
+                      };
+                      setFormData(updated);
+                      persistSettings(updated);
                     }}
                   >
                     Reset Defaults
@@ -963,7 +991,9 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                       type="button"
                       onClick={() => {
                         const newCommands = formData.customSlashCommands.filter(c => c.id !== command.id);
-                        setFormData(prev => ({ ...prev, customSlashCommands: newCommands }));
+                        const updated = { ...formData, customSlashCommands: newCommands };
+                        setFormData(updated);
+                        persistSettings(updated);
                       }}
                       className={cn(
                         'p-1 transition-colors',
@@ -1056,14 +1086,16 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                       if (!trimmedName) { setCommandError('Name is required'); return; }
                       if (!/^[a-zA-Z0-9_-]+$/.test(trimmedName)) { setCommandError('Name can only contain letters, numbers, hyphens, and underscores'); return; }
                       if (!trimmedPrompt) { setCommandError('Prompt is required'); return; }
-                      setFormData(prev => ({
-                        ...prev,
-                        customSlashCommands: prev.customSlashCommands.map(c =>
+                      const updated = {
+                        ...formData,
+                        customSlashCommands: formData.customSlashCommands.map(c =>
                           c.id === editingCommand.id
                             ? { ...c, name: trimmedName, description: commandDraft.description.trim(), prompt: trimmedPrompt }
                             : c
                         ),
-                      }));
+                      };
+                      setFormData(updated);
+                      persistSettings(updated);
                       setEditingCommand(null);
                       setCommandDraft({ name: '', description: '', prompt: '' });
                     }}
@@ -1159,10 +1191,12 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                         description: commandDraft.description.trim(),
                         prompt: trimmedPrompt,
                       };
-                      setFormData(prev => ({
-                        ...prev,
-                        customSlashCommands: [...prev.customSlashCommands, newCommand],
-                      }));
+                      const updated = {
+                        ...formData,
+                        customSlashCommands: [...formData.customSlashCommands, newCommand],
+                      };
+                      setFormData(updated);
+                      persistSettings(updated);
                       setCommandDraft({ name: '', description: '', prompt: '' });
                       setCommandError(null);
                     }}
@@ -1175,10 +1209,9 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                     type="button"
                     variant="secondary"
                     onClick={() => {
-                      setFormData(prev => ({
-                        ...prev,
-                        customSlashCommands: [],
-                      }));
+                      const updated = { ...formData, customSlashCommands: [] };
+                      setFormData(updated);
+                      persistSettings(updated);
                     }}
                   >
                     Reset Defaults
@@ -1699,10 +1732,12 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                     <button
                       type="button"
                       onClick={() => {
-                        setFormData((prev) => ({
-                          ...prev,
-                          mcpServers: prev.mcpServers.filter((s) => s.id !== server.id),
-                        }));
+                        const updated = {
+                          ...formData,
+                          mcpServers: formData.mcpServers.filter((s) => s.id !== server.id),
+                        };
+                        setFormData(updated);
+                        persistSettings(updated);
                       }}
                       className={cn(
                         'ml-2 p-1 transition-colors',
@@ -1883,11 +1918,13 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
                       .map((h) => ({ key: h.key.trim(), value: h.value.trim() })),
                   };
 
-                  // Add to formData
-                  setFormData((prev) => ({
-                    ...prev,
-                    mcpServers: [...prev.mcpServers, newServer],
-                  }));
+                  // Add to formData and auto-save
+                  const updated = {
+                    ...formData,
+                    mcpServers: [...formData.mcpServers, newServer],
+                  };
+                  setFormData(updated);
+                  persistSettings(updated);
 
                   // Reset draft
                   setMcpDraft(emptyMcpServerDraft());
