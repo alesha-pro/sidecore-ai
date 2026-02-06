@@ -268,6 +268,11 @@ export default function App() {
     navigateTo('chat');
   };
 
+  const handleAutoSaveSettings = async (newSettings: Settings) => {
+    await saveSettings(newSettings);
+    setSettings(newSettings);
+  };
+
   const getSelectedTabs = useCallback((overrideTabIds?: number[], overrideTabs?: TabInfo[]) => {
     const selected: TabInfo[] = [];
 
@@ -1324,6 +1329,7 @@ export default function App() {
           <SettingsForm
             settings={settings || DEFAULT_SETTINGS}
             onSave={handleSaveSettings}
+            onAutoSave={handleAutoSaveSettings}
             onCancel={handleBack}
           />
         </div>

@@ -26,6 +26,7 @@ interface McpServerDraft {
 interface SettingsFormProps {
   settings: Settings;
   onSave: (settings: Settings) => Promise<void>;
+  onAutoSave?: (settings: Settings) => Promise<void>;
   onCancel: () => void;
   header?: ComponentChildren;
 }
@@ -64,7 +65,7 @@ function getProviderFromUrl(url: string): string {
   return provider?.id ?? 'custom';
 }
 
-export default function SettingsForm({ settings, onSave, onCancel, header }: SettingsFormProps) {
+export default function SettingsForm({ settings, onSave, onAutoSave, onCancel, header }: SettingsFormProps) {
   const [formData, setFormData] = useState<Settings>(settings);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSaving, setIsSaving] = useState(false);
@@ -381,6 +382,7 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
   };
 
   // Auto-save for CRUD operations (profiles, commands, MCP servers)
+  // Uses onAutoSave (no navigation) when available, falls back to onSave
   const persistSettings = (updatedData: Settings) => {
     isAutoSaving.current = true;
     const normalized: Settings = {
@@ -389,7 +391,8 @@ export default function SettingsForm({ settings, onSave, onCancel, header }: Set
       apiKey: updatedData.apiKey.trim(),
       defaultModel: updatedData.defaultModel.trim(),
     };
-    onSave(normalized).catch(err => {
+    const save = onAutoSave ?? onSave;
+    save(normalized).catch(err => {
       console.error('[SettingsForm] Auto-save failed:', err);
     }).finally(() => {
       setTimeout(() => { isAutoSaving.current = false; }, 50);
