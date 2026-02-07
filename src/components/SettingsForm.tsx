@@ -8,6 +8,7 @@ import type { SlashCommand } from '../lib/types';
 import { normalizeBaseUrl, validateBaseUrl } from '../lib/urlNormalization';
 import { listModels } from '../lib/llm/client';
 import { LLMError } from '../lib/llm/errors';
+import { requestHostPermission, toOriginPattern } from '../lib/permissions';
 import { applyTheme } from '../hooks/useTheme';
 import { ThemeToggle } from './ThemeToggle';
 import { cn } from '../lib/utils';
@@ -289,6 +290,18 @@ export default function SettingsForm({ settings, onSave, onAutoSave, onCancel, h
 
     try {
       const normalizedBaseUrl = normalizeBaseUrl(formData.baseUrl);
+
+      // Request host permission for the API origin (user gesture: button click)
+      const originPattern = toOriginPattern(normalizedBaseUrl);
+      if (originPattern) {
+        const permResult = await requestHostPermission(originPattern);
+        if (permResult.status === 'denied') {
+          setConnectionStatus('error');
+          setConnectionError('Permission denied. The extension needs access to this domain to connect.');
+          return;
+        }
+      }
+
       const models = await listModels(normalizedBaseUrl, formData.apiKey);
       setConnectionStatus('success');
 
@@ -355,6 +368,18 @@ export default function SettingsForm({ settings, onSave, onAutoSave, onCancel, h
     setTitleGenConnectionError(null);
     try {
       const normalizedBaseUrl = normalizeBaseUrl(formData.titleGenBaseUrl);
+
+      // Request host permission for the title gen API origin
+      const originPattern = toOriginPattern(normalizedBaseUrl);
+      if (originPattern) {
+        const permResult = await requestHostPermission(originPattern);
+        if (permResult.status === 'denied') {
+          setTitleGenConnectionStatus('error');
+          setTitleGenConnectionError('Permission denied. The extension needs access to this domain to connect.');
+          return;
+        }
+      }
+
       const models = await listModels(normalizedBaseUrl, formData.titleGenApiKey);
       setTitleGenConnectionStatus('success');
       const modelIds = models.map(m => m.id);

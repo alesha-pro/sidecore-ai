@@ -39,9 +39,7 @@ import { generateSuggestions } from '../../lib/suggestion-generator';
 import { TypewriterTitle } from '../../components/TypewriterTitle';
 import { PermissionBanner, type PermissionBannerType } from '../../components/PermissionBanner';
 import {
-  checkMultiTabAccess,
   requestAllUrlsPermission,
-  checkExternalOriginAccess,
   requestHostPermission,
   toOriginPattern,
 } from '../../lib/permissions';
@@ -522,27 +520,17 @@ export default function App() {
     try {
       let extractionResults: ExtractedTabContent[] = [];
       if (selectedTabs.length > 0) {
-        // Permission check: multi-tab requires <all_urls>
+        // Permission check: multi-tab requires <all_urls> (Send is a user gesture)
         const isMultiTab = selectedTabs.length > 1 || selectedTabs.some(t => !t.active);
         let tabsToExtract = selectedTabs;
 
         if (isMultiTab) {
-          const access = await checkMultiTabAccess();
-          if (!access.granted) {
-            if (access.inCooldown) {
-              // In deny cooldown — silently fall back to active tab only
-              console.log('[App] Multi-tab access in cooldown, using active tab only');
-              tabsToExtract = selectedTabs.filter(t => t.active);
-            } else {
-              // Need to request — show banner and fall back for now
-              // The banner gives user a way to grant for future requests
-              console.log('[App] Multi-tab access not granted, showing banner');
-              setPermissionBanner({
-                type: 'multi-tab',
-                pendingAction: undefined,
-              });
-              tabsToExtract = selectedTabs.filter(t => t.active);
-            }
+          const permResult = await requestAllUrlsPermission();
+          if (permResult.status === 'denied' || permResult.status === 'cooldown') {
+            // Fall back to active tab only
+            console.log('[App] Multi-tab permission not granted:', permResult.status);
+            setPermissionBanner({ type: 'multi-tab' });
+            tabsToExtract = selectedTabs.filter(t => t.active);
           }
         }
 
@@ -627,22 +615,17 @@ export default function App() {
         return await tool.execute(args);
       };
 
-      // Permission check: ensure LLM API origin is accessible
-      const llmOriginAccess = await checkExternalOriginAccess(settings.baseUrl);
-      if (!llmOriginAccess.granted) {
-        if (llmOriginAccess.inCooldown) {
-          console.log('[App] LLM origin access in cooldown — API call may fail');
-        } else {
-          // Show banner for user to grant access
-          const origin = llmOriginAccess.origin;
-          const domain = (() => { try { return new URL(settings.baseUrl).host; } catch { return origin; } })();
-          setPermissionBanner({
-            type: 'external-origin',
-            domain,
-            pendingAction: undefined,
-          });
-          // Attempt the request anyway — it may work for localhost or already-granted origins
-          console.log('[App] LLM origin not explicitly granted, attempting anyway:', origin);
+      // Permission check: ensure LLM API origin is accessible (Send is a user gesture)
+      const llmOrigin = toOriginPattern(settings.baseUrl);
+      if (llmOrigin) {
+        const permResult = await requestHostPermission(llmOrigin);
+        if (permResult.status === 'denied') {
+          const domain = (() => { try { return new URL(settings.baseUrl).host; } catch { return llmOrigin; } })();
+          setPermissionBanner({ type: 'external-origin', domain });
+          console.log('[App] LLM origin permission denied:', llmOrigin);
+          // Continue anyway — the LLM client will show a clear error
+        } else if (permResult.status === 'cooldown') {
+          console.log('[App] LLM origin permission in cooldown, attempting anyway');
         }
       }
 
