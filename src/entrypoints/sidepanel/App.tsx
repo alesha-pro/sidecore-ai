@@ -37,6 +37,14 @@ import { assembleContext } from '../../lib/context-assembler';
 import { generateTitle } from '../../lib/title-generator';
 import { generateSuggestions } from '../../lib/suggestion-generator';
 import { TypewriterTitle } from '../../components/TypewriterTitle';
+import { PermissionBanner, type PermissionBannerType } from '../../components/PermissionBanner';
+import {
+  checkMultiTabAccess,
+  requestAllUrlsPermission,
+  checkExternalOriginAccess,
+  requestHostPermission,
+  toOriginPattern,
+} from '../../lib/permissions';
 
 // Helper function to get language instruction
 function getLanguageInstruction(languageCode: string): string {
@@ -93,6 +101,13 @@ export default function App() {
   // Title generation animation state
   const [animatingTitle, setAnimatingTitle] = useState<string | null>(null);
   const [isTitleAnimating, setIsTitleAnimating] = useState(false);
+
+  // Permission banner state
+  const [permissionBanner, setPermissionBanner] = useState<{
+    type: PermissionBannerType;
+    domain?: string;
+    pendingAction?: () => void;
+  } | null>(null);
 
   // Chat management state
   const [chats, setChats] = useState<ChatSummary[]>([]);
@@ -507,17 +522,43 @@ export default function App() {
     try {
       let extractionResults: ExtractedTabContent[] = [];
       if (selectedTabs.length > 0) {
-        const response = await chrome.runtime.sendMessage({
-          type: 'extract-tabs',
-          tabs: selectedTabs,
-          budget: settings.contextBudget,
-        });
+        // Permission check: multi-tab requires <all_urls>
+        const isMultiTab = selectedTabs.length > 1 || selectedTabs.some(t => !t.active);
+        let tabsToExtract = selectedTabs;
 
-        if (response.success) {
-          extractionResults = response.results;
-          setExtractionResults(extractionResults);
-        } else {
-          console.error('Extraction failed:', response.error);
+        if (isMultiTab) {
+          const access = await checkMultiTabAccess();
+          if (!access.granted) {
+            if (access.inCooldown) {
+              // In deny cooldown — silently fall back to active tab only
+              console.log('[App] Multi-tab access in cooldown, using active tab only');
+              tabsToExtract = selectedTabs.filter(t => t.active);
+            } else {
+              // Need to request — show banner and fall back for now
+              // The banner gives user a way to grant for future requests
+              console.log('[App] Multi-tab access not granted, showing banner');
+              setPermissionBanner({
+                type: 'multi-tab',
+                pendingAction: undefined,
+              });
+              tabsToExtract = selectedTabs.filter(t => t.active);
+            }
+          }
+        }
+
+        if (tabsToExtract.length > 0) {
+          const response = await chrome.runtime.sendMessage({
+            type: 'extract-tabs',
+            tabs: tabsToExtract,
+            budget: settings.contextBudget,
+          });
+
+          if (response.success) {
+            extractionResults = response.results;
+            setExtractionResults(extractionResults);
+          } else {
+            console.error('Extraction failed:', response.error);
+          }
         }
       }
 
@@ -585,6 +626,25 @@ export default function App() {
         }
         return await tool.execute(args);
       };
+
+      // Permission check: ensure LLM API origin is accessible
+      const llmOriginAccess = await checkExternalOriginAccess(settings.baseUrl);
+      if (!llmOriginAccess.granted) {
+        if (llmOriginAccess.inCooldown) {
+          console.log('[App] LLM origin access in cooldown — API call may fail');
+        } else {
+          // Show banner for user to grant access
+          const origin = llmOriginAccess.origin;
+          const domain = (() => { try { return new URL(settings.baseUrl).host; } catch { return origin; } })();
+          setPermissionBanner({
+            type: 'external-origin',
+            domain,
+            pendingAction: undefined,
+          });
+          // Attempt the request anyway — it may work for localhost or already-granted origins
+          console.log('[App] LLM origin not explicitly granted, attempting anyway:', origin);
+        }
+      }
 
       // Create streaming message placeholder for agent mode
       const agentStreamingMessageId = crypto.randomUUID();
@@ -1126,6 +1186,27 @@ export default function App() {
     handleSendMessage(text);
   }, [isCurrentChatStreaming, handleSendMessage]);
 
+  const handlePermissionGrant = useCallback(async () => {
+    if (!permissionBanner) return;
+
+    if (permissionBanner.type === 'multi-tab') {
+      const result = await requestAllUrlsPermission();
+      console.log('[App] Multi-tab permission result:', result.status);
+    } else if (permissionBanner.type === 'external-origin' && permissionBanner.domain) {
+      const origin = toOriginPattern(`https://${permissionBanner.domain}`);
+      if (origin) {
+        const result = await requestHostPermission(origin);
+        console.log('[App] External origin permission result:', result.status);
+      }
+    }
+
+    setPermissionBanner(null);
+  }, [permissionBanner]);
+
+  const handlePermissionDismiss = useCallback(() => {
+    setPermissionBanner(null);
+  }, []);
+
   if (isLoading) {
     return (
       <div className={cn(
@@ -1319,6 +1400,14 @@ export default function App() {
       {/* Chat view - contains all streaming logic */}
       {currentView === 'chat' && (
         <div className="flex flex-col flex-1 min-w-0 overflow-hidden @container">
+          {permissionBanner && (
+            <PermissionBanner
+              type={permissionBanner.type}
+              domain={permissionBanner.domain}
+              onGrant={handlePermissionGrant}
+              onDismiss={handlePermissionDismiss}
+            />
+          )}
           {settings?.showExtractionStatus && (
             <ExtractionStatus results={extractionResults} />
           )}
