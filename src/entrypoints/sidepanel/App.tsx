@@ -492,12 +492,43 @@ export default function App() {
       return;
     }
 
+    // ====================================================================
+    // IMPORTANT: Request all permissions FIRST, before any await/setState.
+    // chrome.permissions.request() requires user gesture context which is
+    // lost after the first await in the call stack.
+    // ====================================================================
+    const selectedTabs = getSelectedTabs(tabIds, overrideTabs);
+    const needsTabPermission = selectedTabs.length > 0;
+    const llmOrigin = toOriginPattern(settings.baseUrl);
+
+    // Batch permission requests synchronously from user gesture
+    let tabPermissionGranted = !needsTabPermission; // true if no tabs needed
+    let llmPermissionGranted = true;
+
+    if (needsTabPermission) {
+      const tabPerm = await requestAllUrlsPermission();
+      tabPermissionGranted = tabPerm.status === 'granted' || tabPerm.status === 'already-granted';
+      if (!tabPermissionGranted) {
+        console.log('[App] Tab read permission not granted:', tabPerm.status);
+      }
+    }
+
+    if (llmOrigin && tabPermissionGranted) {
+      // Only request LLM origin if tab permission didn't consume the gesture
+      // If tab perm was already-granted, gesture is still valid
+      const llmPerm = await requestHostPermission(llmOrigin);
+      llmPermissionGranted = llmPerm.status === 'granted' || llmPerm.status === 'already-granted';
+      if (!llmPermissionGranted) {
+        console.log('[App] LLM origin permission not granted:', llmPerm.status);
+      }
+    }
+    // ====================================================================
+
     // Capture chatId at start to handle chat switching during streaming
     // overrideChatId bypasses stale closure (used by context menu actions)
     const chatId = overrideChatId || currentChatId;
     if (!chatId) return;
 
-    const selectedTabs = getSelectedTabs(tabIds, overrideTabs);
     console.log('Selected tabs for context:', selectedTabs.map(t => ({ id: t.id, title: t.title })));
 
     const userMessage: Message = {
@@ -519,28 +550,21 @@ export default function App() {
 
     try {
       let extractionResults: ExtractedTabContent[] = [];
-      if (selectedTabs.length > 0) {
-        // Permission check: tab extraction requires <all_urls> host permission
-        // (activeTab does NOT work from side panel context)
-        const permResult = await requestAllUrlsPermission();
-        if (permResult.status === 'denied' || permResult.status === 'cooldown') {
-          console.log('[App] Tab read permission not granted:', permResult.status);
-          setPermissionBanner({ type: 'multi-tab' });
-          // Skip extraction entirely — send message without page context
-        } else {
-          const response = await chrome.runtime.sendMessage({
-            type: 'extract-tabs',
-            tabs: selectedTabs,
-            budget: settings.contextBudget,
-          });
+      if (needsTabPermission && tabPermissionGranted) {
+        const response = await chrome.runtime.sendMessage({
+          type: 'extract-tabs',
+          tabs: selectedTabs,
+          budget: settings.contextBudget,
+        });
 
-          if (response.success) {
-            extractionResults = response.results;
-            setExtractionResults(extractionResults);
-          } else {
-            console.error('Extraction failed:', response.error);
-          }
+        if (response.success) {
+          extractionResults = response.results;
+          setExtractionResults(extractionResults);
+        } else {
+          console.error('Extraction failed:', response.error);
         }
+      } else if (needsTabPermission && !tabPermissionGranted) {
+        setPermissionBanner({ type: 'multi-tab' });
       }
 
       const successfulExtractions = extractionResults.filter((r) => !r.error && r.markdown);
@@ -608,18 +632,10 @@ export default function App() {
         return await tool.execute(args);
       };
 
-      // Permission check: ensure LLM API origin is accessible (Send is a user gesture)
-      const llmOrigin = toOriginPattern(settings.baseUrl);
-      if (llmOrigin) {
-        const permResult = await requestHostPermission(llmOrigin);
-        if (permResult.status === 'denied') {
-          const domain = (() => { try { return new URL(settings.baseUrl).host; } catch { return llmOrigin; } })();
-          setPermissionBanner({ type: 'external-origin', domain });
-          console.log('[App] LLM origin permission denied:', llmOrigin);
-          // Continue anyway — the LLM client will show a clear error
-        } else if (permResult.status === 'cooldown') {
-          console.log('[App] LLM origin permission in cooldown, attempting anyway');
-        }
+      // Show banner if LLM permission was denied (requested at top of function)
+      if (!llmPermissionGranted) {
+        const domain = (() => { try { return new URL(settings.baseUrl).host; } catch { return 'API'; } })();
+        setPermissionBanner({ type: 'external-origin', domain });
       }
 
       // Create streaming message placeholder for agent mode
