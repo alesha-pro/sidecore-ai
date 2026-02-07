@@ -1630,7 +1630,7 @@ export default function SettingsForm({ settings, onSave, onAutoSave, onCancel, h
               <Button
                 type="button"
                 variant="secondary"
-                onClick={() => {
+                onClick={async () => {
                   // Validate URL
                   const trimmedUrl = mcpDraft.url.trim();
                   if (!trimmedUrl) {
@@ -1640,6 +1640,16 @@ export default function SettingsForm({ settings, onSave, onAutoSave, onCancel, h
                   if (!isValidHttpUrl(trimmedUrl)) {
                     setMcpUrlError('URL must be a valid http:// or https:// URL');
                     return;
+                  }
+
+                  // Request host permission for MCP server origin (user gesture: button click)
+                  const originPattern = toOriginPattern(trimmedUrl);
+                  if (originPattern) {
+                    const permResult = await requestHostPermission(originPattern);
+                    if (permResult.status === 'denied') {
+                      setMcpUrlError('Permission denied. The extension needs access to this domain.');
+                      return;
+                    }
                   }
 
                   // Create new server config

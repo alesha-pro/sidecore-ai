@@ -19,19 +19,6 @@ export async function* createStreamingClient(
 ): AsyncGenerator<StreamingChunkType> {
   const { apiKey, body, signal } = options;
 
-  // Check host permission before streaming request
-  try {
-    const parsed = new URL(url);
-    const originPattern = `${parsed.protocol}//${parsed.host}/*`;
-    const hasPermission = await chrome.permissions.contains({ origins: [originPattern] });
-    if (!hasPermission) {
-      yield { type: 'error', payload: { message: `No permission to access ${parsed.host}. Grant access to this domain in the permission prompt.` } };
-      return;
-    }
-  } catch {
-    // Ignore URL parse or API availability issues
-  }
-
   try {
     const response = await fetch(url, {
       method: 'POST',

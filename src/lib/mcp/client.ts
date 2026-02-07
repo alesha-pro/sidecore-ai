@@ -59,21 +59,6 @@ export class McpClient {
       ...(params !== undefined && { params }),
     };
 
-    // Check host permission before making request
-    try {
-      const url = new URL(this.serverUrl);
-      const originPattern = `${url.protocol}//${url.host}/*`;
-      const hasPermission = await chrome.permissions.contains({ origins: [originPattern] });
-      if (!hasPermission) {
-        throw new Error(
-          `No permission to access MCP server at ${url.host}. Grant access to this domain first.`
-        );
-      }
-    } catch (e) {
-      // Re-throw permission errors, ignore URL parse or API availability issues
-      if (e instanceof Error && e.message.includes('No permission')) throw e;
-    }
-
     const response = await fetch(this.serverUrl, {
       method: 'POST',
       headers: {

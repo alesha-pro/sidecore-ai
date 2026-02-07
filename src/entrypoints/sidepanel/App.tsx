@@ -520,24 +520,17 @@ export default function App() {
     try {
       let extractionResults: ExtractedTabContent[] = [];
       if (selectedTabs.length > 0) {
-        // Permission check: multi-tab requires <all_urls> (Send is a user gesture)
-        const isMultiTab = selectedTabs.length > 1 || selectedTabs.some(t => !t.active);
-        let tabsToExtract = selectedTabs;
-
-        if (isMultiTab) {
-          const permResult = await requestAllUrlsPermission();
-          if (permResult.status === 'denied' || permResult.status === 'cooldown') {
-            // Fall back to active tab only
-            console.log('[App] Multi-tab permission not granted:', permResult.status);
-            setPermissionBanner({ type: 'multi-tab' });
-            tabsToExtract = selectedTabs.filter(t => t.active);
-          }
-        }
-
-        if (tabsToExtract.length > 0) {
+        // Permission check: tab extraction requires <all_urls> host permission
+        // (activeTab does NOT work from side panel context)
+        const permResult = await requestAllUrlsPermission();
+        if (permResult.status === 'denied' || permResult.status === 'cooldown') {
+          console.log('[App] Tab read permission not granted:', permResult.status);
+          setPermissionBanner({ type: 'multi-tab' });
+          // Skip extraction entirely — send message without page context
+        } else {
           const response = await chrome.runtime.sendMessage({
             type: 'extract-tabs',
-            tabs: tabsToExtract,
+            tabs: selectedTabs,
             budget: settings.contextBudget,
           });
 
