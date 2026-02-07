@@ -13,13 +13,18 @@ export default defineConfig({
   }),
   manifest: {
     name: 'Sidepanel AI Agent',
-    permissions: ['sidePanel', 'storage', 'tabs', 'scripting', 'contextMenus'],
-    host_permissions: [
-      '<all_urls>',  // Required for on-demand content extraction via chrome.scripting.executeScript
-      'https://api.openai.com/*',
-      'https://*.openai.com/*',
-      'http://localhost:11434/*'  // Ollama local
-    ],
+    // Mandatory: minimal install footprint
+    // - sidePanel: UI container
+    // - storage: settings + chat persistence
+    // - tabs: query tab metadata (title, URL) for tab picker
+    // - activeTab: scripting access to current tab on user gesture (single-tab flow)
+    // - scripting: inject content extractor into tabs
+    // - contextMenus: "Summarize page" / "Ask about page" actions
+    permissions: ['sidePanel', 'storage', 'tabs', 'activeTab', 'scripting', 'contextMenus'],
+    // Optional: requested at runtime via chrome.permissions.request()
+    // - <all_urls>: multi-tab extraction (read content from non-active tabs)
+    // - External API origins are requested dynamically per-domain for LLM/MCP/fetch
+    optional_host_permissions: ['<all_urls>'],
     side_panel: {
       default_path: 'sidepanel.html'
     },
