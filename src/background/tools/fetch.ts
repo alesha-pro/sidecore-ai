@@ -46,6 +46,19 @@ export async function fetchUrl(
     return { error: `Unsupported URL scheme: ${parsedUrl.protocol} (only http/https allowed)` };
   }
 
+  // Check host permission before fetching
+  const originPattern = `${parsedUrl.protocol}//${parsedUrl.host}/*`;
+  try {
+    const hasPermission = await chrome.permissions.contains({ origins: [originPattern] });
+    if (!hasPermission) {
+      return {
+        error: `No permission to access ${parsedUrl.host}. Grant access to this domain in the extension settings or permission prompt.`,
+      };
+    }
+  } catch {
+    // permissions API may not be available in all contexts, proceed with fetch
+  }
+
   // Set up abort controller for timeout
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);

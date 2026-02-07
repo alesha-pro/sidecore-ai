@@ -14,6 +14,28 @@ const LIST_MODELS_TIMEOUT_MS = 10000;
 const COMPLETION_TIMEOUT_MS = 60000;
 
 /**
+ * Check host permission for a URL (non-blocking, best-effort)
+ */
+async function checkHostPermission(url: string): Promise<void> {
+  try {
+    const parsed = new URL(url);
+    const originPattern = `${parsed.protocol}//${parsed.host}/*`;
+    const hasPermission = await chrome.permissions.contains({ origins: [originPattern] });
+    if (!hasPermission) {
+      throw new LLMError(
+        `No permission to access ${parsed.host}. Grant access to this domain in the permission prompt.`,
+        403,
+        'permission_denied',
+        { origin: originPattern }
+      );
+    }
+  } catch (e) {
+    if (e instanceof LLMError) throw e;
+    // Ignore URL parse or API availability issues
+  }
+}
+
+/**
  * Fetch wrapper with timeout using AbortController
  */
 async function fetchWithTimeout(
@@ -52,6 +74,7 @@ export async function listModels(
   apiKey: string
 ): Promise<Model[]> {
   try {
+    await checkHostPermission(`${baseUrl}/models`);
     const response = await fetchWithTimeout(
       `${baseUrl}/models`,
       {
@@ -88,6 +111,7 @@ export async function createChatCompletion(
   request: ChatCompletionRequest
 ): Promise<ChatCompletionResponse> {
   try {
+    await checkHostPermission(`${baseUrl}/chat/completions`);
     const response = await fetchWithTimeout(
       `${baseUrl}/chat/completions`,
       {
