@@ -39,6 +39,8 @@ import { generateSuggestions } from '../../lib/suggestion-generator';
 import { TypewriterTitle } from '../../components/TypewriterTitle';
 import { PermissionBanner, type PermissionBannerType } from '../../components/PermissionBanner';
 import {
+  containsAllUrlsPermission,
+  containsHostPermission,
   requestAllUrlsPermission,
   requestHostPermission,
   toOriginPattern,
@@ -104,6 +106,7 @@ export default function App() {
   const [permissionBanner, setPermissionBanner] = useState<{
     type: PermissionBannerType;
     domain?: string;
+    originPattern?: string;
     pendingAction?: () => void;
   } | null>(null);
 
@@ -492,37 +495,28 @@ export default function App() {
       return;
     }
 
-    // ====================================================================
-    // IMPORTANT: Request all permissions FIRST, before any await/setState.
-    // chrome.permissions.request() requires user gesture context which is
-    // lost after the first await in the call stack.
-    // ====================================================================
+    // Determine available permissions (no prompt in send flow).
+    // Permission requests are triggered from explicit Grant buttons only.
     const selectedTabs = getSelectedTabs(tabIds, overrideTabs);
     const needsTabPermission = selectedTabs.length > 0;
     const llmOrigin = toOriginPattern(settings.baseUrl);
 
-    // Batch permission requests synchronously from user gesture
-    let tabPermissionGranted = !needsTabPermission; // true if no tabs needed
+    let tabPermissionGranted = !needsTabPermission;
     let llmPermissionGranted = true;
 
     if (needsTabPermission) {
-      const tabPerm = await requestAllUrlsPermission();
-      tabPermissionGranted = tabPerm.status === 'granted' || tabPerm.status === 'already-granted';
+      tabPermissionGranted = await containsAllUrlsPermission();
       if (!tabPermissionGranted) {
-        console.log('[App] Tab read permission not granted:', tabPerm.status);
+        console.log('[App] Tab read permission not granted');
       }
     }
 
-    if (llmOrigin && tabPermissionGranted) {
-      // Only request LLM origin if tab permission didn't consume the gesture
-      // If tab perm was already-granted, gesture is still valid
-      const llmPerm = await requestHostPermission(llmOrigin);
-      llmPermissionGranted = llmPerm.status === 'granted' || llmPerm.status === 'already-granted';
+    if (llmOrigin) {
+      llmPermissionGranted = await containsHostPermission(llmOrigin);
       if (!llmPermissionGranted) {
-        console.log('[App] LLM origin permission not granted:', llmPerm.status);
+        console.log('[App] LLM origin permission not granted');
       }
     }
-    // ====================================================================
 
     // Capture chatId at start to handle chat switching during streaming
     // overrideChatId bypasses stale closure (used by context menu actions)
@@ -565,6 +559,14 @@ export default function App() {
         }
       } else if (needsTabPermission && !tabPermissionGranted) {
         setPermissionBanner({ type: 'multi-tab' });
+      }
+
+      // No provider-origin permission -> do not attempt network call.
+      if (!llmPermissionGranted) {
+        const domain = (() => { try { return new URL(settings.baseUrl).host; } catch { return 'API'; } })();
+        setPermissionBanner({ type: 'external-origin', domain, originPattern: llmOrigin ?? undefined });
+        setLLMError(`Permission required: allow access to ${domain} in the banner above.`);
+        return;
       }
 
       const successfulExtractions = extractionResults.filter((r) => !r.error && r.markdown);
@@ -631,12 +633,6 @@ export default function App() {
         }
         return await tool.execute(args);
       };
-
-      // Show banner if LLM permission was denied (requested at top of function)
-      if (!llmPermissionGranted) {
-        const domain = (() => { try { return new URL(settings.baseUrl).host; } catch { return 'API'; } })();
-        setPermissionBanner({ type: 'external-origin', domain });
-      }
 
       // Create streaming message placeholder for agent mode
       const agentStreamingMessageId = crypto.randomUUID();
@@ -1184,14 +1180,15 @@ export default function App() {
     if (permissionBanner.type === 'multi-tab') {
       const result = await requestAllUrlsPermission();
       console.log('[App] Multi-tab permission result:', result.status);
-    } else if (permissionBanner.type === 'external-origin' && permissionBanner.domain) {
-      const origin = toOriginPattern(`https://${permissionBanner.domain}`);
+    } else if (permissionBanner.type === 'external-origin') {
+      const origin = permissionBanner.originPattern || (permissionBanner.domain ? toOriginPattern(`https://${permissionBanner.domain}`) : null);
       if (origin) {
         const result = await requestHostPermission(origin);
         console.log('[App] External origin permission result:', result.status);
       }
     }
 
+    setLLMError(null);
     setPermissionBanner(null);
   }, [permissionBanner]);
 

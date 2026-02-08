@@ -1,5 +1,6 @@
 import type { ComponentChildren } from 'preact';
 import { useState, useEffect, useRef } from 'preact/hooks';
+import { AlertTriangle, ShieldCheck } from 'lucide-preact';
 import type { MCPServer, Tool } from '../lib/tools';
 import { getMockServers, getMockTools, getServers, getTools } from '../lib/tools';
 import type { Settings, McpHeader } from '../lib/types';
@@ -8,7 +9,13 @@ import type { SlashCommand } from '../lib/types';
 import { normalizeBaseUrl, validateBaseUrl } from '../lib/urlNormalization';
 import { listModels } from '../lib/llm/client';
 import { LLMError } from '../lib/llm/errors';
-import { requestHostPermission, toOriginPattern } from '../lib/permissions';
+import {
+  containsAllUrlsPermission,
+  containsHostPermission,
+  requestAllUrlsPermission,
+  requestHostPermission,
+  toOriginPattern,
+} from '../lib/permissions';
 import { applyTheme } from '../hooks/useTheme';
 import { ThemeToggle } from './ThemeToggle';
 import { cn } from '../lib/utils';
@@ -43,6 +50,17 @@ interface FormErrors {
   modelContextLimit?: string;
 }
 
+type PermissionStatus = 'granted' | 'missing' | 'not-configured' | 'invalid';
+
+interface PermissionItem {
+  key: string;
+  title: string;
+  description: string;
+  status: PermissionStatus;
+  requestKind: 'all-urls' | 'origin' | 'none';
+  originPattern?: string;
+}
+
 const emptyMcpServerDraft = (): McpServerDraft => ({
   name: '',
   url: '',
@@ -64,6 +82,17 @@ function getProviderFromUrl(url: string): string {
     p => p.id !== 'custom' && normalized === p.baseUrl.toLowerCase()
   );
   return provider?.id ?? 'custom';
+}
+
+function formatOriginLabel(originPattern: string): string {
+  return originPattern.replace(/\/\*$/, '');
+}
+
+function statusLabel(status: PermissionStatus): string {
+  if (status === 'granted') return 'Granted';
+  if (status === 'missing') return 'Missing';
+  if (status === 'invalid') return 'Invalid URL';
+  return 'Not configured';
 }
 
 export default function SettingsForm({ settings, onSave, onAutoSave, onCancel, header }: SettingsFormProps) {
@@ -99,6 +128,14 @@ export default function SettingsForm({ settings, onSave, onAutoSave, onCancel, h
   const [editingCommand, setEditingCommand] = useState<SlashCommand | null>(null);
   const [commandDraft, setCommandDraft] = useState({ name: '', description: '', prompt: '' });
   const [commandError, setCommandError] = useState<string | null>(null);
+
+  // Permission checklist state (onboarding + missing access hints)
+  const [allUrlsGranted, setAllUrlsGranted] = useState(false);
+  const [originPermissionMap, setOriginPermissionMap] = useState<Record<string, boolean>>({});
+  const [isPermissionLoading, setIsPermissionLoading] = useState(true);
+  const [grantInProgressKey, setGrantInProgressKey] = useState<string | null>(null);
+  const [permissionFeedback, setPermissionFeedback] = useState<string | null>(null);
+  const [permissionRefreshTick, setPermissionRefreshTick] = useState(0);
 
   // Reset form when settings prop changes (skip for auto-save to preserve editing states)
   useEffect(() => {
@@ -157,6 +194,181 @@ export default function SettingsForm({ settings, onSave, onAutoSave, onCancel, h
       isMounted = false;
     };
   }, []);
+
+  const isInitialSetup = !settings.baseUrl || !settings.apiKey;
+
+  const llmOriginPattern = (() => {
+    if (!formData.baseUrl.trim()) return null;
+    try {
+      return toOriginPattern(normalizeBaseUrl(formData.baseUrl));
+    } catch {
+      return null;
+    }
+  })();
+
+  const titleGenOriginPattern = (() => {
+    if (!formData.titleGenEnabled || formData.titleGenUseSameProvider || !formData.titleGenBaseUrl.trim()) {
+      return null;
+    }
+    try {
+      return toOriginPattern(normalizeBaseUrl(formData.titleGenBaseUrl));
+    } catch {
+      return null;
+    }
+  })();
+
+  const mcpPermissionTargets = formData.mcpServers.map((server) => {
+    const originPattern = toOriginPattern(server.url);
+    const displayName = server.name.trim() || server.url;
+    return {
+      key: `mcp:${server.id}`,
+      displayName,
+      originPattern,
+    };
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const refreshPermissionState = async () => {
+      setIsPermissionLoading(true);
+
+      try {
+        const originSet = new Set<string>();
+        if (llmOriginPattern) originSet.add(llmOriginPattern);
+        if (titleGenOriginPattern) originSet.add(titleGenOriginPattern);
+        for (const target of mcpPermissionTargets) {
+          if (target.originPattern) {
+            originSet.add(target.originPattern);
+          }
+        }
+
+        const allUrls = await containsAllUrlsPermission();
+        const nextOriginMap: Record<string, boolean> = {};
+
+        for (const originPattern of originSet) {
+          nextOriginMap[originPattern] = await containsHostPermission(originPattern);
+        }
+
+        if (!cancelled) {
+          setAllUrlsGranted(allUrls);
+          setOriginPermissionMap(nextOriginMap);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('[SettingsForm] Failed to refresh permissions:', error);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsPermissionLoading(false);
+        }
+      }
+    };
+
+    refreshPermissionState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    llmOriginPattern,
+    titleGenOriginPattern,
+    formData.titleGenEnabled,
+    formData.titleGenUseSameProvider,
+    formData.mcpServers,
+    permissionRefreshTick,
+  ]);
+
+  const permissionItems: PermissionItem[] = [
+    {
+      key: 'all-urls',
+      title: 'Read content from multiple tabs',
+      description: 'Required for multi-tab context and web tools. One-time permission.',
+      status: allUrlsGranted ? 'granted' : 'missing',
+      requestKind: 'all-urls',
+      originPattern: '<all_urls>',
+    },
+    {
+      key: 'llm-origin',
+      title: 'Main LLM endpoint access',
+      description: llmOriginPattern
+        ? `Allow requests to ${formatOriginLabel(llmOriginPattern)}.`
+        : 'Configure Base URL first to request this permission.',
+      status: !formData.baseUrl.trim()
+        ? 'not-configured'
+        : !llmOriginPattern
+          ? 'invalid'
+          : (originPermissionMap[llmOriginPattern] ? 'granted' : 'missing'),
+      requestKind: llmOriginPattern ? 'origin' : 'none',
+      originPattern: llmOriginPattern ?? undefined,
+    },
+  ];
+
+  if (formData.titleGenEnabled && !formData.titleGenUseSameProvider) {
+    permissionItems.push({
+      key: 'title-gen-origin',
+      title: 'Title generation endpoint access',
+      description: titleGenOriginPattern
+        ? `Allow requests to ${formatOriginLabel(titleGenOriginPattern)}.`
+        : 'Configure Title Generation Base URL first.',
+      status: !formData.titleGenBaseUrl.trim()
+        ? 'not-configured'
+        : !titleGenOriginPattern
+          ? 'invalid'
+          : (originPermissionMap[titleGenOriginPattern] ? 'granted' : 'missing'),
+      requestKind: titleGenOriginPattern ? 'origin' : 'none',
+      originPattern: titleGenOriginPattern ?? undefined,
+    });
+  }
+
+  for (const target of mcpPermissionTargets) {
+    permissionItems.push({
+      key: target.key,
+      title: `MCP server access: ${target.displayName}`,
+      description: target.originPattern
+        ? `Allow requests to ${formatOriginLabel(target.originPattern)}.`
+        : 'Server URL is invalid. Fix URL to request permission.',
+      status: !target.originPattern
+        ? 'invalid'
+        : (originPermissionMap[target.originPattern] ? 'granted' : 'missing'),
+      requestKind: target.originPattern ? 'origin' : 'none',
+      originPattern: target.originPattern ?? undefined,
+    });
+  }
+
+  const missingPermissionCount = permissionItems.filter((item) => item.status === 'missing').length;
+  const invalidPermissionCount = permissionItems.filter((item) => item.status === 'invalid').length;
+  const showPermissionChecklist = isInitialSetup || missingPermissionCount > 0 || invalidPermissionCount > 0;
+
+  const handleGrantPermission = async (item: PermissionItem) => {
+    if (item.requestKind === 'none') {
+      return;
+    }
+
+    setGrantInProgressKey(item.key);
+    setPermissionFeedback(null);
+
+    try {
+      const result = item.requestKind === 'all-urls'
+        ? await requestAllUrlsPermission()
+        : await requestHostPermission(item.originPattern!);
+
+      if (result.status === 'denied') {
+        setPermissionFeedback(`Permission denied for "${item.title}".`);
+      } else if (result.status === 'cooldown') {
+        const minutes = Math.max(1, Math.ceil(result.retryAfter / 60000));
+        setPermissionFeedback(`Permission prompt paused for "${item.title}". Try again in about ${minutes} min.`);
+      } else {
+        setPermissionFeedback(null);
+      }
+    } catch (error) {
+      setPermissionFeedback(`Failed to request permission for "${item.title}".`);
+      console.error('[SettingsForm] Permission request failed:', error);
+    } finally {
+      setGrantInProgressKey(null);
+      setPermissionRefreshTick((prev) => prev + 1);
+    }
+  };
 
   const validate = (): boolean => {
     const newErrors: FormErrors = {};
@@ -430,6 +642,128 @@ export default function SettingsForm({ settings, onSave, onAutoSave, onCancel, h
         {header && (
           <div>
             {header}
+          </div>
+        )}
+
+        {showPermissionChecklist && (
+          <div className={cn(
+            'rounded-lg border px-4 py-3',
+            'border-amber-300 bg-amber-50',
+            'dark:border-amber-800 dark:bg-amber-950/40'
+          )}>
+            <div className="flex items-start gap-2">
+              <AlertTriangle size={16} className="mt-0.5 text-amber-600 dark:text-amber-400" />
+              <div className="min-w-0 flex-1">
+                <p className={cn(
+                  'text-sm font-semibold',
+                  'text-amber-900 dark:text-amber-200'
+                )}>
+                  {isInitialSetup
+                    ? 'Welcome! Grant permissions for full functionality.'
+                    : 'Some permissions are still missing.'}
+                </p>
+                <p className={cn(
+                  'mt-1 text-xs',
+                  'text-amber-800 dark:text-amber-300'
+                )}>
+                  Grant each permission below once. You can continue without some of them, but related features will stay limited.
+                </p>
+                <p className={cn(
+                  'mt-1 text-xs',
+                  'text-amber-800 dark:text-amber-300'
+                )}>
+                  Built-in manifest permissions (side panel, storage, tabs, scripting, context menu) are already granted at install and are not listed here.
+                </p>
+                <p className={cn(
+                  'mt-2 text-xs font-medium',
+                  'text-amber-900 dark:text-amber-200'
+                )}>
+                  Missing: {missingPermissionCount}
+                  {invalidPermissionCount > 0 ? `, invalid URLs: ${invalidPermissionCount}` : ''}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-3 space-y-2">
+              {permissionItems.map((item) => {
+                const isMissing = item.status === 'missing';
+                const isInvalid = item.status === 'invalid';
+                const isGranted = item.status === 'granted';
+                const isPending = grantInProgressKey === item.key;
+
+                return (
+                  <div
+                    key={item.key}
+                    className={cn(
+                      'rounded-md border p-2.5',
+                      isMissing
+                        ? 'border-amber-400 bg-amber-100/70 dark:border-amber-700 dark:bg-amber-900/30'
+                        : 'border-amber-200 bg-white/70 dark:border-amber-800 dark:bg-amber-950/20'
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className={cn(
+                          'text-xs font-medium',
+                          'text-text-primary dark:text-text-primary-dark'
+                        )}>
+                          {item.title}
+                        </p>
+                        <p className={cn(
+                          'mt-0.5 text-xs',
+                          'text-text-secondary dark:text-text-secondary-dark'
+                        )}>
+                          {item.description}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={cn(
+                          'inline-flex items-center rounded px-2 py-0.5 text-[11px] font-medium',
+                          isGranted
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+                            : isMissing
+                              ? 'bg-amber-200 text-amber-900 dark:bg-amber-800/50 dark:text-amber-200'
+                              : isInvalid
+                                ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                                : 'bg-surface-hover text-text-secondary dark:bg-surface-hover-dark dark:text-text-secondary-dark'
+                        )}>
+                          {statusLabel(item.status)}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => handleGrantPermission(item)}
+                          disabled={
+                            item.requestKind === 'none' ||
+                            item.status === 'granted' ||
+                            isPermissionLoading ||
+                            isPending
+                          }
+                          className={cn(
+                            'inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium',
+                            'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+                            'disabled:opacity-50 disabled:cursor-not-allowed',
+                            isMissing
+                              ? 'bg-amber-600 text-white hover:bg-amber-700'
+                              : 'bg-surface border border-border text-text-primary hover:bg-surface-hover dark:bg-surface-dark dark:border-border-dark dark:text-text-primary-dark dark:hover:bg-surface-hover-dark'
+                          )}
+                        >
+                          <ShieldCheck size={12} />
+                          {isPending ? 'Requesting...' : (isGranted ? 'Granted' : 'Grant')}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {permissionFeedback && (
+              <p className="mt-3 text-xs text-amber-900 dark:text-amber-200">
+                {permissionFeedback}
+              </p>
+            )}
           </div>
         )}
 
