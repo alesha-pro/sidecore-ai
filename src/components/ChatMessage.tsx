@@ -53,6 +53,161 @@ marked.use({
   },
 });
 
+const ALLOWED_TAGS = new Set([
+  'A', 'BLOCKQUOTE', 'BR', 'CODE', 'DEL', 'DIV', 'EM', 'H1', 'H2', 'H3', 'H4',
+  'H5', 'H6', 'HR', 'LI', 'OL', 'P', 'PRE', 'SPAN', 'STRONG', 'TABLE', 'TBODY',
+  'TD', 'TH', 'THEAD', 'TR', 'UL',
+]);
+
+const DROP_CONTENT_TAGS = new Set(['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT', 'EMBED']);
+
+function sanitizeUrl(url: string): string | null {
+  try {
+    const parsed = new URL(url, window.location.href);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'mailto:') {
+      return parsed.toString();
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+function sanitizeElementTree(root: ParentNode): void {
+  const elements = Array.from(root.querySelectorAll('*'));
+
+  for (const element of elements) {
+    const tagName = element.tagName.toUpperCase();
+
+    if (DROP_CONTENT_TAGS.has(tagName)) {
+      element.remove();
+      continue;
+    }
+
+    if (!ALLOWED_TAGS.has(tagName)) {
+      element.replaceWith(...Array.from(element.childNodes));
+      continue;
+    }
+
+    const allowedAttributes = new Set<string>();
+    if (tagName === 'A') {
+      allowedAttributes.add('href');
+      allowedAttributes.add('title');
+    }
+    if (tagName === 'CODE') {
+      allowedAttributes.add('class');
+    }
+
+    for (const attr of Array.from(element.attributes)) {
+      if (!allowedAttributes.has(attr.name)) {
+        element.removeAttribute(attr.name);
+        continue;
+      }
+
+      if (attr.name === 'href') {
+        const safeHref = sanitizeUrl(attr.value);
+        if (!safeHref) {
+          element.removeAttribute('href');
+          continue;
+        }
+        element.setAttribute('href', safeHref);
+        element.setAttribute('target', '_blank');
+        element.setAttribute('rel', 'noopener noreferrer');
+      }
+
+      if (attr.name === 'class') {
+        const safeClasses = attr.value
+          .split(/\s+/)
+          .filter((token) => token === 'hljs' || token.startsWith('language-'));
+        if (safeClasses.length === 0) {
+          element.removeAttribute('class');
+        } else {
+          element.setAttribute('class', safeClasses.join(' '));
+        }
+      }
+    }
+  }
+}
+
+function replaceCitations(root: ParentNode, citationMap: CitationMap | undefined): void {
+  if (!citationMap || Object.keys(citationMap).length === 0) {
+    return;
+  }
+
+  const citationKeys = Object.keys(citationMap).sort((a, b) => b.length - a.length);
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const textNodes: Text[] = [];
+
+  let currentNode = walker.nextNode();
+  while (currentNode) {
+    const parent = currentNode.parentElement;
+    if (parent && !['A', 'CODE', 'PRE'].includes(parent.tagName.toUpperCase())) {
+      textNodes.push(currentNode as Text);
+    }
+    currentNode = walker.nextNode();
+  }
+
+  for (const textNode of textNodes) {
+    const content = textNode.textContent || '';
+    let cursor = 0;
+    let matched = false;
+    const fragment = document.createDocumentFragment();
+
+    while (cursor < content.length) {
+      let matchedKey: string | null = null;
+
+      for (const key of citationKeys) {
+        if (!content.startsWith(key, cursor)) {
+          continue;
+        }
+
+        const nextChar = content[cursor + key.length] || '';
+        if (!nextChar || /\s|[.,;:!?)]/.test(nextChar)) {
+          matchedKey = key;
+          break;
+        }
+      }
+
+      if (!matchedKey) {
+        fragment.append(content[cursor]);
+        cursor += 1;
+        continue;
+      }
+
+      matched = true;
+      const source = citationMap[matchedKey];
+      const link = document.createElement('a');
+      const safeHref = sanitizeUrl(source.url);
+      if (safeHref) {
+        link.href = safeHref;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+      }
+      link.title = source.title;
+      link.className = 'citation-link';
+      link.textContent = matchedKey;
+      fragment.append(link);
+      cursor += matchedKey.length;
+    }
+
+    if (matched) {
+      textNode.replaceWith(fragment);
+    }
+  }
+}
+
+function renderSafeAssistantHtml(content: string, citationMap: CitationMap | undefined): string {
+  const parsed = marked.parse(content) as string;
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(parsed, 'text/html');
+
+  sanitizeElementTree(doc.body);
+  replaceCitations(doc.body, citationMap);
+
+  return doc.body.innerHTML;
+}
+
 interface ChatMessageProps {
   message: Message;
   isLastUserMessage?: boolean;
@@ -62,12 +217,11 @@ interface ChatMessageProps {
   onRegenerate?: () => void;
   toolOutputs?: Message[];
   isNew?: boolean;
-  citationMap?: CitationMap;
   onSuggestionClick?: (text: string) => void;
   isStreaming?: boolean;
 }
 
-export default function ChatMessage({ message, isLastUserMessage, isLatestAssistantMessage, onEdit, onDelete, onRegenerate, toolOutputs, isNew, citationMap, onSuggestionClick, isStreaming }: ChatMessageProps) {
+export default function ChatMessage({ message, isLastUserMessage, isLatestAssistantMessage, onEdit, onDelete, onRegenerate, toolOutputs, isNew, onSuggestionClick, isStreaming }: ChatMessageProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [isHovered, setIsHovered] = useState(false);
@@ -83,44 +237,12 @@ export default function ChatMessage({ message, isLastUserMessage, isLatestAssist
     return null;
   }
 
-  /**
-   * Process citations in text, replacing [N] with clickable links
-   */
-  const processCitations = (content: string, map: CitationMap | undefined): string => {
-    if (!map || Object.keys(map).length === 0) return content;
-
-    // Escape regex special characters in citation keys
-    const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-    let processed = content;
-
-    // Sort keys by length (descending) to match longer citations first
-    const sortedKeys = Object.keys(map).sort((a, b) => b.length - a.length);
-
-    for (const key of sortedKeys) {
-      const source = map[key];
-      if (!source) continue;
-
-      // Create a regex that matches the citation key as a whole word
-      // Allow for optional punctuation after the citation
-      const pattern = new RegExp(`(${escapeRegex(key)})(?=[\\s.,;:!?]|$)`, 'g');
-
-      const linkHtml = `<a href="${source.url}" target="_blank" rel="noopener noreferrer" title="${source.title}" class="citation-link">${key}</a>`;
-
-      processed = processed.replace(pattern, linkHtml);
-    }
-
-    return processed;
-  };
-
   const renderedContent = useMemo(() => {
     if (message.role === 'assistant' && message.content) {
-      // Process citations first, then parse markdown
-      const withCitations = processCitations(message.content, citationMap);
-      return marked.parse(withCitations) as string;
+      return renderSafeAssistantHtml(message.content, message.citations);
     }
     return null;
-  }, [message.role, message.content, citationMap]);
+  }, [message.role, message.content, message.citations]);
 
   const handleSaveEdit = () => {
     if (onEdit && editContent.trim()) {

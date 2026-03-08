@@ -12,7 +12,11 @@ export async function getSettings(): Promise<Settings> {
     const result = await chrome.storage.local.get([STORAGE_KEY]);
     if (result[STORAGE_KEY]) {
       // Merge with defaults to handle new fields in updates
-      return { ...DEFAULT_SETTINGS, ...result[STORAGE_KEY] };
+      const merged = { ...DEFAULT_SETTINGS, ...result[STORAGE_KEY] } as Settings;
+      if (!merged.baseUrl?.trim()) {
+        merged.baseUrl = DEFAULT_SETTINGS.baseUrl;
+      }
+      return merged;
     }
     return { ...DEFAULT_SETTINGS };
   } catch (error) {

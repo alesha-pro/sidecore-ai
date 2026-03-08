@@ -24,6 +24,7 @@ import { Toggle } from './ui/Toggle';
 import { Select } from './ui/Select';
 import { Button } from './ui/Button';
 import { Divider } from './ui/Divider';
+import { debugLog } from '../lib/debug';
 
 interface McpServerDraft {
   name: string;
@@ -78,6 +79,9 @@ function isValidHttpUrl(str: string): boolean {
 
 function getProviderFromUrl(url: string): string {
   const normalized = url.trim().toLowerCase();
+  if (!normalized) {
+    return 'openai';
+  }
   const provider = LLM_PROVIDERS.find(
     p => p.id !== 'custom' && normalized === p.baseUrl.toLowerCase()
   );
@@ -440,7 +444,7 @@ export default function SettingsForm({ settings, onSave, onAutoSave, onCancel, h
         defaultModel: formData.defaultModel.trim(),
       };
 
-      console.log('[SettingsForm] Saving settings, mcpServers:', normalizedSettings.mcpServers);
+      debugLog('[SettingsForm] Saving settings, mcpServers:', normalizedSettings.mcpServers);
 
       await onSave(normalizedSettings);
     } catch (error) {

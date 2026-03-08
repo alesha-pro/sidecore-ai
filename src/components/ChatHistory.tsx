@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'preact/hooks';
-import type { Message, CitationMap } from '../lib/types';
+import type { Message } from '../lib/types';
 import ChatMessage from './ChatMessage';
 import { RefreshCw } from 'lucide-preact';
 import { cn } from '../lib/utils';
@@ -12,7 +12,6 @@ interface ChatHistoryProps {
   onEditMessage?: (id: string, newContent: string) => void;
   onDeleteMessage?: (id: string) => void;
   onRegenerate?: () => void;
-  citationMap?: CitationMap;
   onSuggestionClick?: (text: string) => void;
 }
 
@@ -24,7 +23,6 @@ export default function ChatHistory({
   onEditMessage,
   onDeleteMessage,
   onRegenerate,
-  citationMap,
   onSuggestionClick,
 }: ChatHistoryProps) {
   // Track new messages for animation
@@ -115,7 +113,6 @@ export default function ChatHistory({
         onRegenerate={onRegenerate}
         toolOutputs={toolOutputs.length > 0 ? toolOutputs : undefined}
         isNew={animatedIds.has(message.id)}
-        citationMap={citationMap}
         onSuggestionClick={onSuggestionClick}
         isStreaming={isStreaming}
       />

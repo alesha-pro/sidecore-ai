@@ -34,6 +34,8 @@ export interface Message {
   contentMessageId?: string;
   /** Follow-up suggestion texts (max 3, assistant messages only) */
   suggestions?: string[];
+  /** Per-message citations for assistant responses */
+  citations?: CitationMap;
 }
 
 export interface Settings {
@@ -132,7 +134,7 @@ export interface SlashCommand {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  baseUrl: '',
+  baseUrl: 'https://api.openai.com/v1',
   apiKey: '',
   defaultModel: '',
   contextBudget: 50000,
@@ -213,7 +215,6 @@ export interface McpServerConfig {
  * Preset LLM providers with OpenAI-compatible endpoints
  */
 export const LLM_PROVIDERS = [
-  { id: 'custom', name: 'Custom', baseUrl: '' },
   { id: 'openai', name: 'OpenAI', baseUrl: 'https://api.openai.com/v1' },
   { id: 'openrouter', name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1' },
   { id: 'zai', name: 'z.ai', baseUrl: 'https://api.z.ai/api/coding/paas/v4' },
@@ -221,6 +222,7 @@ export const LLM_PROVIDERS = [
   { id: 'groq', name: 'Groq', baseUrl: 'https://api.groq.com/openai/v1' },
   { id: 'mistral', name: 'Mistral', baseUrl: 'https://api.mistral.ai/v1' },
   { id: 'deepseek', name: 'DeepSeek', baseUrl: 'https://api.deepseek.com/v1' },
+  { id: 'custom', name: 'Custom', baseUrl: '' },
 ] as const;
 
 export type LLMProvider = typeof LLM_PROVIDERS[number];

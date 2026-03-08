@@ -5,6 +5,7 @@
 
 import type { ToolRegistry } from '../tools/registry';
 import type { McpServerConfig } from '../types';
+import { debugLog } from '../debug';
 import { McpClient } from './client';
 import { buildMcpTools, getServerPrefix } from './tool-adapter';
 
@@ -29,7 +30,7 @@ export class McpToolManager {
       if (!currentServerIds.has(serverId)) {
         const prefix = getServerPrefix(serverId);
         const removed = this.registry.unregisterByPrefix(prefix);
-        console.log(`[McpToolManager] Removed ${removed} tools from server ${serverId}`);
+        debugLog(`[McpToolManager] Removed ${removed} tools from server ${serverId}`);
       }
     }
 
@@ -59,7 +60,7 @@ export class McpToolManager {
       const result = await client.listTools();
 
       if (!result.tools || result.tools.length === 0) {
-        console.log(`[McpToolManager] Server ${server.id} (${server.url}) has no tools`);
+        debugLog(`[McpToolManager] Server ${server.id} (${server.url}) has no tools`);
         return;
       }
 
@@ -69,7 +70,7 @@ export class McpToolManager {
         this.registry.register(tool);
       }
 
-      console.log(
+      debugLog(
         `[McpToolManager] Registered ${tools.length} tools from server ${server.id} (${server.url})`
       );
     } catch (error) {

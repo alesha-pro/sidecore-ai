@@ -1,5 +1,6 @@
 import { extractTabs } from '../background/extraction/extractTabs';
 import { fetchUrl } from '../background/tools/fetch';
+import { debugLog } from '../lib/debug';
 import type { TabInfo } from '../lib/tabs';
 import type { ExtractedTabContent } from '../shared/extraction';
 
@@ -25,11 +26,11 @@ export default defineBackground(() => {
   chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (!tab?.id || !tab.windowId) return;
 
-    console.log('[background] Context menu clicked:', info.menuItemId, 'tab:', tab.id);
+    debugLog('[background] Context menu clicked:', info.menuItemId, 'tab:', tab.id);
 
     // Open side panel FIRST (must be synchronous response to user gesture)
     chrome.sidePanel.open({ windowId: tab.windowId });
-    console.log('[background] Side panel open called');
+    debugLog('[background] Side panel open called');
 
     // Then store pending action in session storage
     chrome.storage.session.set({
@@ -39,7 +40,7 @@ export default defineBackground(() => {
         timestamp: Date.now(),
       },
     }).then(() => {
-      console.log('[background] Pending action saved to session storage');
+      debugLog('[background] Pending action saved to session storage');
     });
   });
 

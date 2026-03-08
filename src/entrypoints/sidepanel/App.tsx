@@ -11,8 +11,9 @@ import { ChevronLeft, MessageSquarePlus, Settings as SettingsIcon, Sparkles, Tra
 import { cn } from '../../lib/utils';
 import { useTheme } from '@/hooks/useTheme';
 import { useTabs } from '../../hooks/useTabs';
+import { debugLog } from '../../lib/debug';
 import { getSettings, saveSettings } from '../../lib/storage';
-import type { Message, Settings, TabSelection, Chat, ChatSummary, CitationMap } from '../../lib/types';
+import type { Message, Settings, TabSelection, Chat, ChatSummary } from '../../lib/types';
 import { DEFAULT_SETTINGS, DEFAULT_TAB_SELECTION, SUPPORTED_LANGUAGES } from '../../lib/types';
 import { LLMError } from '../../lib/llm/errors';
 import type { ChatMessage as LLMChatMessage } from '../../lib/llm/types';
@@ -86,9 +87,6 @@ export default function App() {
 
   const [extractionResults, setExtractionResults] = useState<ExtractedTabContent[]>([]);
 
-  // Citation map for current context (maps [1], [2] to source URLs)
-  const [citationMap, setCitationMap] = useState<CitationMap>({});
-
   // Debug view state
   const [isDebugViewOpen, setIsDebugViewOpen] = useState(false);
   const [currentInputContent, setCurrentInputContent] = useState('');
@@ -137,7 +135,7 @@ export default function App() {
     const loadSettingsAndChats = async () => {
       try {
         const loadedSettings = await getSettings();
-        console.log('[App] Loaded settings, mcpServers:', loadedSettings.mcpServers);
+        debugLog('[App] Loaded settings, mcpServers:', loadedSettings.mcpServers);
         setSettings(loadedSettings);
 
         if (!loadedSettings.baseUrl || !loadedSettings.apiKey) {
@@ -268,7 +266,7 @@ export default function App() {
     const hasActiveStream = currentChatId ? streamingChats.has(currentChatId) : false;
 
     if (hasStreamingMessage && !hasActiveStream) {
-      console.log('[App] Reconciling stale streaming state: no active stream but messages have isStreaming=true');
+      debugLog('[App] Reconciling stale streaming state: no active stream but messages have isStreaming=true');
       setMessages(prev => prev.map(m =>
         m.isStreaming ? { ...m, isStreaming: false } : m
       ));
@@ -490,15 +488,35 @@ export default function App() {
     }
   }, [isDebugViewOpen, extractForPreview]);
 
-  const handleSendMessage = async (content: string, tabIds: number[] = [], overrideChatId?: string, overrideTabs?: TabInfo[]) => {
+  interface SendMessageOptions {
+    chatId?: string;
+    tabs?: TabInfo[];
+    baseMessages?: Message[];
+    appendUserMessage?: boolean;
+  }
+
+  const handleSendMessage = async (
+    content: string,
+    tabIds: number[] = [],
+    options: SendMessageOptions = {}
+  ) => {
     if (!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel) {
       return;
     }
 
+    const {
+      chatId: overrideChatId,
+      tabs: overrideTabs,
+      baseMessages,
+      appendUserMessage = true,
+    } = options;
+    const historyMessages = baseMessages ?? messages;
+
     // Determine available permissions (no prompt in send flow).
     // Permission requests are triggered from explicit Grant buttons only.
     const selectedTabs = getSelectedTabs(tabIds, overrideTabs);
-    const needsTabPermission = selectedTabs.length > 0;
+    const hasSelectedTabs = selectedTabs.length > 0;
+    const needsTabPermission = hasSelectedTabs && !(selectedTabs.length === 1 && selectedTabs[0]?.active);
     const llmOrigin = toOriginPattern(settings.baseUrl);
 
     let tabPermissionGranted = !needsTabPermission;
@@ -507,14 +525,14 @@ export default function App() {
     if (needsTabPermission) {
       tabPermissionGranted = await containsAllUrlsPermission();
       if (!tabPermissionGranted) {
-        console.log('[App] Tab read permission not granted');
+        debugLog('[App] Tab read permission not granted');
       }
     }
 
     if (llmOrigin) {
       llmPermissionGranted = await containsHostPermission(llmOrigin);
       if (!llmPermissionGranted) {
-        console.log('[App] LLM origin permission not granted');
+        debugLog('[App] LLM origin permission not granted');
       }
     }
 
@@ -523,15 +541,17 @@ export default function App() {
     const chatId = overrideChatId || currentChatId;
     if (!chatId) return;
 
-    console.log('Selected tabs for context:', selectedTabs.map(t => ({ id: t.id, title: t.title })));
+    debugLog('Selected tabs for context:', selectedTabs.map(t => ({ id: t.id, title: t.title })));
 
-    const userMessage: Message = {
-      id: crypto.randomUUID(),
-      role: 'user',
-      content,
-      timestamp: Date.now(),
-    };
-    setMessages((prev) => [...prev, userMessage]);
+    if (appendUserMessage) {
+      const userMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'user',
+        content,
+        timestamp: Date.now(),
+      };
+      setMessages((prev) => [...prev, userMessage]);
+    }
 
     setTabSelection(DEFAULT_TAB_SELECTION);
     setIsTabPickerOpen(false);
@@ -544,7 +564,7 @@ export default function App() {
 
     try {
       let extractionResults: ExtractedTabContent[] = [];
-      if (needsTabPermission && tabPermissionGranted) {
+      if (hasSelectedTabs && tabPermissionGranted) {
         const response = await chrome.runtime.sendMessage({
           type: 'extract-tabs',
           tabs: selectedTabs,
@@ -558,13 +578,35 @@ export default function App() {
           console.error('Extraction failed:', response.error);
         }
       } else if (needsTabPermission && !tabPermissionGranted) {
-        setPermissionBanner({ type: 'multi-tab' });
+        setPermissionBanner({
+          type: 'multi-tab',
+          pendingAction: () => {
+            void handleSendMessage(content, tabIds, {
+              chatId: overrideChatId,
+              tabs: overrideTabs,
+              baseMessages: historyMessages,
+              appendUserMessage: false,
+            });
+          },
+        });
       }
 
       // No provider-origin permission -> do not attempt network call.
       if (!llmPermissionGranted) {
         const domain = (() => { try { return new URL(settings.baseUrl).host; } catch { return 'API'; } })();
-        setPermissionBanner({ type: 'external-origin', domain, originPattern: llmOrigin ?? undefined });
+        setPermissionBanner({
+          type: 'external-origin',
+          domain,
+          originPattern: llmOrigin ?? undefined,
+          pendingAction: () => {
+            void handleSendMessage(content, tabIds, {
+              chatId: overrideChatId,
+              tabs: overrideTabs,
+              baseMessages: historyMessages,
+              appendUserMessage: false,
+            });
+          },
+        });
         setLLMError(`Permission required: allow access to ${domain} in the banner above.`);
         return;
       }
@@ -601,15 +643,12 @@ export default function App() {
 
       // Assemble context with smart management (compression, trimming, etc.)
       const { apiMessages, citationMap: newCitationMap } = assembleContext({
-        messages, // Current history (before userMessage due to React batching)
+        messages: historyMessages, // Current history (before userMessage due to React batching)
         userContent: content,
         systemPrompt: systemPromptContent.trim() ? systemPromptContent : '',
         tabContentSystemMessage,
         modelContextLimit: settings.modelContextLimit,
       });
-
-      // Store citation map for rendering clickable citations
-      setCitationMap(newCitationMap);
 
       // Always use agentic loop with automatic tool execution
       // Get tool definitions (built-in tools registered at module init)
@@ -640,6 +679,7 @@ export default function App() {
         id: agentStreamingMessageId,
         role: 'assistant',
         content: '',
+        citations: newCitationMap,
         timestamp: Date.now(),
         isStreaming: true,
       }]);
@@ -706,7 +746,7 @@ export default function App() {
           });
         },
         onIterationStart: (iteration: number) => {
-          console.log(`[agent] Starting iteration ${iteration}`);
+          debugLog(`[agent] Starting iteration ${iteration}`);
           // On iteration > 0, finalize previous streaming message and create new placeholder
           if (iteration > 0) {
             const newStreamingId = crypto.randomUUID();
@@ -730,6 +770,7 @@ export default function App() {
                 id: newStreamingId,
                 role: 'assistant',
                 content: '',
+                citations: newCitationMap,
                 timestamp: Date.now(),
                 isStreaming: true,
               }];
@@ -785,6 +826,7 @@ export default function App() {
             ...streamingMessage,
             content: mainContent,
             thinking: thinking || undefined,
+            citations: newCitationMap,
             isStreaming: false,
             timestamp: Date.now(),
           },
@@ -852,10 +894,10 @@ export default function App() {
         setLLMError(error.userMessage);
         console.error(error.toLogString());
       } else if (error instanceof DOMException && error.name === 'AbortError') {
-        console.log('Request aborted successfully.');
+        debugLog('Request aborted successfully.');
         setLLMError('Generation stopped.');
       } else if (abortController.signal.aborted) {
-        console.log('LLM request aborted successfully.');
+        debugLog('LLM request aborted successfully.');
         setLLMError('Generation stopped.');
       } else if (error instanceof Error && (
         error.message === 'Agent loop timed out' ||
@@ -882,35 +924,35 @@ export default function App() {
   useEffect(() => {
     // Wait for settings to load
     if (!settings?.baseUrl || !settings?.apiKey || !settings?.defaultModel) {
-      console.log('[App] Context menu handler: waiting for settings...');
+      debugLog('[App] Context menu handler: waiting for settings...');
       return;
     }
 
     const processPendingAction = async () => {
-      console.log('[App] Checking for pending context menu action...');
+      debugLog('[App] Checking for pending context menu action...');
       const result = await chrome.storage.session.get('pendingContextMenuAction');
       const pending = result.pendingContextMenuAction;
 
       if (!pending) {
-        console.log('[App] No pending action found');
+        debugLog('[App] No pending action found');
         return;
       }
 
-      console.log('[App] Found pending action:', pending.action, 'timestamp:', pending.timestamp);
+      debugLog('[App] Found pending action:', pending.action, 'timestamp:', pending.timestamp);
 
       // Clear immediately to prevent re-execution
       await chrome.storage.session.remove('pendingContextMenuAction');
-      console.log('[App] Cleared pending action from storage');
+      debugLog('[App] Cleared pending action from storage');
 
       // Check if action is recent (within 10 seconds)
       const age = Date.now() - pending.timestamp;
       if (age > 10000) {
-        console.log('[App] Action too old, ignoring. Age:', age, 'ms');
+        debugLog('[App] Action too old, ignoring. Age:', age, 'ms');
         return;
       }
 
       const { action } = pending;
-      console.log('[App] Processing action:', action);
+      debugLog('[App] Processing action:', action);
 
       // Always create a new chat for context menu actions
       const newChat = await createChat();
@@ -921,7 +963,7 @@ export default function App() {
       setPreviewExtraction([]);
       const updatedChats = await listChats();
       setChats(updatedChats);
-      console.log('[App] Created new chat:', newChat.id);
+      debugLog('[App] Created new chat:', newChat.id);
 
       // Switch to chat view
       setCurrentView('chat');
@@ -931,11 +973,11 @@ export default function App() {
         includeActiveTab: false,
         selectedTabIds: new Set([pending.tab.id]),
       });
-      console.log('[App] Set tab selection with explicit tab ID:', pending.tab.id);
+      debugLog('[App] Set tab selection with explicit tab ID:', pending.tab.id);
 
       // Trigger action based on menu item
       if (action === 'summarize-page') {
-        console.log('[App] Sending summarize request for tab:', pending.tab.id);
+        debugLog('[App] Sending summarize request for tab:', pending.tab.id);
         // Pass explicit chatId and TabInfo to bypass all stale closure/state issues
         const tabInfo: TabInfo = {
           id: pending.tab.id,
@@ -949,8 +991,10 @@ export default function App() {
         await handleSendMessage(
           'Please summarize this page concisely, highlighting the key points.',
           [pending.tab.id],
-          newChat.id,
-          [tabInfo]
+          {
+            chatId: newChat.id,
+            tabs: [tabInfo],
+          }
         );
       }
       // 'ask-about-page' just prepares context, user types question
@@ -962,17 +1006,17 @@ export default function App() {
     // Listen for storage changes (for when sidepanel is already open)
     const handleStorageChange = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
       if (areaName === 'session' && changes.pendingContextMenuAction?.newValue) {
-        console.log('[App] Storage changed, new pending action detected');
+        debugLog('[App] Storage changed, new pending action detected');
         processPendingAction();
       }
     };
 
     chrome.storage.onChanged.addListener(handleStorageChange);
-    console.log('[App] Context menu storage listener registered');
+    debugLog('[App] Context menu storage listener registered');
 
     return () => {
       chrome.storage.onChanged.removeListener(handleStorageChange);
-      console.log('[App] Context menu storage listener removed');
+      debugLog('[App] Context menu storage listener removed');
     };
   }, [settings]);
 
@@ -1118,7 +1162,7 @@ export default function App() {
       setLLMError(null);
 
       // Re-send the message with updated content (creates new user message)
-      await handleSendMessage(newContent);
+      await handleSendMessage(newContent, [], { baseMessages: messagesToKeep });
     } else {
       // Just update the message content (for assistant messages)
       const updatedMessages = [...messages];
@@ -1166,30 +1210,39 @@ export default function App() {
     setLLMError(null);
 
     // Re-send with the same user content
-    handleSendMessage(userContent);
+    void handleSendMessage(userContent, [], { baseMessages: messagesWithoutUser });
   }, [currentChatId, isCurrentChatStreaming, messages, handleSendMessage]);
 
   const handleSuggestionClick = useCallback((text: string) => {
     if (isCurrentChatStreaming) return;
-    handleSendMessage(text);
+    void handleSendMessage(text);
   }, [isCurrentChatStreaming, handleSendMessage]);
 
   const handlePermissionGrant = useCallback(async () => {
     if (!permissionBanner) return;
 
+    let resultStatus: 'granted' | 'already-granted' | 'denied' | 'cooldown' | null = null;
+
     if (permissionBanner.type === 'multi-tab') {
       const result = await requestAllUrlsPermission();
-      console.log('[App] Multi-tab permission result:', result.status);
+      debugLog('[App] Multi-tab permission result:', result.status);
+      resultStatus = result.status;
     } else if (permissionBanner.type === 'external-origin') {
       const origin = permissionBanner.originPattern || (permissionBanner.domain ? toOriginPattern(`https://${permissionBanner.domain}`) : null);
       if (origin) {
         const result = await requestHostPermission(origin);
-        console.log('[App] External origin permission result:', result.status);
+        debugLog('[App] External origin permission result:', result.status);
+        resultStatus = result.status;
       }
     }
 
     setLLMError(null);
+    const pendingAction = permissionBanner.pendingAction;
     setPermissionBanner(null);
+
+    if (pendingAction && (resultStatus === 'granted' || resultStatus === 'already-granted')) {
+      pendingAction();
+    }
   }, [permissionBanner]);
 
   const handlePermissionDismiss = useCallback(() => {
@@ -1408,7 +1461,6 @@ export default function App() {
             onEditMessage={handleEditMessage}
             onDeleteMessage={handleDeleteMessage}
             onRegenerate={handleRegenerate}
-            citationMap={citationMap}
             onSuggestionClick={handleSuggestionClick}
           />
           <SelectedTabsBar

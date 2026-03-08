@@ -1,6 +1,84 @@
-import type { Chat, ChatSummary } from './types';
+import type { Chat, ChatSummary, Message } from './types';
 
 const CHATS_KEY = 'chats';
+const MAX_TOOL_OUTPUT_CHARS = 8_000;
+const MAX_CONTEXT_SOURCES = 4;
+const MAX_CONTEXT_CHARS_PER_SOURCE = 1_500;
+const MAX_CONTEXT_TOTAL_CHARS = 6_000;
+const CONTEXT_SOURCE_PATTERN = /\[(\d+)\]\s([^\n]+)\nSource:\s([^\n]+)\n\n([\s\S]*?)(?=\n\n\[\d+\]\s|\s*$)/g;
+
+function truncateWithNotice(content: string, maxChars: number, notice: string): string {
+  if (content.length <= maxChars) {
+    return content;
+  }
+
+  return `${content.slice(0, maxChars)}\n\n${notice}`;
+}
+
+function compactStoredContextMessage(message: Message): Message {
+  let remainingChars = MAX_CONTEXT_TOTAL_CHARS;
+  const sourceBlocks = Array.from(message.content.matchAll(CONTEXT_SOURCE_PATTERN));
+
+  if (sourceBlocks.length === 0) {
+    return {
+      ...message,
+      content: truncateWithNotice(
+        message.content,
+        MAX_CONTEXT_TOTAL_CHARS,
+        '[Saved context compressed for storage. Re-extract the source if you need the full text.]'
+      ),
+    };
+  }
+
+  const compactedSections: string[] = [];
+  for (const match of sourceBlocks.slice(0, MAX_CONTEXT_SOURCES)) {
+    if (remainingChars <= 0) {
+      break;
+    }
+
+    const [, id, title, url, body] = match;
+    const maxBodyChars = Math.min(MAX_CONTEXT_CHARS_PER_SOURCE, remainingChars);
+    const trimmedBody = body.trim();
+    const excerpt = trimmedBody.length > maxBodyChars
+      ? `${trimmedBody.slice(0, maxBodyChars)}\n\n[Excerpt truncated in saved chat]`
+      : trimmedBody;
+
+    compactedSections.push(`[${id}] ${title}\nSource: ${url}\n\n${excerpt}`);
+    remainingChars -= excerpt.length;
+  }
+
+  return {
+    ...message,
+    content: 'Saved context snapshot from previous turn. This copy is compressed to reduce storage usage.\n\n'
+      + compactedSections.join('\n\n'),
+  };
+}
+
+function compactMessageForStorage(message: Message): Message {
+  if (message.contentMessageId) {
+    return compactStoredContextMessage(message);
+  }
+
+  if (message.role === 'tool') {
+    return {
+      ...message,
+      content: truncateWithNotice(
+        message.content,
+        MAX_TOOL_OUTPUT_CHARS,
+        '[Tool output truncated in saved chat. Re-run the tool to recover the full result.]'
+      ),
+    };
+  }
+
+  return message;
+}
+
+function compactChatForStorage(chat: Chat): Chat {
+  return {
+    ...chat,
+    messages: chat.messages.map(compactMessageForStorage),
+  };
+}
 
 /**
  * List all chats with summary information.
@@ -51,10 +129,13 @@ export async function saveChat(chat: Chat): Promise<void> {
   try {
     const result = await chrome.storage.local.get([CHATS_KEY]);
     const chats: Record<string, Chat> = result[CHATS_KEY] || {};
+    const compactedChats = Object.fromEntries(
+      Object.entries(chats).map(([id, existingChat]) => [id, compactChatForStorage(existingChat)])
+    );
 
-    chats[chat.id] = chat;
+    compactedChats[chat.id] = compactChatForStorage(chat);
 
-    await chrome.storage.local.set({ [CHATS_KEY]: chats });
+    await chrome.storage.local.set({ [CHATS_KEY]: compactedChats });
   } catch (error) {
     console.error('Failed to save chat:', error);
     throw new Error('Failed to save chat');

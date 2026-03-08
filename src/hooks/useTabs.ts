@@ -1,5 +1,5 @@
 // src/hooks/useTabs.ts
-import { useState, useEffect, useCallback } from 'preact/hooks';
+import { useState, useEffect, useCallback, useRef } from 'preact/hooks';
 import { browser } from 'wxt/browser';
 import type { TabInfo } from '../lib/tabs';
 
@@ -16,12 +16,16 @@ export function useTabs(onTabClosed?: (tabId: number) => void): UseTabsResult {
   const [activeTab, setActiveTab] = useState<TabInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const currentWindowIdRef = useRef<number | null>(null);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const allTabs = await browser.tabs.query({});
+      const currentWindow = await browser.windows.getCurrent();
+      currentWindowIdRef.current = currentWindow.id ?? null;
+
+      const allTabs = await browser.tabs.query({ windowId: currentWindow.id });
       const mapped: TabInfo[] = allTabs
         .filter((tab): tab is typeof tab & { id: number; url: string } =>
           tab.id !== undefined && tab.url !== undefined
@@ -33,7 +37,7 @@ export function useTabs(onTabClosed?: (tabId: number) => void): UseTabsResult {
           favIconUrl: tab.favIconUrl,
           active: tab.active ?? false,
           windowId: tab.windowId ?? 0,
-          index,
+          index: tab.index ?? index,
         }));
 
       setTabs(mapped);
@@ -57,7 +61,13 @@ export function useTabs(onTabClosed?: (tabId: number) => void): UseTabsResult {
   useEffect(() => {
     // Handler for new tabs created
     const handleTabCreated = (tab: chrome.tabs.Tab) => {
-      if (tab.id === undefined) return;
+      if (
+        tab.id === undefined ||
+        currentWindowIdRef.current === null ||
+        tab.windowId !== currentWindowIdRef.current
+      ) {
+        return;
+      }
 
       // Tab might not have URL yet (still loading)
       const newTabInfo: TabInfo = {
@@ -90,6 +100,13 @@ export function useTabs(onTabClosed?: (tabId: number) => void): UseTabsResult {
       changeInfo: chrome.tabs.TabChangeInfo,
       tab: chrome.tabs.Tab
     ) => {
+      if (
+        currentWindowIdRef.current === null ||
+        tab.windowId !== currentWindowIdRef.current
+      ) {
+        return;
+      }
+
       // Only update on meaningful changes to avoid unnecessary rerenders
       if (!changeInfo.url && !changeInfo.title && !changeInfo.favIconUrl) {
         return;
@@ -122,21 +139,26 @@ export function useTabs(onTabClosed?: (tabId: number) => void): UseTabsResult {
     // Handler for tab activation changes
     const handleTabActivated = (activeInfo: chrome.tabs.TabActiveInfo) => {
       const { tabId, windowId } = activeInfo;
+      if (currentWindowIdRef.current === null || windowId !== currentWindowIdRef.current) {
+        return;
+      }
 
-      // Update active flags across all tabs
-      setTabs((prev) =>
-        prev.map((t) => ({
+      setTabs((prev) => {
+        const nextTabs = prev.map((t) => ({
           ...t,
           active: t.id === tabId && t.windowId === windowId,
-        }))
-      );
-
-      // Update activeTab state
-      setTabs((prev) => {
-        const newActive = prev.find((t) => t.id === tabId) || null;
+        }));
+        const newActive = nextTabs.find((t) => t.id === tabId) || null;
         setActiveTab(newActive);
-        return prev;
+        return nextTabs;
       });
+    };
+
+    const handleWindowFocusChanged = (windowId: number) => {
+      if (windowId === chrome.windows.WINDOW_ID_NONE) {
+        return;
+      }
+      void refresh();
     };
 
     // Add event listeners
@@ -144,6 +166,7 @@ export function useTabs(onTabClosed?: (tabId: number) => void): UseTabsResult {
     browser.tabs.onRemoved.addListener(handleTabRemoved);
     browser.tabs.onUpdated.addListener(handleTabUpdated);
     browser.tabs.onActivated.addListener(handleTabActivated);
+    browser.windows.onFocusChanged.addListener(handleWindowFocusChanged);
 
     // Cleanup on unmount
     return () => {
@@ -151,8 +174,9 @@ export function useTabs(onTabClosed?: (tabId: number) => void): UseTabsResult {
       browser.tabs.onRemoved.removeListener(handleTabRemoved);
       browser.tabs.onUpdated.removeListener(handleTabUpdated);
       browser.tabs.onActivated.removeListener(handleTabActivated);
+      browser.windows.onFocusChanged.removeListener(handleWindowFocusChanged);
     };
-  }, [onTabClosed]);
+  }, [onTabClosed, refresh]);
 
   return { tabs, activeTab, loading, error, refresh };
 }

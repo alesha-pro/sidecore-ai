@@ -12,6 +12,7 @@
 
 import { Readability, isProbablyReaderable } from '@mozilla/readability';
 import TurndownService from 'turndown';
+import { debugLog } from '../lib/debug';
 import type { ArticleExtractionPayload } from '../shared/extraction';
 
 /**
@@ -46,7 +47,7 @@ const siteExtractors: Record<string, SiteExtractor> = {
     const title = titleEl?.textContent?.trim() || '';
 
     if (!title) {
-      console.log('[article-extractor] Reddit: no post title found, falling back to Readability');
+      debugLog('[article-extractor] Reddit: no post title found, falling back to Readability');
       return null;
     }
 
@@ -105,7 +106,7 @@ const siteExtractors: Record<string, SiteExtractor> = {
       </article>
     `;
 
-    console.log('[article-extractor] Reddit extractor: extracted', {
+    debugLog('[article-extractor] Reddit extractor: extracted', {
       title,
       postBodyLength: postBody.length,
       commentsCount: comments.length
@@ -121,7 +122,7 @@ const siteExtractors: Record<string, SiteExtractor> = {
   'x.com': (doc: Document, url: string) => {
     const articles = doc.querySelectorAll('article[data-testid="tweet"]');
     if (articles.length === 0) {
-      console.log('[article-extractor] X.com: no tweet articles found, falling back to Readability');
+      debugLog('[article-extractor] X.com: no tweet articles found, falling back to Readability');
       return null;
     }
 
@@ -190,7 +191,7 @@ const siteExtractors: Record<string, SiteExtractor> = {
 
       html += `</article>`;
 
-      console.log('[article-extractor] X.com status extractor: extracted', {
+      debugLog('[article-extractor] X.com status extractor: extracted', {
         title,
         mainTweetLength: mainTweet.text.length,
         repliesCount: replies.length
@@ -202,7 +203,7 @@ const siteExtractors: Record<string, SiteExtractor> = {
       const tweets = Array.from(articles).map(extractTweet).filter(t => t.text);
 
       if (tweets.length === 0) {
-        console.log('[article-extractor] X.com: no tweets with text found, falling back to Readability');
+        debugLog('[article-extractor] X.com: no tweets with text found, falling back to Readability');
         return null;
       }
 
@@ -218,7 +219,7 @@ const siteExtractors: Record<string, SiteExtractor> = {
       }
       html += `</article>`;
 
-      console.log('[article-extractor] X.com timeline extractor: extracted', {
+      debugLog('[article-extractor] X.com timeline extractor: extracted', {
         tweetsCount: tweets.length
       });
 
@@ -300,7 +301,7 @@ function extractArticle(): ArticleExtractionPayload {
     const url = document.location.href;
     const isReaderable = isProbablyReaderable(document);
 
-    console.log('[article-extractor] Starting extraction:', {
+    debugLog('[article-extractor] Starting extraction:', {
       url,
       isReaderable,
       title: document.title,
@@ -314,7 +315,7 @@ function extractArticle(): ArticleExtractionPayload {
     // Try site-specific extractor first (completely bypasses Readability)
     const siteExtractor = getSiteExtractor(hostname);
     if (siteExtractor) {
-      console.log('[article-extractor] Trying site extractor for:', hostname);
+      debugLog('[article-extractor] Trying site extractor for:', hostname);
       const extractorResult = siteExtractor(documentClone, url);
 
       if (extractorResult) {
@@ -326,7 +327,7 @@ function extractArticle(): ArticleExtractionPayload {
 
         const markdown = turndownService.turndown(extractorResult.html);
 
-        console.log('[article-extractor] Site extractor success:', {
+        debugLog('[article-extractor] Site extractor success:', {
           title: extractorResult.title,
           markdownLength: markdown.length
         });
@@ -340,13 +341,13 @@ function extractArticle(): ArticleExtractionPayload {
         };
       }
       // If extractor returns null, fall through to Readability
-      console.log('[article-extractor] Site extractor returned null, falling back to Readability');
+      debugLog('[article-extractor] Site extractor returned null, falling back to Readability');
     }
 
     // Apply site-specific DOM preprocessing if available
     const siteHandler = getSiteHandler(hostname);
     if (siteHandler) {
-      console.log('[article-extractor] Applying site handler for:', hostname);
+      debugLog('[article-extractor] Applying site handler for:', hostname);
       siteHandler(documentClone);
     }
 
@@ -355,14 +356,14 @@ function extractArticle(): ArticleExtractionPayload {
     const reader = new Readability(documentClone);
     const article = reader.parse();
 
-    console.log('[article-extractor] Readability result:', {
+    debugLog('[article-extractor] Readability result:', {
       success: !!article,
       title: article?.title,
       contentLength: article?.content?.length || 0
     });
 
     if (!article) {
-      console.log('[article-extractor] Failed: no article extracted');
+      debugLog('[article-extractor] Failed: no article extracted');
       return {
         readerable: false,
         error: {
@@ -380,7 +381,7 @@ function extractArticle(): ArticleExtractionPayload {
 
     const markdown = turndownService.turndown(article.content);
 
-    console.log('[article-extractor] Success:', {
+    debugLog('[article-extractor] Success:', {
       title: article.title,
       markdownLength: markdown.length
     });

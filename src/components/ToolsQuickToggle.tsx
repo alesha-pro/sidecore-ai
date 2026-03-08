@@ -4,6 +4,7 @@ import { cn } from '../lib/utils';
 import { Toggle } from './ui/Toggle';
 import { builtInTools } from '../lib/tools/builtins';
 import type { McpServerConfig } from '../lib/types';
+import { debugLog } from '../lib/debug';
 
 interface ToolsQuickToggleProps {
   isOpen: boolean;
@@ -49,7 +50,7 @@ export function ToolsQuickToggle({
 
   if (!isOpen) return null;
 
-  console.log('[ToolsQuickToggle] mcpServers:', mcpServers);
+  debugLog('[ToolsQuickToggle] mcpServers:', mcpServers);
 
   return (
     <div
