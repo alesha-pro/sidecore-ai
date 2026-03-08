@@ -6,4 +6,5 @@ node_modules
 .opencode/
 .clavix/
 .claude/
+.sisyphus/
 .DS_Store
