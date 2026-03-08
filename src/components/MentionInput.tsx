@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState, useMemo } from 'preact/hooks';
+import { useRef, useEffect, useState, useMemo } from 'preact/hooks';
 import type { TabInfo } from '../lib/tabs';
 import type { McpServerConfig, SlashCommand } from '../lib/types';
 import { CommandPicker, type Command } from './CommandPicker';
@@ -31,11 +31,6 @@ interface MentionInputProps {
   onStop?: () => void;
 }
 
-interface ExtractedContent {
-  text: string;
-  tabIds: number[];
-}
-
 export function MentionInput({
   onSend,
   disabled = false,
@@ -60,17 +55,32 @@ export function MentionInput({
   isStreaming = false,
   onStop,
 }: MentionInputProps) {
-  const inputRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
-  const insertedTabsRef = useRef<Set<number>>(new Set());
   const [activeIndex, setActiveIndex] = useState(-1);
   const [isCommandPickerOpen, setIsCommandPickerOpen] = useState(false);
   const [commandFilter, setCommandFilter] = useState('');
+  const [inputValue, setInputValue] = useState('');
 
-  // Filter out already selected tabs from picker
-  const pickerTabs = availableTabs.filter(
-    (t) => !selectedTabs.some((s) => s.id === t.id)
-  );
+  const [tabFilter, setTabFilter] = useState('');
+
+  // Filter out already selected tabs from picker, and apply search filter
+  const pickerTabs = useMemo(() => {
+    let filtered = availableTabs.filter((t) => !selectedTabs.some((s) => s.id === t.id));
+    if (tabFilter) {
+      const lowerFilter = tabFilter.toLowerCase();
+      filtered = filtered.filter(t => t.title.toLowerCase().includes(lowerFilter) || t.url?.toLowerCase().includes(lowerFilter));
+    }
+    return filtered;
+  }, [availableTabs, selectedTabs, tabFilter]);
+
+  // Auto-resize logic for textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+    }
+  }, [inputValue]);
 
   // Reset active index when picker opens
   useEffect(() => {
@@ -86,8 +96,8 @@ export function MentionInput({
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
       if (
-        inputRef.current &&
-        !inputRef.current.contains(target) &&
+        textareaRef.current &&
+        !textareaRef.current.contains(target) &&
         pickerRef.current &&
         !pickerRef.current.contains(target)
       ) {
@@ -99,174 +109,40 @@ export function MentionInput({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isPickerOpen, onPickerOpenChange]);
 
-  // Extract content from the contenteditable
-  const extractContent = useCallback((): ExtractedContent => {
-    const container = inputRef.current;
-    if (!container) {
-      return { text: '', tabIds: [] };
+  const removeTriggerFromInput = (triggerStr: string) => {
+    const target = textareaRef.current;
+    if (!target) return;
+    
+    const value = target.value;
+    const selectionStart = target.selectionStart;
+    const textBeforeCursor = value.slice(0, selectionStart);
+    
+    // Find the trigger word (e.g. "@", "@some", "/co")
+    const lastWordMatch = textBeforeCursor.match(new RegExp(`(?:\\s|^)(\\${triggerStr}\\S*)$`));
+    if (lastWordMatch) {
+      // Find the exact index of the trigger
+      const word = lastWordMatch[1];
+      const matchIndex = textBeforeCursor.lastIndexOf(word);
+      const newValue = value.slice(0, matchIndex) + value.slice(selectionStart);
+      setInputValue(newValue);
+      onInputChange?.(newValue);
+      
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = matchIndex;
+          textareaRef.current.selectionEnd = matchIndex;
+        }
+      }, 0);
     }
-
-    const tabIds: number[] = [];
-    let text = '';
-
-    const processNode = (node: Node) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        text += node.textContent || '';
-      } else if (node instanceof HTMLElement) {
-        const tabIdAttr = node.getAttribute('data-tab-id');
-        if (tabIdAttr) {
-          const tabId = parseInt(tabIdAttr, 10);
-          tabIds.push(tabId);
-          // Include tab title in text for context
-          const titleSpan = node.querySelector('[data-chip-title]');
-          const title = titleSpan?.textContent || node.textContent || '';
-          text += `@[${title.replace('×', '').trim()}]`;
-        } else {
-          // Process child nodes (e.g., regular spans, divs)
-          node.childNodes.forEach(processNode);
-        }
-      }
-    };
-
-    container.childNodes.forEach(processNode);
-
-    return { text: text.trim(), tabIds };
-  }, []);
-
-  // Create a chip DOM element (not a Preact component - direct DOM manipulation)
-  const createChipElement = useCallback(
-    (tabId: number, title: string): HTMLSpanElement => {
-      const chip = document.createElement('span');
-      chip.contentEditable = 'false';
-      chip.setAttribute('data-tab-id', String(tabId));
-      chip.className = cn(
-        'inline-flex items-center gap-0.5 px-1.5 py-0.5 mx-0.5 rounded text-xs',
-        'bg-accent-subtle text-accent',
-        'dark:bg-accent-subtle-dark dark:text-accent-dark',
-        'select-none align-baseline'
-      );
-
-      const titleSpan = document.createElement('span');
-      titleSpan.className = 'truncate max-w-[120px]';
-      titleSpan.title = title;
-      titleSpan.setAttribute('data-chip-title', 'true');
-      titleSpan.textContent = title;
-      chip.appendChild(titleSpan);
-
-      const removeBtn = document.createElement('button');
-      removeBtn.type = 'button';
-      removeBtn.className = cn(
-        'ml-0.5 hover:opacity-70 focus:outline-none',
-        'text-accent dark:text-accent-dark'
-      );
-      removeBtn.textContent = '×';
-      removeBtn.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        chip.remove();
-        insertedTabsRef.current.delete(tabId);
-        onRemoveTab(tabId);
-      };
-      chip.appendChild(removeBtn);
-
-      return chip;
-    },
-    [onRemoveTab]
-  );
-
-  // Insert chip at current cursor position
-  const insertChipAtCursor = useCallback(
-    (tabId: number, title: string) => {
-      const container = inputRef.current;
-      if (!container) return;
-
-      container.focus();
-
-      const selection = window.getSelection();
-      if (!selection || selection.rangeCount === 0) {
-        // No selection, append to end
-        const chip = createChipElement(tabId, title);
-        container.appendChild(chip);
-        // Move cursor after chip
-        const range = document.createRange();
-        range.setStartAfter(chip);
-        range.collapse(true);
-        selection?.removeAllRanges();
-        selection?.addRange(range);
-        return;
-      }
-
-      const range = selection.getRangeAt(0);
-
-      // Check if we need to remove @ before inserting chip
-      const startContainer = range.startContainer;
-      if (startContainer.nodeType === Node.TEXT_NODE) {
-        const textContent = startContainer.textContent || '';
-        const offset = range.startOffset;
-        if (offset > 0 && textContent[offset - 1] === '@') {
-          // Remove the @ character
-          const newText =
-            textContent.slice(0, offset - 1) + textContent.slice(offset);
-          startContainer.textContent = newText;
-          range.setStart(startContainer, offset - 1);
-          range.collapse(true);
-        }
-      }
-
-      // Insert chip
-      const chip = createChipElement(tabId, title);
-      range.deleteContents();
-      range.insertNode(chip);
-
-      // Move cursor after chip
-      range.setStartAfter(chip);
-      range.collapse(true);
-      selection.removeAllRanges();
-      selection.addRange(range);
-
-      insertedTabsRef.current.add(tabId);
-    },
-    [createChipElement]
-  );
-
-  // Handle tab selection from picker
-  const handlePickerSelect = (tab: TabInfo) => {
-    insertChipAtCursor(tab.id, tab.title);
-    onSelectTab(tab.id);
-    onPickerOpenChange(false);
-    inputRef.current?.focus();
   };
 
-  // Sync chips when selectedTabs prop changes
-  useEffect(() => {
-    const container = inputRef.current;
-    if (!container) return;
+  const handlePickerSelect = (tab: TabInfo) => {
+    onSelectTab(tab.id);
+    onPickerOpenChange(false);
+    removeTriggerFromInput('@');
+    textareaRef.current?.focus();
+  };
 
-    const selectedTabIds = new Set(selectedTabs.map((t) => t.id));
-
-    // Add chips for newly selected tabs (only if not already inserted)
-    const newTabs = selectedTabs.filter(
-      (tab) => !insertedTabsRef.current.has(tab.id)
-    );
-    for (const tab of newTabs) {
-      insertChipAtCursor(tab.id, tab.title);
-    }
-
-    // Remove chips for tabs that were removed externally
-    const chipsToRemove: HTMLElement[] = [];
-    container.querySelectorAll('[data-tab-id]').forEach((chip) => {
-      const tabId = parseInt(chip.getAttribute('data-tab-id') || '0', 10);
-      if (!selectedTabIds.has(tabId)) {
-        chipsToRemove.push(chip as HTMLElement);
-        insertedTabsRef.current.delete(tabId);
-      }
-    });
-    for (const chip of chipsToRemove) {
-      chip.remove();
-    }
-  }, [selectedTabs, insertChipAtCursor]);
-
-  // Handle backspace to remove chips
   const handleKeyDown = (e: KeyboardEvent) => {
     // Handle picker navigation when open
     if (isPickerOpen) {
@@ -305,64 +181,8 @@ export function MentionInput({
       handleSend();
       return;
     }
-
-    // Handle backspace for chip removal
-    if (e.key === 'Backspace') {
-      const selection = window.getSelection();
-      if (!selection || selection.rangeCount === 0) return;
-
-      const range = selection.getRangeAt(0);
-      if (!range.collapsed) return; // Selection exists, let browser handle
-
-      const container = inputRef.current;
-      if (!container) return;
-
-      // Check if cursor is at the start of a text node that follows a chip
-      const startContainer = range.startContainer;
-      if (
-        startContainer.nodeType === Node.TEXT_NODE &&
-        range.startOffset === 0
-      ) {
-        const prevSibling = startContainer.previousSibling;
-        if (
-          prevSibling instanceof HTMLElement &&
-          prevSibling.hasAttribute('data-tab-id')
-        ) {
-          e.preventDefault();
-          const tabId = parseInt(
-            prevSibling.getAttribute('data-tab-id') || '0',
-            10
-          );
-          prevSibling.remove();
-          insertedTabsRef.current.delete(tabId);
-          onRemoveTab(tabId);
-          return;
-        }
-      }
-
-      // Check if cursor is in the container directly and previous sibling is chip
-      if (startContainer === container && range.startOffset > 0) {
-        const childNodes = Array.from(container.childNodes);
-        const prevNode = childNodes[range.startOffset - 1];
-        if (
-          prevNode instanceof HTMLElement &&
-          prevNode.hasAttribute('data-tab-id')
-        ) {
-          e.preventDefault();
-          const tabId = parseInt(
-            prevNode.getAttribute('data-tab-id') || '0',
-            10
-          );
-          prevNode.remove();
-          insertedTabsRef.current.delete(tabId);
-          onRemoveTab(tabId);
-          return;
-        }
-      }
-    }
   };
 
-  // Generate custom commands from user settings
   const customCommands: Command[] = useMemo(() => {
     return (customSlashCommands ?? []).map(cmd => ({
       name: `custom-${cmd.id}`,
@@ -372,126 +192,109 @@ export function MentionInput({
     }));
   }, [customSlashCommands]);
 
-  // Handle command selection from picker (Tab - autocomplete only, no send)
   const handleCommandSelect = (command: Command) => {
-    const container = inputRef.current;
-    if (!container) return;
-
-    // Clear existing content and set command text
-    container.textContent = command.text;
-
-    // Move cursor to end
-    const range = document.createRange();
-    const selection = window.getSelection();
-    range.selectNodeContents(container);
-    range.collapse(false);
-    selection?.removeAllRanges();
-    selection?.addRange(range);
-
+    setInputValue(command.text);
+    onInputChange?.(command.text);
     setIsCommandPickerOpen(false);
     setCommandFilter('');
-    onInputChange?.(command.text);
-    container.focus();
+    
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        textareaRef.current.selectionStart = command.text.length;
+        textareaRef.current.selectionEnd = command.text.length;
+      }
+    }, 0);
   };
 
-  // Handle command selection and send (Enter - select AND send)
   const handleCommandSelectAndSend = (command: Command) => {
-    const container = inputRef.current;
-    if (!container) return;
-
-    // Set command text in input
-    container.textContent = command.text;
     setIsCommandPickerOpen(false);
     setCommandFilter('');
-    onInputChange?.(command.text);
-
-    // Immediately send
-    handleSend();
-  };
-
-  // Handle input to detect @ and / triggers and notify parent of content changes
-  const handleInput = () => {
-    const container = inputRef.current;
-    if (!container) return;
-
-    // Notify parent of content change (for debug preview)
-    const { text } = extractContent();
-    onInputChange?.(text);
-
-    // Get current text content at cursor position
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-
-    const range = selection.getRangeAt(0);
-    const startContainer = range.startContainer;
-
-    // Check if cursor is in a text node
-    if (startContainer.nodeType === Node.TEXT_NODE) {
-      const textContent = startContainer.textContent || '';
-      const offset = range.startOffset;
-
-      // Check for @ trigger
-      if (offset > 0 && textContent[offset - 1] === '@') {
-        onPickerOpenChange(true);
-        setIsCommandPickerOpen(false);
-      }
-
-      // Check for / at the start of input (for commands)
-      if (textContent.startsWith('/')) {
-        const filter = textContent.slice(1); // Remove leading /
-        setCommandFilter(filter);
-        setIsCommandPickerOpen(true);
-        onPickerOpenChange(false);
-      } else {
-        setIsCommandPickerOpen(false);
-        setCommandFilter('');
-      }
-    }
-  };
-
-  // Handle send
-  const handleSend = () => {
-    const { text, tabIds } = extractContent();
-    if (!text && tabIds.length === 0) return;
-
-    onSend(text, tabIds);
-
-    // Clear input
-    if (inputRef.current) {
-      inputRef.current.innerHTML = '';
-      insertedTabsRef.current.clear();
+    
+    // Include the tab references in the user message text for visibility
+    let finalText = command.text;
+    if (selectedTabs.length > 0) {
+      const tabMentions = selectedTabs.map(t => `@[${t.title}]`).join(' ');
+      finalText = finalText ? `${finalText}\n\n${tabMentions}` : tabMentions;
     }
 
-    // Notify parent that input is now empty
+    // Pass empty array for tabIds so App.tsx uses its full tabSelection state (including active tab)
+    onSend(finalText, []);
+    setInputValue('');
     onInputChange?.('');
   };
 
-  // Trigger @ picker from toolbar button
-  const handleAtClick = () => {
-    onPickerOpenChange(true);
-    inputRef.current?.focus();
+  const handleInput = (e: Event) => {
+    const target = e.target as HTMLTextAreaElement;
+    const value = target.value;
+    setInputValue(value);
+    onInputChange?.(value);
+
+    const selectionStart = target.selectionStart;
+    const textBeforeCursor = value.slice(0, selectionStart);
+
+    // Check for @ or / trigger
+    const lastWordMatch = textBeforeCursor.match(/(?:\s|^)([@/])(\S*)$/);
+    if (lastWordMatch) {
+      const trigger = lastWordMatch[1];
+      const filter = lastWordMatch[2];
+      
+      if (trigger === '@') {
+        setTabFilter(filter);
+        onPickerOpenChange(true);
+        setIsCommandPickerOpen(false);
+      } else if (trigger === '/') {
+        setCommandFilter(filter);
+        setIsCommandPickerOpen(true);
+        onPickerOpenChange(false);
+      }
+    } else {
+      onPickerOpenChange(false);
+      setIsCommandPickerOpen(false);
+    }
   };
 
-  // Trigger / picker from toolbar button
-  const handleSlashClick = () => {
-    const container = inputRef.current;
-    if (!container) return;
+  const handleSend = () => {
+    const text = inputValue.trim();
+    
+    if (!text && selectedTabs.length === 0 && !includeActiveTab) return;
 
-    // Set "/" in input and open command picker
-    container.textContent = '/';
+    // Include the tab references in the user message text for visibility
+    let finalText = text;
+    if (selectedTabs.length > 0) {
+      const tabMentions = selectedTabs.map(t => `@[${t.title}]`).join(' ');
+      finalText = text ? `${text}\n\n${tabMentions}` : tabMentions;
+    }
+
+    // Pass empty array for tabIds so App.tsx uses its full tabSelection state
+    onSend(finalText, []);
+
+    // Clear input
+    setInputValue('');
+    onInputChange?.('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+  };
+
+  const handleAtClick = () => {
+    onPickerOpenChange(true);
+    textareaRef.current?.focus();
+  };
+
+  const handleSlashClick = () => {
+    setInputValue('/');
+    onInputChange?.('/');
     setCommandFilter('');
     setIsCommandPickerOpen(true);
 
-    // Move cursor to end
-    const range = document.createRange();
-    const selection = window.getSelection();
-    range.selectNodeContents(container);
-    range.collapse(false);
-    selection?.removeAllRanges();
-    selection?.addRange(range);
-
-    container.focus();
-    onInputChange?.('/');
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        textareaRef.current.selectionStart = 1;
+        textareaRef.current.selectionEnd = 1;
+      }
+    }, 0);
   };
 
   return (
@@ -566,63 +369,91 @@ export function MentionInput({
           />
 
           {/* Input area with inline Send button */}
-          <div className="relative min-w-0">
-            <div
-              ref={inputRef}
-              contentEditable={!disabled}
-              onKeyDown={handleKeyDown}
-              onInput={handleInput}
-              className={cn(
-                'w-full min-h-[40px] max-h-[200px] overflow-y-auto min-w-0',
-                'px-3 py-2 pr-10 rounded-lg',
-                'border border-border bg-background',
-                'text-sm text-text-primary',
-                'focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-1',
-                'disabled:opacity-50 disabled:cursor-not-allowed',
-                'empty:before:content-[attr(data-placeholder)] empty:before:text-text-tertiary',
-                'dark:bg-background-dark dark:border-border-dark dark:text-text-primary-dark',
-                'dark:empty:before:text-text-tertiary-dark',
-                'break-words'
-              )}
-              data-placeholder="Type a message, @ for tabs, / for commands"
-              role="textbox"
-              aria-label="Message input"
-              aria-multiline="true"
-            />
-
-            {/* Send/Stop button - positioned inside input, on the right */}
-            {isStreaming && onStop ? (
-              <button
-                type="button"
-                onClick={onStop}
-                className={cn(
-                  'absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-md transition-colors',
-                  'text-red-500 hover:bg-red-50',
-                  'dark:text-red-400 dark:hover:bg-red-950'
-                )}
-                title="Stop generation"
-                aria-label="Stop generation"
-              >
-                <StopCircle size={18} />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleSend}
-                disabled={disabled}
-                className={cn(
-                  'absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded-md transition-colors',
-                  'text-accent hover:bg-accent-subtle',
-                  'dark:text-accent-dark dark:hover:bg-accent-subtle-dark',
-                  'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent'
-                )}
-                title="Send message (Enter)"
-              >
-                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                </svg>
-              </button>
+          <div className="relative min-w-0 flex flex-col bg-background dark:bg-background-dark border border-border dark:border-border-dark rounded-lg focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-1">
+            {/* Pill Container for Context inside the input area */}
+            {selectedTabs.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 p-2 pb-0">
+                {selectedTabs.map((tab) => (
+                  <div
+                    key={tab.id}
+                    className={cn(
+                      'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs max-w-full',
+                      'bg-accent-subtle text-accent border border-accent/20',
+                      'dark:bg-accent-subtle-dark dark:text-accent-dark dark:border-accent-dark/20'
+                    )}
+                  >
+                    <span className="truncate max-w-[150px]">{tab.title}</span>
+                    <button
+                      type="button"
+                      onClick={() => onRemoveTab(tab.id)}
+                      className="hover:opacity-70 focus:outline-none flex-shrink-0"
+                      aria-label="Remove tab context"
+                    >
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
+            
+            <div className="relative w-full min-w-0">
+              <textarea
+                ref={textareaRef}
+                disabled={disabled}
+                value={inputValue}
+                onKeyDown={handleKeyDown}
+                onInput={handleInput}
+                rows={1}
+                className={cn(
+                  'w-full min-h-[40px] max-h-[200px] overflow-y-auto min-w-0 resize-none',
+                  'px-3 py-2 pr-10 rounded-lg',
+                  'bg-transparent text-sm text-text-primary',
+                  'focus:outline-none',
+                  'disabled:opacity-50 disabled:cursor-not-allowed',
+                  'placeholder:text-text-tertiary dark:placeholder:text-text-tertiary-dark',
+                  'dark:text-text-primary-dark',
+                  'break-words'
+                )}
+                placeholder="Type a message, @ for tabs, / for commands"
+                aria-label="Message input"
+              />
+
+              {/* Send/Stop button - positioned inside input, on the right */}
+              {isStreaming && onStop ? (
+                <button
+                  type="button"
+                  onClick={onStop}
+                  className={cn(
+                    'absolute right-1.5 bottom-1 p-1.5 rounded-md transition-colors',
+                    'text-red-500 hover:bg-red-50',
+                    'dark:text-red-400 dark:hover:bg-red-950'
+                  )}
+                  title="Stop generation"
+                  aria-label="Stop generation"
+                >
+                  <StopCircle size={18} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleSend}
+                  disabled={disabled || (!inputValue.trim() && selectedTabs.length === 0)}
+                  className={cn(
+                    'absolute right-1.5 bottom-1.5 p-1.5 rounded-md transition-colors',
+                    'text-accent hover:bg-accent-subtle',
+                    'dark:text-accent-dark dark:hover:bg-accent-subtle-dark',
+                    'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent'
+                  )}
+                  title="Send message (Enter)"
+                >
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

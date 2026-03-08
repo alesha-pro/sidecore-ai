@@ -1275,9 +1275,10 @@ export default function App() {
     )}>
       {/* NAV-02: Header with back button */}
       <header className={cn(
-        'flex items-center gap-2 px-4 py-1.5 shrink-0 min-w-0',
-        'bg-surface border-b border-border',
-        'dark:bg-surface-dark dark:border-border-dark'
+        'sticky top-0 z-50 flex items-center gap-2 px-4 py-1.5 shrink-0 min-w-0',
+        'bg-surface/80 backdrop-blur-md border-b border-border/50',
+        'dark:bg-surface-dark/80 dark:border-border-dark/50',
+        'transition-colors duration-200'
       )}>
         {/* Back button (not shown on chat-list) */}
         {currentView !== 'chat-list' && (
@@ -1462,13 +1463,6 @@ export default function App() {
             onDeleteMessage={handleDeleteMessage}
             onRegenerate={handleRegenerate}
             onSuggestionClick={handleSuggestionClick}
-          />
-          <SelectedTabsBar
-            tabs={selectedTabsForInput}
-            includeActiveTab={tabSelection.includeActiveTab}
-            activeTab={activeTab}
-            onRemoveTab={handleRemoveTab}
-            onToggleActiveTab={handleToggleActiveTab}
           />
           {settings?.showDebugPrompt && (
             <PromptDebugView

@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'preact/hooks';
+import { render } from 'preact';
+import { useMemo, useState, useEffect, useRef } from 'preact/hooks';
 import type { Message, CitationMap } from '../lib/types';
 import ThinkingBlock from './ThinkingBlock';
 import ToolCallBlock from './ToolCallBlock';
+import { CodeBlock } from './CodeBlock';
 import { Trash2, Pencil, RefreshCw } from 'lucide-preact';
 import { cn } from '../lib/utils';
 import { marked } from 'marked';
@@ -40,7 +42,7 @@ marked.setOptions({
   gfm: true,
 });
 
-// Use marked extension API for code highlighting (marked v17+)
+// We use marked just for markdown structure, but we'll intercept code block rendering
 marked.use({
   renderer: {
     code({ text, lang }: { text: string; lang?: string }) {
@@ -48,7 +50,12 @@ marked.use({
       const highlighted = validLang
         ? hljs.highlight(text, { language: lang }).value
         : hljs.highlightAuto(text).value;
-      return `<pre><code class="hljs${validLang ? ` language-${lang}` : ''}">${highlighted}</code></pre>`;
+      
+      // We encode the data so we can extract it during sanitization/rendering
+      const encodedCode = encodeURIComponent(text);
+      const encodedHtml = encodeURIComponent(`<pre class="p-0 m-0"><code class="hljs${validLang ? ` language-${lang}` : ''}">${highlighted}</code></pre>`);
+      
+      return `<div data-codeblock="true" data-lang="${lang || ''}" data-code="${encodedCode}" data-html="${encodedHtml}"></div>`;
     },
   },
 });
@@ -97,6 +104,12 @@ function sanitizeElementTree(root: ParentNode): void {
     }
     if (tagName === 'CODE') {
       allowedAttributes.add('class');
+    }
+    if (tagName === 'DIV') {
+      allowedAttributes.add('data-codeblock');
+      allowedAttributes.add('data-lang');
+      allowedAttributes.add('data-code');
+      allowedAttributes.add('data-html');
     }
 
     for (const attr of Array.from(element.attributes)) {
@@ -225,6 +238,7 @@ export default function ChatMessage({ message, isLastUserMessage, isLatestAssist
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [isHovered, setIsHovered] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   // Hide empty assistant messages (no content, no tool_calls, no thinking, not streaming)
   const isEmptyAssistant = message.role === 'assistant'
@@ -233,16 +247,43 @@ export default function ChatMessage({ message, isLastUserMessage, isLatestAssist
     && !message.thinking
     && !message.isStreaming;
 
-  if (isEmptyAssistant) {
-    return null;
-  }
-
   const renderedContent = useMemo(() => {
     if (message.role === 'assistant' && message.content) {
       return renderSafeAssistantHtml(message.content, message.citations);
     }
     return null;
   }, [message.role, message.content, message.citations]);
+
+  // Mount CodeBlock components into placeholders after render
+  useEffect(() => {
+    if (!contentRef.current) return;
+
+    const placeholders = contentRef.current.querySelectorAll('div[data-codeblock="true"]');
+    
+    placeholders.forEach((el) => {
+      // Prevent double rendering
+      if (el.hasAttribute('data-rendered')) return;
+      el.setAttribute('data-rendered', 'true');
+
+      const lang = el.getAttribute('data-lang') || '';
+      const code = decodeURIComponent(el.getAttribute('data-code') || '');
+      const html = decodeURIComponent(el.getAttribute('data-html') || '');
+      
+      // Render the CodeBlock component into the placeholder
+      render(<CodeBlock language={lang} code={code} highlightedHtml={html} />, el);
+    });
+
+    // Cleanup: unmount when component unmounts or content changes
+    return () => {
+      placeholders.forEach((el) => {
+        render(null, el);
+      });
+    };
+  }, [renderedContent]);
+
+  if (isEmptyAssistant) {
+    return null;
+  }
 
   const handleSaveEdit = () => {
     if (onEdit && editContent.trim()) {
@@ -322,13 +363,15 @@ export default function ChatMessage({ message, isLastUserMessage, isLatestAssist
         {/* Thinking bubble - shown while streaming with no content yet */}
         {message.role === 'assistant' && message.isStreaming && !message.content && !message.tool_calls?.length && (
           <div className={cn(
-            'px-4 py-2 rounded-lg',
-            'bg-surface border border-border text-text-secondary',
-            'dark:bg-surface-dark dark:border-border-dark dark:text-text-secondary-dark',
-            'text-sm flex items-center gap-2'
+            'px-4 py-3 rounded-2xl rounded-bl-sm text-sm inline-flex items-center gap-1.5',
+            'bg-surface border border-border/50 shadow-sm',
+            'dark:bg-surface-dark dark:border-border-dark/50'
           )}>
-            <span className="inline-block w-2 h-2 bg-gray-400 rounded-full animate-pulse"></span>
-            Thinking...
+            <div className="flex space-x-1 items-center justify-center h-4">
+              <div className="w-1.5 h-1.5 bg-text-tertiary dark:bg-text-tertiary-dark rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+              <div className="w-1.5 h-1.5 bg-text-tertiary dark:bg-text-tertiary-dark rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+              <div className="w-1.5 h-1.5 bg-text-tertiary dark:bg-text-tertiary-dark rounded-full animate-bounce"></div>
+            </div>
           </div>
         )}
 
@@ -338,10 +381,10 @@ export default function ChatMessage({ message, isLastUserMessage, isLatestAssist
         {!(message.role === 'assistant' && !message.content) && (
           <div
             className={cn(
-              // MSG-01: User message - soft subtle bubble (not bright blue)
-              isUser && 'px-4 py-2.5 rounded-2xl bg-accent-subtle text-text-primary dark:bg-accent-subtle dark:text-text-primary',
+              // MSG-01: User message - soft subtle bubble with organic shape (iMessage style)
+              isUser && 'px-4 py-2.5 rounded-2xl rounded-br-sm shadow-sm bg-accent-subtle text-text-primary dark:bg-accent-subtle dark:text-text-primary',
               // MSG-02: Assistant message - no bubble, generous whitespace
-              !isUser && 'py-3'
+              !isUser && 'py-1'
             )}
           >
             {/* Content */}
@@ -386,7 +429,9 @@ export default function ChatMessage({ message, isLastUserMessage, isLatestAssist
           ) : (
             <>
               {message.role === 'assistant' ? (
-                <div className={cn(
+                <div 
+                  ref={contentRef}
+                  className={cn(
                   'prose prose-sm max-w-none break-words overflow-hidden min-w-0',
                   'text-text-primary',
                   'dark:prose-invert dark:text-text-primary-dark',
