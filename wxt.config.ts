@@ -12,7 +12,7 @@ export default defineConfig({
     },
   }),
   manifest: {
-    name: 'Sidepanel AI Agent',
+    name: 'Sidecore AI',
     // Mandatory: minimal install footprint
     // - sidePanel: UI container
     // - storage: settings + chat persistence

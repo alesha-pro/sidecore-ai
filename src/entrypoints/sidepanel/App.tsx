@@ -1269,15 +1269,13 @@ export default function App() {
 
   return (
     <div className={cn(
-      'flex flex-col h-screen overflow-x-hidden',
-      'bg-background',
-      'dark:bg-background-dark'
+      'flex flex-col h-screen overflow-x-hidden bg-background dark:bg-background-dark',
+      'text-text-primary dark:text-text-primary-dark'
     )}>
       {/* NAV-02: Header with back button */}
       <header className={cn(
-        'sticky top-0 z-50 flex items-center gap-2 px-4 py-1.5 shrink-0 min-w-0',
-        'bg-surface/80 backdrop-blur-md border-b border-border/50',
-        'dark:bg-surface-dark/80 dark:border-border-dark/50',
+        'sticky top-0 z-50 flex items-center gap-2 px-4 py-2 shrink-0 min-w-0',
+        'bg-background dark:bg-background-dark border-b border-border/50',
         'transition-colors duration-200'
       )}>
         {/* Back button (not shown on chat-list) */}

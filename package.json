@@ -1,7 +1,7 @@
 {
-  "name": "ai-agents-chrome-extension",
+  "name": "sidecore-ai",
   "version": "1.0.0",
-  "description": "Chrome extension with AI agent in side panel",
+  "description": "AI assistant in Chrome Side Panel — summarize pages, ask questions about tabs, use your own LLM provider.",
   "type": "module",
   "scripts": {
     "dev": "wxt",

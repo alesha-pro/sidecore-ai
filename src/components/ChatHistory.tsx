@@ -167,8 +167,7 @@ export default function ChatHistory({
         aria-label="Chat history"
         className={cn(
           'flex-1 overflow-y-auto overflow-x-hidden p-3 @sm:p-4 space-y-4 min-w-0 scroll-smooth',
-          'bg-background',
-          'dark:bg-background-dark'
+          'bg-transparent custom-scrollbar'
         )}
       >
         {messages.length === 0 ? (

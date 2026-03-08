@@ -22,20 +22,28 @@ export function CodeBlock({ language, code, highlightedHtml }: CodeBlockProps) {
   };
 
   return (
-    <div className="relative my-4 rounded-md overflow-hidden bg-surface dark:bg-surface-code-dark border border-border dark:border-border-dark group">
-      <div className="flex items-center justify-between px-4 py-1.5 bg-surface-hover dark:bg-surface-hover-dark border-b border-border dark:border-border-dark">
-        <span className="text-xs font-medium text-text-secondary dark:text-text-secondary-dark uppercase">
-          {language || 'text'}
-        </span>
+    <div className="relative my-4 rounded-xl overflow-hidden bg-[#1e1e1e] dark:bg-surface-code-dark shadow-md border border-border/20 dark:border-white/10 group">
+      <div className="flex items-center justify-between px-4 py-2.5 bg-black/20 dark:bg-black/40 border-b border-white/5">
+        <div className="flex items-center gap-2">
+          {/* Mac-style window controls */}
+          <div className="flex gap-1.5 mr-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]"></div>
+            <div className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]"></div>
+            <div className="w-2.5 h-2.5 rounded-full bg-[#27c93f]"></div>
+          </div>
+          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            {language || 'text'}
+          </span>
+        </div>
         <button
           onClick={handleCopy}
           className={cn(
-            'flex items-center gap-1.5 px-2 py-1 text-xs rounded transition-opacity duration-200',
+            'flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-all duration-200',
             // Always show on mobile, fade in on hover for desktop
             'opacity-100 @sm:opacity-0 @sm:group-hover:opacity-100',
             isCopied
-              ? 'text-green-600 dark:text-green-400'
-              : 'text-text-secondary hover:text-text-primary dark:text-text-secondary-dark dark:hover:text-text-primary-dark hover:bg-surface dark:hover:bg-surface-dark'
+              ? 'text-green-400 bg-green-400/10'
+              : 'text-gray-400 hover:text-white hover:bg-white/10'
           )}
           aria-label={isCopied ? 'Copied' : 'Copy code'}
         >

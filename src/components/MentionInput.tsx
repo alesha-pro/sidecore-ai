@@ -3,7 +3,7 @@ import type { TabInfo } from '../lib/tabs';
 import type { McpServerConfig, SlashCommand } from '../lib/types';
 import { CommandPicker, type Command } from './CommandPicker';
 import { InputToolbar } from './InputToolbar';
-import { StopCircle } from 'lucide-preact';
+import { StopCircle, ArrowUp } from 'lucide-preact';
 import { cn } from '../lib/utils';
 
 interface MentionInputProps {
@@ -368,29 +368,37 @@ export function MentionInput({
             extraCommands={customCommands}
           />
 
-          {/* Input area with inline Send button */}
-          <div className="relative min-w-0 flex flex-col bg-background dark:bg-background-dark border border-border dark:border-border-dark rounded-lg focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-1">
+          {/* Floating Input Island */}
+          <div className={cn(
+            "relative min-w-0 flex flex-col rounded-2xl transition-all duration-300",
+            "bg-surface/70 dark:bg-surface-dark/70 backdrop-blur-xl",
+            "border border-border/50 dark:border-border-dark/50",
+            "shadow-sm hover:shadow-md focus-within:shadow-lg focus-within:ring-2 focus-within:ring-accent focus-within:ring-offset-2 focus-within:ring-offset-background dark:focus-within:ring-offset-background-dark",
+            // Floating island effect at the bottom
+            "mb-2"
+          )}>
             {/* Pill Container for Context inside the input area */}
             {selectedTabs.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 p-2 pb-0">
+              <div className="flex flex-wrap gap-1.5 p-3 pb-1">
                 {selectedTabs.map((tab) => (
                   <div
                     key={tab.id}
                     className={cn(
-                      'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs max-w-full',
-                      'bg-accent-subtle text-accent border border-accent/20',
-                      'dark:bg-accent-subtle-dark dark:text-accent-dark dark:border-accent-dark/20'
+                      'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium max-w-full',
+                      'bg-accent/10 text-accent border border-accent/20',
+                      'dark:bg-accent-dark/10 dark:text-accent-dark dark:border-accent-dark/20',
+                      'shadow-sm backdrop-blur-md'
                     )}
                   >
                     <span className="truncate max-w-[150px]">{tab.title}</span>
                     <button
                       type="button"
                       onClick={() => onRemoveTab(tab.id)}
-                      className="hover:opacity-70 focus:outline-none flex-shrink-0"
+                      className="hover:bg-accent/20 dark:hover:bg-accent-dark/20 rounded-full p-0.5 focus:outline-none transition-colors flex-shrink-0"
                       aria-label="Remove tab context"
                     >
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
                   </div>
@@ -407,16 +415,16 @@ export function MentionInput({
                 onInput={handleInput}
                 rows={1}
                 className={cn(
-                  'w-full min-h-[40px] max-h-[200px] overflow-y-auto min-w-0 resize-none',
-                  'px-3 py-2 pr-10 rounded-lg',
+                  'w-full min-h-[44px] max-h-[200px] overflow-y-auto min-w-0 resize-none',
+                  'px-4 py-3 pr-12 rounded-2xl',
                   'bg-transparent text-sm text-text-primary',
                   'focus:outline-none',
                   'disabled:opacity-50 disabled:cursor-not-allowed',
                   'placeholder:text-text-tertiary dark:placeholder:text-text-tertiary-dark',
                   'dark:text-text-primary-dark',
-                  'break-words'
+                  'break-words leading-relaxed'
                 )}
-                placeholder="Type a message, @ for tabs, / for commands"
+                placeholder="Message or / for commands..."
                 aria-label="Message input"
               />
 
@@ -426,14 +434,14 @@ export function MentionInput({
                   type="button"
                   onClick={onStop}
                   className={cn(
-                    'absolute right-1.5 bottom-1 p-1.5 rounded-md transition-colors',
-                    'text-red-500 hover:bg-red-50',
-                    'dark:text-red-400 dark:hover:bg-red-950'
+                    'absolute right-2 bottom-2 p-1.5 rounded-full transition-all duration-200',
+                    'text-red-500 hover:bg-red-50 hover:scale-110',
+                    'dark:text-red-400 dark:hover:bg-red-950/50'
                   )}
                   title="Stop generation"
                   aria-label="Stop generation"
                 >
-                  <StopCircle size={18} />
+                  <StopCircle size={20} strokeWidth={2.5} />
                 </button>
               ) : (
                 <button
@@ -441,16 +449,17 @@ export function MentionInput({
                   onClick={handleSend}
                   disabled={disabled || (!inputValue.trim() && selectedTabs.length === 0)}
                   className={cn(
-                    'absolute right-1.5 bottom-1.5 p-1.5 rounded-md transition-colors',
-                    'text-accent hover:bg-accent-subtle',
-                    'dark:text-accent-dark dark:hover:bg-accent-subtle-dark',
-                    'disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent'
+                    'absolute right-2 bottom-2 p-1.5 rounded-full transition-all duration-300',
+                    // Logic: highlight ONLY when there's text to send
+                    inputValue.trim() || selectedTabs.length > 0
+                      ? 'bg-accent text-white shadow-sm scale-100 hover:scale-110 hover:bg-accent-hover'
+                      : 'bg-transparent text-text-tertiary opacity-40',
+                    'dark:text-gray-900 dark:disabled:text-text-tertiary-dark',
+                    'disabled:cursor-not-allowed disabled:scale-100 disabled:bg-transparent'
                   )}
                   title="Send message (Enter)"
                 >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                  </svg>
+                  <ArrowUp size={18} strokeWidth={3} />
                 </button>
               )}
             </div>

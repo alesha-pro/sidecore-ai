@@ -7,7 +7,28 @@
     font-family: var(--font-sans);
     font-size: var(--text-base);
     line-height: var(--leading-normal);
+    background-color: var(--color-background);
   }
+}
+
+/* ============================================================================
+   Premium Mesh Gradient Backgrounds
+   ============================================================================ */
+
+.mesh-bg {
+  background-color: var(--color-background);
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+    radial-gradient(at 50% 0%, hsla(225,39%,30%,0.1) 0, transparent 50%), 
+    radial-gradient(at 100% 0%, hsla(339,49%,30%,0.1) 0, transparent 50%);
+  background-attachment: fixed;
+}
+
+html.dark .mesh-bg {
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(17, 24, 39, 1) 0, transparent 50%), 
+    radial-gradient(at 50% 0%, rgba(30, 58, 138, 0.15) 0, transparent 50%), 
+    radial-gradient(at 100% 0%, rgba(88, 28, 135, 0.1) 0, transparent 50%);
 }
 
 /* ============================================================================

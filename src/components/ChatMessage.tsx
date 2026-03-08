@@ -363,15 +363,17 @@ export default function ChatMessage({ message, isLastUserMessage, isLatestAssist
         {/* Thinking bubble - shown while streaming with no content yet */}
         {message.role === 'assistant' && message.isStreaming && !message.content && !message.tool_calls?.length && (
           <div className={cn(
-            'px-4 py-3 rounded-2xl rounded-bl-sm text-sm inline-flex items-center gap-1.5',
-            'bg-surface border border-border/50 shadow-sm',
-            'dark:bg-surface-dark dark:border-border-dark/50'
+            'px-4 py-3 text-sm inline-flex items-center gap-2',
+            'text-accent dark:text-accent-dark font-medium'
           )}>
-            <div className="flex space-x-1 items-center justify-center h-4">
-              <div className="w-1.5 h-1.5 bg-text-tertiary dark:bg-text-tertiary-dark rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-              <div className="w-1.5 h-1.5 bg-text-tertiary dark:bg-text-tertiary-dark rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-              <div className="w-1.5 h-1.5 bg-text-tertiary dark:bg-text-tertiary-dark rounded-full animate-bounce"></div>
+            <div className="flex space-x-1 items-center justify-center h-4 opacity-70">
+              <div className="w-1.5 h-1.5 bg-accent dark:bg-accent-dark rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+              <div className="w-1.5 h-1.5 bg-accent dark:bg-accent-dark rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+              <div className="w-1.5 h-1.5 bg-accent dark:bg-accent-dark rounded-full animate-bounce"></div>
             </div>
+            <span className="bg-gradient-to-r from-accent/80 via-accent to-accent/80 dark:from-accent-dark/80 dark:via-accent-dark dark:to-accent-dark/80 bg-clip-text text-transparent animate-pulse">
+              Thinking...
+            </span>
           </div>
         )}
 
@@ -381,10 +383,16 @@ export default function ChatMessage({ message, isLastUserMessage, isLatestAssist
         {!(message.role === 'assistant' && !message.content) && (
           <div
             className={cn(
-              // MSG-01: User message - soft subtle bubble with organic shape (iMessage style)
-              isUser && 'px-4 py-2.5 rounded-2xl rounded-br-sm shadow-sm bg-accent-subtle text-text-primary dark:bg-accent-subtle dark:text-text-primary',
-              // MSG-02: Assistant message - no bubble, generous whitespace
-              !isUser && 'py-1'
+              // MSG-01: User message - volumetric bubble with gradient and inner shadow
+              isUser && 'px-4 py-2.5 rounded-2xl rounded-br-sm shadow-sm text-white',
+              isUser && 'bg-gradient-to-br from-accent to-accent-hover dark:from-accent dark:to-blue-700',
+              isUser && 'shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]',
+              
+              // MSG-02: Assistant message - no bubble, borderless with subtle accent line
+              !isUser && 'py-1 pl-4 relative',
+              !isUser && 'before:absolute before:left-0 before:top-2 before:bottom-2 before:w-0.5 before:bg-accent/20 before:dark:bg-accent-dark/20 before:rounded-full',
+              // If streaming, animate the accent line
+              !isUser && isStreaming && 'before:bg-accent before:dark:bg-accent-dark before:animate-pulse before:shadow-[0_0_8px_rgba(59,130,246,0.6)]'
             )}
           >
             {/* Content */}
