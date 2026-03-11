@@ -56,7 +56,7 @@ Content is extracted on-demand from tabs you explicitly select. Requests go dire
 
 ### Chrome Web Store
 
-> Coming soon
+> https://chromewebstore.google.com/detail/sidecore-ai/eknmcilipdfdpobhbfcpnfbgepdfodjk
 
 ### From source (developer mode)
 
