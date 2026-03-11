@@ -95,19 +95,19 @@ export function assembleContext(options: AssembleOptions): AssembleResult {
   // 1. Build fixed messages (always included)
   const fixedMessages: ChatMessage[] = [];
 
-  // System prompt (if non-empty)
+  // Single system message: merge system prompt + tab content
+  // Many models (e.g. Qwen) require exactly one system message at the beginning
+  const systemParts: string[] = [];
   if (systemPrompt.trim()) {
-    fixedMessages.push({
-      role: 'system',
-      content: systemPrompt,
-    });
+    systemParts.push(systemPrompt);
   }
-
-  // Tab content from current extraction (if any)
   if (tabContentSystemMessage) {
+    systemParts.push(tabContentSystemMessage);
+  }
+  if (systemParts.length > 0) {
     fixedMessages.push({
       role: 'system',
-      content: tabContentSystemMessage,
+      content: systemParts.join('\n\n'),
     });
   }
 
@@ -124,9 +124,11 @@ export function assembleContext(options: AssembleOptions): AssembleResult {
       content: msg.content,
     };
 
-    // Convert contentMessageId messages to system role for API
+    // Content injection points: use 'user' role with marker to avoid
+    // mid-conversation system messages (breaks Qwen and other strict templates)
     if (msg.contentMessageId) {
-      apiMsg.role = 'system';
+      apiMsg.role = 'user';
+      apiMsg.content = `[Referenced Tab Content]\n${msg.content}`;
     }
 
     // Include tool_calls for assistant messages
